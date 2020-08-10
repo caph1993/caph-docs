@@ -334,7 +334,9 @@ const mathString = (text)=>{
     stringToDisplay.match(blockRegularExpression) ? "block" : "inline"
   );
   let parser;
-  if(window.katex) parser=katex.renderToString;
+  if(window.katex)
+    parser=(formula, mode)=>katex.renderToString(formula, {
+      displayMode: mode=='block'});
   else if((window.MathJax||{}).tex2svg)
     parser = (formula, mode)=>(mode=='inline'?
       MathJax.tex2svg(formula).innerHTML

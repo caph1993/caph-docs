@@ -16,7 +16,7 @@ function Main({}){ return html`
 
 <h3 class="subsection">Math</h3>
 
-<p>KaTeX is used for rendering math. Supporting math formulas is crucial in caph-docs, not only inline math, such as $\\log x := \\int_1^x \\frac 1{x}\\ dx$, but also in display mode $$\\log x := \\int_1^x \\frac 1{x}\\ dx$$.</p>
+<p>KaTeX is used for rendering math. Supporting math formulas is crucial in caph-docs, not only inline math, such as $\\log x := \\int_1^x \\frac 1{x}\\ dx$, but also in display mode $$\\log x := \\int_1^x \\frac 1{x}\\ dx.$$</p>
 <p>The formula I like the most is $$e^{i\\pi}+1=0$$ because it joins algebra, geometry, calulus and complex numbers together.</p>
 
 <h3 class="subsection">Code</h3>
@@ -227,7 +227,8 @@ h1{
 async function main(){
   //document.documentElement.lang = 'es';
   await caph.ready();
-  let url = 'https://cdn.jsdelivr.net/gh/caph1993/caph-docs@2.4/'; // or ../
+  let url = 'https://cdn.jsdelivr.net/gh/caph1993/caph-docs@2.7/';
+  //url='../';
   await Promise.all([
     caph.load('./document.css'),
     caph.load(url+"dist/font-lmroman.css"),
