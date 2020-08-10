@@ -1,0 +1,20 @@
+#caph-body{
+  font-family: Latin Modern Roman, Computer Modern, serif;
+}
+body {
+  counter-reset: h2counter h3counter;
+}
+h1, h2, h3 {text-align: left;}
+.section:before {
+  counter-increment: h2counter;
+  content: counter(h2counter) ". ";
+}
+.section{
+  counter-reset: h3counter;
+}
+.subsection:before {
+  counter-increment: h3counter;
+  content: counter(h2counter) "." counter(h3counter) ". ";
+}
+.nocount:before { counter-increment: none; }
+.hiddencount:before { content: none; }
