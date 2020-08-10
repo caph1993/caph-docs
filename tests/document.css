@@ -1,6 +1,7 @@
 #caph-body{
-  font-family: Latin Modern Roman, Computer Modern, serif;
+  font-family: Latin Modern Roman, serif;
 }
+
 body {
   counter-reset: h2counter h3counter;
 }
