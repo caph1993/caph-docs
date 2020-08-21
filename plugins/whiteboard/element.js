@@ -1,5 +1,5 @@
 
-const PluginWhiteboard = caph.makePlugin({
+caph.components.whiteboard = caph.makePlugin({
   component: ({children})=>{
     if(children&&children.length) throw 'Unexpected children';
     return html`

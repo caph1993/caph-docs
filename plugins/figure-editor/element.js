@@ -1,5 +1,5 @@
 
-const PluginFigureEditor = caph.makePlugin({
+caph.components.figureEditor = caph.makePlugin({
   component: ()=>{
     return html`
       <div id="fabric-editor-main" class="vbox fullscreen-layer hidden">

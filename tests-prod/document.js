@@ -239,6 +239,7 @@ async function main(){
     caph.load(url+"dist/plugin-fabric.js"),
     caph.load(url+"dist/plugin-figure-editor.js"),
   ]);
+  console.log(html`<${Main}/>`);
   preact.render(html`<${Main}/>`, document.body);
 };
 

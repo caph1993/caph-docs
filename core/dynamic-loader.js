@@ -2,6 +2,8 @@
 class ResourcesLoader{
 
   plugins = {};
+  components = {};
+  loadPlugins = async ()=>console.log('caph.loadPlugins not set. No plugins were loaded');
   _attachments=[];
   _loadStatus = {};
 
@@ -13,8 +15,6 @@ class ResourcesLoader{
     {ref: 'caph-docs/core/core.css',},
     {ref: 'caph-docs/core/menu.js',},
     {ref: 'caph-docs/core/elements.js',},
-    {ref: 'caph-docs/core/document.css',},
-    {ref: 'caph-docs/core/marp.css',},
     {ref: 'caph-docs/core/katex.min.js',},
     {ref: 'caph-docs/core/katex-nofonts.min.css',},
   ];
@@ -79,6 +79,7 @@ class ResourcesLoader{
       await this._load_elem(ref, tag, attrs, parent, where, content);
     } catch(err){
       console.log(err);
+      throw err;
     }
   }
 
@@ -126,34 +127,69 @@ class ResourcesLoader{
       setTimeout(()=>done||_err(['Timeout (3s) loading source:', e]), 3000);
     });
   };
+
+  async render(){
+    await this.ready();
+    let promise;
+    await (promise=this.loadPlugins());
+    if(Promise.resolve(promise) != promise){
+      let msg = 'caph.loadPlugin must be an asynchronous function!';
+      console.error(msg);
+      window.alert('Error: '+msg);
+    }
+    let rootElement = document.querySelector('#caph-root');
+    if(rootElement) rootElement.removeAttribute('id');
+    else{
+      rootElement = document.body;
+      console.warn("No element with id 'caph-root'. Using body.");
+    }
+    function hDataTag(type, props, ...children) {
+      let tag = props&&props['data-tag'];
+      let component = tag&&caph.components[tag];
+      if(tag && !component) console.warn(`Found undefined tag "${tag}".`);
+      if(component){
+        for(let k in props) if(k.startsWith('data-')){
+          let value = props[k];
+          delete props[k];
+          props[k.slice(5)] = value.length?value:'true';
+        }
+        delete props['tag'];
+        type = component;
+      }
+      return preact.h(type, props, children);
+    }
+    let dataParser = htm.bind(hDataTag);
+    let dom = dataParser([rootElement.innerHTML]);
+    preact.render(dom, rootElement);
+  }
+
+  makePlugin({component, loader=null, post_loader=null}){
+    return function(){
+      const [ready, setReady] = preact.useState(false);
+      const [error, setError] = preact.useState(null);
+      const _load = async ()=>{
+        try{
+          if(loader) await loader(...arguments);
+          setReady(true);
+          if(post_loader) await post_loader(...arguments);
+        } catch(err){ setError(err); console.error(err); }
+      };
+      preact.useEffect(()=>{_load();}, []);
+      return html`${
+        error? html`<div>Error</div>`
+        : (
+          ready? component.apply(this, arguments)
+          : html`
+            <div class="hbox align-center space-around flex"
+                style="width:100%;height:100%">
+              <div class="plugin-loading"/>
+            </div>`
+        )
+      }`;
+    }
+  }
 }
 
 window.caph_requirements = window.caph_requirements||[];
 var caph = new ResourcesLoader(window.caph_requirements);
 delete window.caph_requirements;
-
-caph.makePlugin = ({component, loader=null, post_loader=null})=>{
-  return function(){
-    const [ready, setReady] = preact.useState(false);
-    const [error, setError] = preact.useState(null);
-    const _load = async ()=>{
-      try{
-        if(loader) await loader(...arguments);
-        setReady(true);
-        if(post_loader) await post_loader(...arguments);
-      } catch(err){ setError(err); console.error(err); }
-    };
-    preact.useEffect(()=>{_load();}, []);
-    return html`${
-      error? html`<div>Error</div>`
-      : (
-        ready? component.apply(this, arguments)
-        : html`
-          <div class="hbox align-center space-around flex"
-              style="width:100%;height:100%">
-            <div class="plugin-loading"/>
-          </div>`
-      )
-    }`;
-  }
-}

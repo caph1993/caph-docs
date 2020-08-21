@@ -1,7 +1,7 @@
 // htm syntax
 
-const CaphSlides = caph.makePlugin({
-  component: ({children, defaultTheme})=>{
+caph.components.slides = caph.makePlugin({
+  component: ({children})=>{
     return html`
     <div class="reveal">
       <div class="slides">
@@ -9,35 +9,17 @@ const CaphSlides = caph.makePlugin({
       </div>
     </div>
   `},
-  loader: async({defaultTheme})=>{
-    await caph.load('caph-docs/reveal.js/dist/reveal.js');
-    await caph.load('caph-docs/reveal.js/dist/reveal.css');
-    if(defaultTheme) caph.load('caph-docs/core/marp.css');
-    await caph.load('caph-docs/reveal.js/plugin/notes/notes.js');
-    await caph.load('caph-docs/reveal.js/plugin/markdown/markdown.js');
-    await caph.load('caph-docs/reveal.js/plugin/highlight/highlight.js');
-
-    if(!document.getElementById('theme')){
-      await caph.load('caph-docs/reveal.js/dist/theme/simple.css', {
-        id: 'theme',
-        parent: caph.head_sources,
-      });
-    }
-    if(!document.getElementById('highlight-theme')){
-      await caph.load('caph-docs/reveal.js/plugin/highlight/monokai.css',{
-        id: 'highlight-theme',
-        parent: caph.head_sources,
-      });
-    }
-    
-    await caph.load('caph-docs/slides-core.css',{
-      parent: caph.head_sources,
-    });
+  loader: async({options, marp=true})=>{
+    await caph.load('caph-docs/libraries/reveal.js/dist/reveal.js');
+    await caph.load('caph-docs/libraries/reveal.js/dist/reveal.css');
+    if(marp) await caph.load('caph-docs/core/marp.css');
+    else await caph.load('caph-docs/libraries/reveal.js/dist/theme/simple.css');
+    await caph.load('caph-docs/libraries/reveal.js/plugin/notes/notes.js');
     return;
   },
-  post_loader: async({reveal_options})=>{
+  post_loader: async({options})=>{
     let print = (window.location.href.indexOf('?print-pdf')!=-1);
-    let options = MyObject.deep_assign({
+    options = MyObject.deep_assign({
       progress: true,
       slideNumber: 'c/t',
       history: true,
@@ -51,7 +33,7 @@ const CaphSlides = caph.makePlugin({
         //87: ()=> this.set_menu_option('Whiteboard'),// W key
         //27: ()=> this.set_menu_option('Default'),// esc key
       }
-    }, reveal_options);
+    }, options);
     if(print){
       options.width=options.height='100%';
       center=true;
@@ -115,10 +97,10 @@ caph.scroll = new class {
   }
 }
 
-const CaphDocument = caph.makePlugin({
+caph.components.document = caph.makePlugin({
   component: (props)=>{
     return html`
-    <div id="caph-body" class=${props.class}>
+    <div id="caph-root" class=${props.class}>
       ${props.children}
     </div>`
   },

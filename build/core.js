@@ -26,7 +26,6 @@ let sources = {
 };
 
 async function main(){
-
   let static = '';
   for(let path of sources.static) static+=''+fs.readFileSync(path);
   let loader = ''+fs.readFileSync(sources.loader);

@@ -1,12 +1,8 @@
 
-const FabricDiagram = caph.makePlugin({
-  component: ({children, id=null})=>{
-    assert(children&&children.props&&children.props.children);
-    let script = (x=>(Array.isArray(x)?x.join(''):x))(
-      children.props.children
-    );
-    let classString = children.props.class||"";
-    script = script.replace(/\\/g, '\\\\'); // Escape backslash again
+caph.components.fabric = caph.makePlugin({
+  component: ({children, id=null, class:_class})=>{
+    let script = (x=>(Array.isArray(x)?x.join(''):x))(children);
+    //script = script.replace(/\\/g, '\\\\'); // Escape backslash again
     if(!id) id='diagram-'+Math.floor(1e12*Math.random());
     preact.useEffect(()=>{ plugin(script); }, []);
 
@@ -17,7 +13,7 @@ const FabricDiagram = caph.makePlugin({
     }
     return html`
       <canvas id=${id} tabIndex="1" fireRightClick
-          class=${classString}>
+          class=${_class}>
       </canvas>
     `;
   },
