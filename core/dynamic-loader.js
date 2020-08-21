@@ -2,6 +2,7 @@
 class ResourcesLoader{
 
   plugins = {};
+  mathMacros = {};
   components = {};
   loadPlugins = async ()=>console.log('caph.loadPlugins not set. No plugins were loaded');
   _attachments=[];
@@ -14,7 +15,6 @@ class ResourcesLoader{
   _required = [
     {ref: 'caph-docs/core/core.css',},
     {ref: 'caph-docs/core/menu.js',},
-    {ref: 'caph-docs/core/elements.js',},
     {ref: 'caph-docs/core/katex.min.js',},
     {ref: 'caph-docs/core/katex-nofonts.min.css',},
   ];
@@ -134,9 +134,11 @@ class ResourcesLoader{
     await (promise=this.loadPlugins());
     if(Promise.resolve(promise) != promise){
       let msg = 'caph.loadPlugin must be an asynchronous function!';
-      console.error(msg);
       window.alert('Error: '+msg);
+      throw msg;
     }
+    this.loadMathMacros();
+
     let rootElement = document.querySelector('#caph-root');
     if(rootElement) rootElement.removeAttribute('id');
     else{
@@ -161,6 +163,21 @@ class ResourcesLoader{
     let dataParser = htm.bind(hDataTag);
     let dom = dataParser([rootElement.innerHTML]);
     preact.render(dom, rootElement);
+  }
+
+  loadMathMacros(){
+    // Load this.mathMacros to KaTeX.__defineMacro and MathJax.tex.macros
+    window.MathJax = MyObject.deep_assign({
+      tex: {inlineMath: [['$', '$'], ['\\(', '\\)']], macros:{}},
+      svg: {fontCache: 'local', exFactor: 1.0, scale: 0.9,},
+    }, window.MathJax||{});
+    
+    for(let key in this.mathMacros){
+      let s = this.mathMacros[key];
+      katex.__defineMacro(`\\${key}`, s);
+      let n = 1; while(s.indexOf(`#${n}`)!=-1) n+=1;
+      window.MathJax.tex.macros[key] = n==1?s : [s, n-1];
+    }
   }
 
   makePlugin({component, loader=null, post_loader=null}){

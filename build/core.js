@@ -13,15 +13,9 @@ let sources = {
   'loader': 'core/dynamic-loader.js',
   'dynamic': [
     'core/core.css',
-    'core/document.css',
-    'core/marp.css',
     'core/menu.js',
-    'core/elements.js',
     'core/katex.min.js',
     'core/katex-nofonts.min.css',
-    'core/reveal.js',
-    'core/reveal.css',
-    'core/hyphenator.min.js',
   ],
 };
 

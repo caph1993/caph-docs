@@ -29,14 +29,14 @@ html{
   background: #fff;
 }
 @media only screen and (max-width: 600px) {
-  #caph-body{
+  #caph-root{
     padding: 0.5em;
     margin-top: 0.2em;
     max-width: calc(100vw - 2em);
   }
 }
 @media print {
-  #caph-body{
+  #caph-root{
     margin: initial;
     padding: initial;
     max-width: initial;

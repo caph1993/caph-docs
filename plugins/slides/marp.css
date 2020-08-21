@@ -56,7 +56,13 @@ body{
 .reveal h5{ font-size: 1em; color: var(--bright-blue); }
 .reveal h6{ font-size: 1em; color: var(--brighter-blue); }
 
-.reveal section{
+.reveal section h1:first-child,
+.reveal section h2:first-child,
+.reveal section h3:first-child{
+  margin-top: 0;
+}
+
+.reveal .slides>section{
   text-align: left;
 }
 
