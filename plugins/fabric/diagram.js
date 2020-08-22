@@ -132,12 +132,16 @@ CaphFabric.Node = class extends CaphFabric.Element{
   async load_tex(formula, canvas, {scale=1}={}){
     formula = formula || '';
     const e = MathJax.tex2svg(formula).firstElementChild;
-    let size=canvas&&getComputedStyle(canvas.wrapperEl).fontSize;
-    size=size&&size.length&&parseFloat(size.replace('px',''));
+    let getSize=(elem)=>{
+      let size=canvas&&getComputedStyle(elem).fontSize;
+      return size&&size.length&&parseFloat(size.replace('px',''));
+    }
+    let q = [getSize(canvas.wrapperEl), getSize(canvas.wrapperEl.parentElement)];
+    let factor = q[0]&&q[1]?(q[0]/q[1]):1;
+
     ['height', 'width'].forEach((s)=>{
       let v = parseFloat(e.getAttribute(s).replace('ex', ''));
-      v = v*(size||10)/2*scale + 'px';
-      e.setAttribute(s, v);
+      e.setAttribute(s, (v*factor)+'em');
     });
     return await this.load_svg(e.outerHTML);
   }

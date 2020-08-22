@@ -346,26 +346,17 @@ const mathString = (text)=>{
   const getDisplay = (stringToDisplay) =>(
     stringToDisplay.match(blockRegularExpression) ? "block" : "inline"
   );
-  let parser;
-  if(window.katex)
-    parser=(formula, mode)=>katex.renderToString(formula, {
-      displayMode: mode=='block'});
-  else if((window.MathJax||{}).tex2svg)
-    parser = (formula, mode)=>(mode=='inline'?
-      MathJax.tex2svg(formula).innerHTML
-      :MathJax.tex2svg(formula).outerHTML
-    );
-  else{
-    console.warn('No math parser loaded for html`..$..$..`');
-    parser = (formula, mode)=>`<span class="math-${mode}"> ${formula} </span>`;
-  }
+  let parser = (formula, mode)=>`
+    <script data-tag="math" data-mode="${mode}" type="text/math">
+      String.raw\`${formula}\`
+    </script>`.trim();
   
   let result = [];
   text.split(regularExpression).forEach((s, index) => {
     result.push(s);
     if(latexMatch[index]) {
       let x = latexMatch[index];
-      let formula = stripDollars(x);
+      let formula = stripDollars(x).replace(/&amp;/g, '&');
       let mode = getDisplay(x);
       let block = parser(formula, mode);
       result.push(block);
@@ -712,7 +703,7 @@ class ResourcesLoader{
     // Load this.mathMacros to KaTeX.__defineMacro and MathJax.tex.macros
     window.MathJax = MyObject.deep_assign({
       tex: {inlineMath: [['$', '$'], ['\\(', '\\)']], macros:{}},
-      svg: {fontCache: 'local', exFactor: 1.0, scale: 0.9,},
+      svg: {fontCache: 'local', exFactor: 1.0, scale: 1.0,},
     }, window.MathJax||{});
     
     for(let key in this.mathMacros){
@@ -753,3 +744,10 @@ class ResourcesLoader{
 window.caph_requirements = window.caph_requirements||[];
 var caph = new ResourcesLoader(window.caph_requirements);
 delete window.caph_requirements;
+
+caph.components.math = ({children, mode='inline'})=>{
+  let script = (x=>(Array.isArray(x)?x.join(''):x))(children);
+  let formula = eval(script);
+  let s = katex.renderToString(formula, {displayMode: mode=='block'});
+  return html([s]);
+}

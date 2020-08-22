@@ -174,7 +174,7 @@ class ResourcesLoader{
     // Load this.mathMacros to KaTeX.__defineMacro and MathJax.tex.macros
     window.MathJax = MyObject.deep_assign({
       tex: {inlineMath: [['$', '$'], ['\\(', '\\)']], macros:{}},
-      svg: {fontCache: 'local', exFactor: 1.0, scale: 0.9,},
+      svg: {fontCache: 'local', exFactor: 1.0, scale: 1.0,},
     }, window.MathJax||{});
     
     for(let key in this.mathMacros){
@@ -215,3 +215,10 @@ class ResourcesLoader{
 window.caph_requirements = window.caph_requirements||[];
 var caph = new ResourcesLoader(window.caph_requirements);
 delete window.caph_requirements;
+
+caph.components.math = ({children, mode='inline'})=>{
+  let script = (x=>(Array.isArray(x)?x.join(''):x))(children);
+  let formula = eval(script);
+  let s = katex.renderToString(formula, {displayMode: mode=='block'});
+  return html([s]);
+}
