@@ -11,7 +11,7 @@
 }
 
 body{
-  font-family: "Liberation Sans", sans-serif;
+  font-family: "Latin Modern Sans", "Liberation Sans", sans-serif;
   color: var(--marp-black);
 }
 
@@ -62,7 +62,7 @@ body{
   margin-top: 0;
 }
 
-.reveal .slides>section{
+.reveal section{
   text-align: left;
 }
 

@@ -1,4 +1,3 @@
-
 const mathString = (text)=>{
   const regularExpression = /\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)|\$[^\$\\]*(?:\\.[^\$\\]*)*\$/g;
   const latexMatch = text.match(regularExpression);
@@ -29,7 +28,7 @@ const mathString = (text)=>{
     console.warn('No math parser loaded for html`..$..$..`');
     parser = (formula, mode)=>`<span class="math-${mode}"> ${formula} </span>`;
   }
-
+  
   let result = [];
   text.split(regularExpression).forEach((s, index) => {
     result.push(s);

@@ -45,7 +45,7 @@ caph.components.slides = caph.makePlugin({
     );
     Reveal.initialize(options);
     await MyPromise.until(()=>Reveal.isReady());
-    if(print) window.print();
+    if(print) caph.ready().then(()=>setTimeout(window.print, 1500));
     caph.menu.pushOption('PDF print', {
       show:()=>{
         let loc = window.location;

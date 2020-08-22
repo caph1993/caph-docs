@@ -8,6 +8,9 @@ class ResourcesLoader{
   _attachments=[];
   _loadStatus = {};
 
+  setPreReady;
+  _preReady = new Promise((setter, _)=>this.setPreReady=setter);
+  preReady = ()=>this._preReady;
   setReady;
   _ready = new Promise((setter, _)=>this.setReady=setter);
   ready = ()=>this._ready;
@@ -34,10 +37,10 @@ class ResourcesLoader{
       for(let s of this._required){
         await this.load(s.ref, {
           parent:this.div,
-          afterReady: false,
+          afterPreReady: false,
         });
       }
-      this.setReady();
+      this.setPreReady();
     })();
   }
 
@@ -55,9 +58,9 @@ class ResourcesLoader{
   }
 
   async load(ref, {attrs={}, parent=null, where='beforeend',
-      auto_attrs=true, afterReady=true}={}){
+      auto_attrs=true, afterPreReady=true}={}){
     // Load an external script or style by inserting relative to parent
-    if(afterReady) await this.ready();
+    if(afterPreReady) await this.preReady();
     if(parent==null) parent=this.div;
     const ext = ref.split('.').pop();
     let tag = ext=='js'? 'script': ext=='css'? 'link' : null;
@@ -124,12 +127,12 @@ class ResourcesLoader{
         }
       }
       parent.insertAdjacentElement(where, e);
-      setTimeout(()=>done||_err(['Timeout (3s) loading source:', e]), 3000);
+      setTimeout(()=>done||_err(['Timeout (5s) loading source:', e]), 5000);
     });
   };
 
   async render(){
-    await this.ready();
+    await this.preReady();
     let promise;
     await (promise=this.loadPlugins());
     if(Promise.resolve(promise) != promise){
@@ -161,8 +164,10 @@ class ResourcesLoader{
       return preact.h(type, props, children);
     }
     let dataParser = htm.bind(hDataTag);
-    let dom = dataParser([rootElement.innerHTML]);
-    preact.render(dom, rootElement);
+    let innerHtml = rootElement.innerHTML;
+    let vdom = dataParser([innerHtml]);
+    preact.render(vdom, rootElement);
+    this.setReady();
   }
 
   loadMathMacros(){

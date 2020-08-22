@@ -21,9 +21,7 @@ caph.menu = new class{
 
   pushOption(text, {show=()=>null, hide=()=>null}={}){
     let element = MyDocument.createElement('option',{
-      text,
-      parent: this.elem,
-      where: 'beforeend',
+      text, value:text, parent: this.elem, where: 'beforeend',
     });
     this.options.push({text, show, hide, element});
     if(this.options.length>1){
@@ -60,8 +58,8 @@ caph.menu = new class{
         `
       });
       this.pushOption('About', {
-        show:()=>{about.classList.remove('hidden'); },
-        hide:()=>{about.classList.add('hidden'); },
+        show:()=>{ about.classList.remove('hidden'); },
+        hide:()=>{ about.classList.add('hidden'); },
       });
     });
   }
