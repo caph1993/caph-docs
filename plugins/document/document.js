@@ -40,9 +40,9 @@ caph.scroll = new class {
 }
 
 caph.components.document = caph.makePlugin({
-  component: (props)=>{
+  component: ({class:_class})=>{
     return html`
-    <div id="caph-root" class=${props.class}>
+    <div id="caph-root" class=${_class}>
       ${props.children}
     </div>`
   },

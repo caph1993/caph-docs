@@ -95,3 +95,5 @@ div.plugin-loading.fullscreen-plugin-loading{
   border-radius: 1em;
   font-family: monospace, arial;
 }
+.mspace{ min-width:0.25em; }
+.mord{ display: inline-block; }

@@ -153,10 +153,12 @@ class ResourcesLoader{
       let component = tag&&caph.components[tag];
       if(tag && !component) console.warn(`Found undefined tag "${tag}".`);
       if(component){
-        for(let k in props) if(k.startsWith('data-')){
-          let value = props[k];
+        for(const k in props) if(k.startsWith('data-')){
+          const strValue = props[k];
           delete props[k];
-          props[k.slice(5)] = value.length?value:'true';
+          let value = strValue.length?strValue:'true';
+          try{ value=eval(`(${value})`); }catch(error){}
+          props[k.slice(5)] = value;
         }
         delete props['tag'];
         type = component;
@@ -165,9 +167,19 @@ class ResourcesLoader{
     }
     let dataParser = htm.bind(hDataTag);
     let innerHtml = rootElement.innerHTML;
+    innerHtml = this.fixSelfClosing(innerHtml);
     let vdom = dataParser([innerHtml]);
     preact.render(vdom, rootElement);
     this.setReady();
+  }
+
+  fixSelfClosing(text){
+    const tags='area base br col command embed hr img input keygen link meta param source track wbr';
+    for(const tag of tags.split(' ')){
+      const reg = new RegExp(`<${tag}(.*?)\/?>`, 'g'); 
+      text = text.replace(reg, `<div data-tag="selfClosing" data-htmlTag="${tag}" $1></div>`);
+    }
+    return text;
   }
 
   loadMathMacros(){
@@ -210,15 +222,68 @@ class ResourcesLoader{
       }`;
     }
   }
+  entities = {
+    '&nbsp;': '\\ ', '&amp;' :'&', '&gt;' :'>', '&lt;' :'<',
+    '&quot;' :'"', '&apos;' :"'",
+    '&cent;' :'¢', '&pound;' :'£', '&yen;' :'¥',
+    '&euro;' :'€', '&copy;' :'©', '&reg;' :'®',
+  };
+  replace(s, obj){ // Undo xthm replacements
+    if(obj==undefined) obj=this.entities;
+    for(const key in obj) s = s.replace(new RegExp(key, 'g'), obj[key]);
+    return s;
+  }
+  mathString(text){
+    const regularExpression = /\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)|\$[^\$\\]*(?:\\.[^\$\\]*)*\$/g;
+    const latexMatch = text.match(regularExpression);
+    
+    if(!latexMatch) return text; // no math in text
+
+    const blockRegularExpression = /\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]/g;
+    
+    const stripDollars = (stringToStrip) =>(
+      (stringToStrip[0] === "$" && stringToStrip[1] !== "$")?
+        stringToStrip.slice(1, -1)
+        : stringToStrip.slice(2, -2)
+    );
+
+    const getDisplay = (stringToDisplay) =>(
+      stringToDisplay.match(blockRegularExpression) ? "block" : "inline"
+    );
+    let parser = (formula, mode)=>`
+      <script data-tag="math" data-mode="${mode}" type="text/math">
+        ${formula}
+      </script>`.trim();
+    
+    let result = [];
+    text.split(regularExpression).forEach((s, index) => {
+      result.push(caph.replace(s));
+      if(latexMatch[index]) {
+        const x = latexMatch[index];
+        const mode = getDisplay(x);
+        let formula = caph.replace(stripDollars(x));
+        const block = parser(formula, mode);
+        result.push(block);
+      }
+    });
+    return result.join('');
+  }
 }
 
 window.caph_requirements = window.caph_requirements||[];
 var caph = new ResourcesLoader(window.caph_requirements);
 delete window.caph_requirements;
+window.html = htm.bind(preact.createElement);
+
+caph.components.selfClosing = ({htmlTag, ...props})=>{
+  return preact.createElement(htmlTag, props);
+};
 
 caph.components.math = ({children, mode='inline'})=>{
-  let script = (x=>(Array.isArray(x)?x.join(''):x))(children);
-  let formula = eval(script);
-  let s = katex.renderToString(formula, {displayMode: mode=='block'});
-  return html([s]);
-}
+  const formula = (x=>(Array.isArray(x)?x.join(''):x))(children);
+  const htmlFormula = katex.renderToString(formula, {
+    displayMode: mode=='block',
+    throwOnError: false,
+  });
+  return html([caph.replace(htmlFormula)]);
+};

@@ -1,7 +1,7 @@
 // htm syntax
 
 caph.components.slides = caph.makePlugin({
-  component: ({children})=>{
+  component: ({children, options})=>{
     return html`
     <div class="reveal">
       <div class="slides">
@@ -9,7 +9,7 @@ caph.components.slides = caph.makePlugin({
       </div>
     </div>
   `},
-  loader: async({options, marp=true})=>{
+  loader: async({marp=true})=>{
     await caph.load('caph-docs/libraries/reveal.js/dist/reveal.js');
     await caph.load('caph-docs/libraries/reveal.js/dist/reveal.css');
     if(marp) await caph.load('caph-docs/plugins/slides/marp.css');
@@ -24,7 +24,8 @@ caph.components.slides = caph.makePlugin({
       slideNumber: 'c/t',
       history: true,
       //center: true,
-      //width: '100%', height: '100%',
+      //width: '100%',
+      height: '100%',
       hash: true,
       transition: 'none', // none/fade/slide/convex/concave/zoom
       //plugins: [ RevealMarkdown, RevealHighlight, RevealNotes ],

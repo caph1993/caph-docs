@@ -10,8 +10,9 @@ let sources = {
     'core/math.js',
     'libraries/preact-10.4.6/preact.min.js',
     'libraries/preact-10.4.6/hooks.js',
-    'libraries/xhtm-1.5.3/htm.js',
-    'libraries/xhtm-1.5.3/index.js',
+    'libraries/htm-3.0.4/htm.js',
+    //'libraries/xhtm-1.5.3/htm.js',
+    //'libraries/xhtm-1.5.3/index.js',
   ],
   'loader': 'core/dynamic-loader.js',
   'dynamic': [
@@ -47,10 +48,17 @@ function parseContent(path){
     text +=`for(let key in hooks) preact[key]=hooks[key];\n`;
     text +=`delete window.hooks;\n`;
   } else if(name=='htm'){
-    text = text.replace(
-      /function *\(statics\) *{/g,
-      'function (statics) {\n  statics=[...statics.map(mathString)]; // Math support!',
-    );
+    if(path.indexOf('/xhtm')!=-1){
+      text = text.replace(
+        /function *\(statics\) *{/g,
+        'function (statics) {\n  statics=[...statics.map(mathString)]; // Math support!',
+      );
+    } else{
+      text = text.replace(
+        /function *\(e\) *{/g,
+        'function (e) {\n  e=[...e.map(caph.mathString)]; /* Math support */ ',
+      );
+    }
   }
   return `//${path}\n${text}`;
 }

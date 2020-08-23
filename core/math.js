@@ -17,17 +17,17 @@ const mathString = (text)=>{
   );
   let parser = (formula, mode)=>`
     <script data-tag="math" data-mode="${mode}" type="text/math">
-      String.raw\`${formula}\`
+      ${formula}
     </script>`.trim();
   
   let result = [];
   text.split(regularExpression).forEach((s, index) => {
-    result.push(s);
+    result.push(caph.replace(s));
     if(latexMatch[index]) {
-      let x = latexMatch[index];
-      let formula = stripDollars(x).replace(/&amp;/g, '&');
-      let mode = getDisplay(x);
-      let block = parser(formula, mode);
+      const x = latexMatch[index];
+      const mode = getDisplay(x);
+      let formula = caph.replace(stripDollars(x));
+      const block = parser(formula, mode);
       result.push(block);
     }
   });
