@@ -141,9 +141,27 @@ let fonts = {
       'font-weight': 'normal',
       'font-style': 'normal',
     }
-  ]
+  ],
+  'font-material-icons': [
+    {
+      'font-family': 'Material Icons',
+      'path': 'fonts/material-icons/material-icons.woff2',
+      'font-style': 'normal',
+      'font-weight': '400',
+    },
+    {
+      'path': 'fonts/material-icons/material-icons.css',
+    }
+  ],
+  'font-open-sans-emoji': [
+    {
+      'font-family': 'Open Sans Emoji',
+      'path': 'fonts/open-sans-emoji/OpenSansEmoji.otf',
+      'font-style': 'normal',
+      'font-weight': '400',
+    },
+  ],
 };
-
 
 
 function parseFont(font){
@@ -152,8 +170,11 @@ function parseFont(font){
     {ext: 'ttf', name: 'truetype'},
     {ext: 'woff', name: 'woff'},
     {ext: 'woff2', name: 'woff2'},
+    {ext: 'css', name: 'css'},
   ].find(e=>font.path.endsWith(e.ext));
   if(!ext) throw `Unknown font extension of: ${font.path}`;
+  
+  if(ext=='css') return `/*${font.path}*/\n${fs.readFileSync(font.path)}\n`;
   let b64 = fs.readFileSync(font.path).toString('base64');
   let f = {...font};
   delete f.path;
@@ -169,7 +190,6 @@ function parseFont(font){
 }
 `;
 }
-
 
 async function main(){
   for(let key in fonts){
