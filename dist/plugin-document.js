@@ -42,20 +42,20 @@ caph.scroll = new class {
 }
 
 caph.components.document = caph.makePlugin({
-  component: ({class:_class})=>{
+  component: ({children, class:_class})=>{
     return html`
     <div id="caph-root" class=${_class}>
-      ${props.children}
+      ${children}
     </div>`
   },
-  loader: async({theme})=>{
+  loader: async({})=>{
     await caph.load('caph-docs/plugins/document/document.css');
     caph.menu.pushOption('PDF print', {
       show:()=>{window.print(); caph.menu.onSelect();},
     });
     return;
   },
-  post_loader: async({theme})=>{
+  post_loader: async({})=>{
     let main = await MyPromise.until(()=>
       document.querySelector('#caph-root')
     );
