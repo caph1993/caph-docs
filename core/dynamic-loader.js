@@ -33,6 +33,16 @@ class ResourcesLoader{
         where: 'beforeend',
       });
     }
+    const metaContent = document.querySelector('meta[content]');
+    if(!metaContent) MyDocument.createElement('div', {
+      parent: document.head,
+      where: 'afterbegin',
+      name: 'viewport',
+      content: window.innerWidth > 960?
+        'width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no'
+        : 'width=1024'
+    });
+
     (async()=>{
       for(let s of this._required){
         await this.load(s.ref, {
