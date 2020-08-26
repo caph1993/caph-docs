@@ -18,7 +18,10 @@ caph.components.slides = caph.makePlugin({
     return;
   },
   post_loader: async({options})=>{
-    let print = (window.location.href.indexOf('?print-pdf')!=-1);
+    let print = (
+      window.location.href.indexOf('?print-pdf')!=-1
+      || window.location.href.indexOf('&print-pdf')!=-1
+    );
     options = MyObject.deep_assign({
       progress: true,
       slideNumber: 'c/t',
@@ -89,13 +92,15 @@ caph.components.slides = caph.makePlugin({
         }
         i++;
       }
+      caph.scroll.initial_scroll();
       await sleep(100);
       if(confirm('Export as PDF?'))window.print();
     })();
     caph.menu.pushOption('PDF print', {
       show:()=>{
-        let loc = window.location;
-        open(loc.href.slice(0,-loc.hash.length)+'?print-pdf');
+        const loc = window.location;
+        let url = loc.href.slice(0,-loc.hash.length);
+        open(url+(loc.search.length?'&':'?')+'print-pdf');
         caph.menu.onSelect();
       },
     });

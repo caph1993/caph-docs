@@ -131,14 +131,10 @@ CaphFabric.Node = class extends CaphFabric.Element{
 
   async load_tex(formula, canvas, {scale=1}={}){
     formula = formula || '';
-    const e = MathJax.tex2svg(formula).firstElementChild;
-    let getSize=(elem)=>{
-      let size=canvas&&getComputedStyle(elem).fontSize;
-      return size&&size.length&&parseFloat(size.replace('px',''));
-    }
-    let q = [getSize(canvas.wrapperEl), getSize(canvas.wrapperEl.parentElement)];
-    let factor = q[0]&&q[1]?(q[0]/q[1]):1;
-
+    // Dont't use canvas.wrapperElem. styles might not be ready
+    const options = MathJax.getMetricsFor(document.body, true);
+    const e = MathJax.tex2svg(formula, options).firstElementChild;
+    const factor = options.em/35*scale;
     ['height', 'width'].forEach((s)=>{
       let v = parseFloat(e.getAttribute(s).replace('ex', ''));
       e.setAttribute(s, (v*factor)+'em');
@@ -154,7 +150,9 @@ CaphFabric.Node = class extends CaphFabric.Element{
     if(padding===undefined) padding=null;
     let width = text.width*text.scaleX;
     let height = text.height*text.scaleY;
-    if(padding==null) padding = 3+Math.log1p(height*width);
+    if(padding==null){
+      padding = 2*Math.log1p(width);
+    }
     text.set({top:padding, left:padding});
 
     let rect = new fabric.Rect({
@@ -191,7 +189,7 @@ CaphFabric.Arrow = class extends CaphFabric.Element{
     line: {},
     from: {tip:null},
     to: {tip:'triangle'},
-    text: {}, box: { stroke:'', fill:'#ffffffee', padding:1},
+    text: {}, box: { stroke:'', fill:'#ffffffee', padding:2},
   }
   parse_style({text, box, line, from, to, ...all}){
     this.style = CaphFabric.parse_style(
@@ -431,16 +429,23 @@ CaphFabric.exposed_args = {
   HGrid: (...args)=>new CaphFabric.HGrid(...args),
   Node: (...args)=>new CaphFabric.Node(...args),
   Arrow: (...args)=>new CaphFabric.Arrow(...args),
-  draw: async function (canvas, {layout, width, height,
+  draw: async function (canvas, {layout, width, height, maxVWidth=1, maxVHeight=1,
       nodes={}, arrows=[], borders=false}={}){
-    let lnodes = Object.values(nodes);
-    layout = layout || new CaphFabric.Tree(lnodes);
     width = width || 500;
     height = height || width;
+    const scale = Math.min(1,
+      (window.innerWidth*maxVWidth)/width,
+      (window.innerHeight*maxVHeight)/height,
+    );
+    width = Math.floor(scale*width);
+    height = Math.floor(scale*height);
+    let lnodes = Object.values(nodes);
+    layout = layout || new CaphFabric.Tree(lnodes);
     for(let u of lnodes) await u.load_content(canvas);
     for(let a of arrows) await a.load_content(canvas);
     await layout.draw_on(canvas, {width, height, borders});
     for(let a of arrows) await a.draw_on(canvas);
+    // Force size again (hotfix for small devices)
   },
   light_palette:{
     white: '#fffd', gold: '#fe6d',

@@ -12,6 +12,7 @@
 
 body{
   font-family: "Liberation Sans", sans-serif;
+  font-size: calc(0.8em + 1.8vw);
   color: var(--marp-black);
 }
 
@@ -24,10 +25,9 @@ body{
 .box-shadow:hover{
   box-shadow: 0px 0px 0.3rem 0.2rem rgba(0,0,0,0.75);
 }
-
-.reveal .slides > section, .reveal .slides .pdf-page section{
+.reveal .slides > section,
+.reveal .slides .pdf-page section{
   min-width: 90vw;
-  font-size: 2.3rem;
 }
 .pdf-page section{ border: solid 1px #ccc; }
 .pdf-page{ border: solid 1px black; }

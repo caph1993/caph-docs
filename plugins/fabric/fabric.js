@@ -1,9 +1,9 @@
 caph.plugins.fabric = new class {
   
   async render(canvas, script){
-    let fabric_canvas = new fabric.Canvas(canvas);
+    let fabricCanvas = new fabric.Canvas(canvas);
     canvas.classList.forEach((s)=>
-      fabric_canvas.wrapperEl.classList.add(s)
+      fabricCanvas.wrapperEl.classList.add(s)
     );
     canvas.nextSibling.oncontextmenu=(ev)=>{
       ev.preventDefault();
@@ -11,8 +11,8 @@ caph.plugins.fabric = new class {
     };
     try{ var f = eval(script); }
     catch(err){ console.error('INVALID SYNTAX:\n'+script); throw err; }
-    await f(fabric_canvas, caph.plugins.fabricDiagram.exposed_args);
-    return 
+    await f(fabricCanvas, caph.plugins.fabricDiagram.exposed_args);
+    return fabricCanvas;
   }
 
   serialize(canvas){

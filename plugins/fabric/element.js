@@ -9,7 +9,11 @@ caph.components.fabric = caph.makePlugin({
     const plugin = async(script)=>{
       let canvas = await MyPromise.until(()=>
         document.querySelector(`#${id}`));
-      caph.plugins.fabric.render(canvas, script);
+      let fabricCanvas = await caph.plugins.fabric.render(canvas, script);
+      window.addEventListener('resize', async ()=>{
+        fabricCanvas.dispose();
+        fabricCanvas = await caph.plugins.fabric.render(canvas, script);
+      });
     }
     return html`
       <canvas id=${id} tabIndex="1" fireRightClick
