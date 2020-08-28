@@ -1,32 +1,20 @@
-/* ----------- Tex theme --------------- */
-
-:root {
-  --font-black: #121417;
-  --marp-black: #24292e;
-  --marp-blue: #224466;
-  --marp-blacker: #14191e;
-  --marp-bullet: #555555;
-  --bright-blue: #336699;
-  --brighter-blue: #4488CC;
-  --marp-green: #2F7F2F;
-}
 
 html{
-  background: #eee;
+  background: var(--background-2);
   font-family: serif;
 }
 #caph-root{
+  color: var(--text);
+  background: var(--background);
   font-size: 1.2rem;
   padding: 5em;
   padding-top: 3.5em;
   margin: auto;
   margin-bottom: calc(50vh - 5em);
   margin-top: 3em;
-  color: var(--marp-black);
   max-width: 30em;
   box-shadow: 0px 0px 1px 0px;
   text-align: justify;
-  background: #fff;
 }
 @media only screen and (max-width: 600px) {
   #caph-root{
@@ -48,10 +36,10 @@ html{
   }
 }
 
-h1, h2{ color: #224466; }
+h1, h2{ color: var(--text-2); }
 pre{
   display: inline;
-  background-color: #ddd;
+  background-color: var(--background-pre);
   padding: 0em 0.25em;
   border-radius: 0.2em;
 };
@@ -62,6 +50,8 @@ span.katex.display.formula{
 span.katex{
   font-size: 1em;
 }
+/*.katex{ filter: contrast(130%); }*/
+
 table{
   margin-top: 0.5em;
   margin-bottom: 0.5em;

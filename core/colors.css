@@ -1,0 +1,32 @@
+
+html {
+  --background: #fff;
+  --background-2: #eee;
+  --background-pre: #ddd;
+  --text: #24292e;
+  --text-strong: #14191e;
+  --text-2: #224466;
+  --box-shadow: rgba(0,0,0,0.75);
+  --marp-green: #2F7F2F;
+}
+
+@media only screen {
+  html[data-theme='dark'] {
+    --background: #282923;
+    --background-2: #6d6e6a;
+    --background-pre: #aaa;
+    --text: #f8f8f2;
+    --text-strong: #fff;
+    --text-2: #67d8ef;
+    --box-shadow: rgba(100,100,100,0.75);
+
+    --text-color-normal: hsl(210, 10%, 62%);
+    --text-color-light: hsl(210, 15%, 35%);
+    --text-color-richer: hsl(210, 50%, 72%);
+    --text-color-highlight: hsl(25, 70%, 45%);
+  }
+  html[data-theme='dark'] .auto-dark{
+    filter: brightness(50%);
+  }
+}
+

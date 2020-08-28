@@ -128,6 +128,49 @@
     </script>
   </div>
 </section>
+
+
+<section>
+  <h3>Heavy load test</h3>
+  <script>
+    window.fig1=async (canvas, {draw, node, arrow, Row, Column})=>{
+      let n = {
+        X: node('X'),
+        PY: node('\\hat Y'),
+        Y: node('Y'),
+        PYn: node('\\hat{\\tilde Y}'),
+        Yn: node('\\tilde{Y}'),
+      };
+      let arrows = [
+        arrow(n.X, n.PY, 'RL'),
+        arrow(n.X, n.PYn, 'RL'),
+        arrow(n.Y, n.PY, 'LR', {
+          text: '\\mathcal L', dashed: true,
+        }),
+        arrow(n.Yn, n.PYn, 'LR', {
+          text:'\\mathcal L', dashed: true,
+        }),
+      ];
+      let layout = Row(
+        n.X,
+        Column(n.PY, n.PYn),
+        Column(n.Y, n.Yn),
+      );
+      await draw(canvas, {
+        nodes:n, arrows, layout,
+        width:500, height:150,
+        borders: false,
+      });
+    }
+  </script>
+  <div class="hbox space-around">
+    <script data-tag="fabric" class="box-shadow">fig1</script>
+    <script data-tag="fabric" class="box-shadow">fig1</script>
+    <script data-tag="fabric" class="box-shadow">fig1</script>
+    <script data-tag="fabric" class="box-shadow">fig1</script>
+  </div>
+</section>
+
   </div>
 </body>
 </html>

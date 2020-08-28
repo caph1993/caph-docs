@@ -1,6 +1,7 @@
 
 class ResourcesLoader{
 
+  theme='light';
   plugins = {};
   mathMacros = {};
   components = {};
@@ -16,13 +17,15 @@ class ResourcesLoader{
   ready = ()=>this._ready;
 
   _required = [
+    {ref: 'caph-docs/core/colors.css',},
     {ref: 'caph-docs/core/core.css',},
     {ref: 'caph-docs/core/menu.js',},
-    {ref: 'caph-docs/core/katex.min.js',},
-    {ref: 'caph-docs/core/katex-nofonts.min.css',},
+    //{ref: 'caph-docs/core/katex.min.js',},
+    //{ref: 'caph-docs/core/katex-nofonts.min.css',},
   ];
   
   constructor(required_attachments){
+    this.setTheme(window.localStorage.getItem('theme'));
     for(let a of required_attachments) this.attach(a);
 
     this.div = document.getElementById('core-sources');
@@ -52,6 +55,14 @@ class ResourcesLoader{
       }
       this.setPreReady();
     })();
+  }
+  setTheme(theme){
+    const root = document.querySelector('html');
+    if(theme!='dark' && theme!='light'){
+      theme = root.getAttribute('data-theme')!='dark'?'dark':'light';
+    }
+    root.setAttribute('data-theme', this.theme=theme);
+    window.localStorage.setItem('theme', theme);
   }
 
   getAttachment(ref){
@@ -150,7 +161,6 @@ class ResourcesLoader{
       window.alert('Error: '+msg);
       throw msg;
     }
-    this.loadMathMacros();
 
     let rootElement = document.querySelector('#caph-root');
     if(rootElement) rootElement.removeAttribute('id');
@@ -158,11 +168,10 @@ class ResourcesLoader{
       rootElement = document.body;
       console.warn("No element with id 'caph-root'. Using body.");
     }
+    const createComponent = this.createComponent;
     function hDataTag(type, props, ...children) {
       let tag = props&&props['data-tag'];
-      let component = tag&&caph.components[tag];
-      if(tag && !component) console.warn(`Found undefined tag "${tag}".`);
-      if(component){
+      if(tag){
         for(const k in props) if(k.startsWith('data-')){
           const strValue = props[k];
           delete props[k];
@@ -171,7 +180,7 @@ class ResourcesLoader{
           props[k.slice(5)] = value;
         }
         delete props['tag'];
-        type = component;
+        type = caph.Plugin.component(tag);
       }
       return preact.h(type, props, children);
     }
@@ -192,22 +201,26 @@ class ResourcesLoader{
     return text;
   }
 
-  loadMathMacros(){
-    // Load this.mathMacros to KaTeX.__defineMacro and MathJax.tex.macros
-    window.MathJax = MyObject.deep_assign({
-      tex: {inlineMath: [['$', '$'], ['\\(', '\\)']], macros:{}},
-      svg: {fontCache: 'local', exFactor: 1.0, scale: 1.0,},
-    }, window.MathJax||{});
-    
-    for(let key in this.mathMacros){
-      let s = this.mathMacros[key];
-      katex.__defineMacro(`\\${key}`, s);
-      let n = 1; while(s.indexOf(`#${n}`)!=-1) n+=1;
-      window.MathJax.tex.macros[key] = n==1?s : [s, n-1];
+  createComponent(tag){
+    return function(){
+      const [component, setComponent] = preact.useState(null);
+      const _load = async ()=>{
+        const component = await MyPromise.until(()=>caph.components[tag]);
+        setComponent(()=>component);
+      };
+      preact.useEffect(()=>{_load();}, []);
+      return html`${
+        component?component.apply(this, arguments)
+        :
+          html`
+            <div class="hbox align-center space-around flex plugin-loading-container">
+              <div>${name} <div class="plugin-loading"/></div>
+            </div>`
+      }`;
     }
   }
 
-  makePlugin({component, loader=null, post_loader=null}){
+  makePlugin({component, loader=null, post_loader=null, name=null}){
     return function(){
       const [ready, setReady] = preact.useState(false);
       const [error, setError] = preact.useState(null);
@@ -220,18 +233,19 @@ class ResourcesLoader{
       };
       preact.useEffect(()=>{_load();}, []);
       return html`${
-        error? html`<div>Error</div>`
+        error? html`<div>${name} Error</div>`
         : (
           ready? component.apply(this, arguments)
           : html`
-            <div class="hbox align-center space-around flex"
-                style="width:100%;height:100%">
-              <div class="plugin-loading"/>
+            <div class="hbox align-center space-around flex plugin-loading-container">
+              <div>${name} <div class="plugin-loading"/></div>
             </div>`
         )
       }`;
     }
   }
+
+
   entities = {
     '&nbsp;': '\\ ', '&amp;' :'&', '&gt;' :'>', '&lt;' :'<',
     '&quot;' :'"', '&apos;' :"'",
@@ -285,10 +299,6 @@ var caph = new ResourcesLoader(window.caph_requirements);
 delete window.caph_requirements;
 window.html = htm.bind(preact.createElement);
 
-caph.components.selfClosing = ({htmlTag, ...props})=>{
-  return preact.createElement(htmlTag, props);
-};
-
 
 caph.scroll = new class {
   constructor(){
@@ -329,51 +339,94 @@ caph.scroll = new class {
   }
 }
 
-caph.components.math = ({children, mode='inline'})=>{
-  const formula = (x=>(Array.isArray(x)?x.join(''):x))(children);
-  const htmlFormula = katex.renderToString(formula, {
-    displayMode: mode=='block',
-    throwOnError: false,
-  });
-  return html([caph.replace(htmlFormula)]);
+caph.Plugin = class{
+  
+  loadInline = false;
+  
+  loader(){}
+
+  post_loader(){}
+  
+  render({children, class:_class, ...props}){
+    console.log(props);
+    return html`<div class="${_class}">${children}</div>`;
+  }
+
+  static component(tag){
+    return function(){
+      const [plugin, setPlugin] = preact.useState(null);
+      const [ready, setReady] = preact.useState(false);
+      const [error, setError] = preact.useState(null);
+      const [loadInline, setLoadInline] = preact.useState(true);
+      // load as inline before plugin is even loaded
+
+      const _load = async ()=>{
+        const plugin = await MyPromise.until(()=>caph.plugins[tag]);
+        setPlugin(()=>plugin);
+        setLoadInline(plugin.loadInline);
+        try{
+          if(plugin.loader) await plugin.loader(plugin, ...arguments);
+          setReady(true);
+          if(plugin.post_loader) await plugin.post_loader(plugin, ...arguments);
+        } catch(err){ setError(err); console.error(err); }
+      };
+      preact.useEffect(()=>{_load();}, []);
+      return html`${
+        !error&&ready? plugin.render.apply(plugin, arguments)
+        : html`
+          <div style="display:${loadInline?'inline':'block'}"
+              class="hbox align-center space-around flex plugin-loading-container">
+            ${error?'error':html`
+              <span>${tag}</span> <div class="plugin-loading"/>
+            `}
+          </div>
+      `}`;
+    }
+  }
+}
+
+caph.loadKatexMacros = MyDecorators.once(()=>{
+  for(const key in caph.mathMacros){
+    katex.__defineMacro(`\\${key}`, caph.mathMacros[key]);
+  }
+});
+
+
+caph.loadMathJaxMacros = MyDecorators.once(()=>{
+  window.MathJax = MyObject.deep_assign({
+    tex: {inlineMath: [['$', '$'], ['\\(', '\\)']], macros:{}},
+    svg: {fontCache: 'local', exFactor: 1.0, scale: 1.0,},
+  }, window.MathJax||{});
+  for(const key in caph.mathMacros){
+    const s = caph.mathMacros[key];
+    let n = 1; while(s.indexOf(`#${n}`)!=-1) n+=1;
+    window.MathJax.tex.macros[key] = n==1?s : [s, n-1];
+  }
+});
+
+
+caph.plugins.selfClosing = new class extends caph.Plugin{
+  loadInline=false;
+  render({htmlTag, ...props}){
+    return preact.createElement(htmlTag, props);
+  }
 };
 
 
-caph.scroll = new class {
-  constructor(){
-    // restore previous scroll position if available
-    window.addEventListener('keydown', (e)=>{
-      if (e.keyCode == 116) this.save_scroll_position(); // F5 key
+caph.plugins.math = new class extends caph.Plugin{
+  loadInline=true;
+
+  render({children, mode='inline'}){
+    const formula = (x=>(Array.isArray(x)?x.join(''):x))(children);
+    const htmlFormula = katex.renderToString(formula, {
+      displayMode: mode=='block',
+      throwOnError: false,
     });
+    return html([caph.replace(htmlFormula)]);
   }
-  save_scroll_position(){
-    window.localStorage.setItem('scrollX', ''+window.scrollX);
-    window.localStorage.setItem('scrollY', ''+window.scrollY);
-  }
-  load_scroll_position(){
-    let scrollX = parseInt(window.localStorage.getItem('scrollX'));
-    let scrollY = parseInt(window.localStorage.getItem('scrollY'));
-    window.scrollBy(scrollX-window.scrollX, scrollY-window.scrollY);
-  }
-  load_href_scroll_position(){
-    let href =  window.location.href;
-    if (href.indexOf('startAt') != -1 ) {
-      let match = href.split('?')[1].split("&")[0].split("=");
-      document.getElementsByTagName("body")[0].scrollTop = match[1];
-    }
-  }
-  async initial_scroll(ms=200, ms_stable=3000){
-    // scrolls to last saved scroll position every ms until the
-    // document height is stable for at least ms_stable
-    // fights scroll unstability after each visible plugin loads 
-    let t=0, h, prevh, initialh;
-    do{
-      prevh=initialh=document.body.scrollHeight;
-      for(let t=0; t<ms_stable; t+=ms){
-        await sleep(ms);
-        h = document.body.scrollHeight;
-        if(h!=prevh){ prevh=h; this.load_scroll_position();}
-      }
-    } while(prevh!=initialh);
+  async loader(){
+    await caph.load('caph-docs/core/katex.min.js');
+    await caph.load('caph-docs/core/katex-nofonts.min.css');
+    caph.loadKatexMacros();
   }
 }

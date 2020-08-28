@@ -1,23 +1,23 @@
-// htm syntax
-
-caph.components.slides = caph.makePlugin({
-  component: ({children, options})=>{
+caph.plugins.slides = new class extends caph.Plugin {
+  render({children, options}){
     return html`
     <div class="reveal">
       <div class="slides">
         ${children}
       </div>
     </div>
-  `},
-  loader: async({marp=true})=>{
+  `}
+
+  async loader({marp=true}){
     await caph.load('caph-docs/libraries/reveal.js/dist/reveal.js');
     await caph.load('caph-docs/libraries/reveal.js/dist/reveal.css');
     if(marp) await caph.load('caph-docs/plugins/slides/marp.css');
     else await caph.load('caph-docs/libraries/reveal.js/dist/theme/simple.css');
     await caph.load('caph-docs/libraries/reveal.js/plugin/notes/notes.js');
     return;
-  },
-  post_loader: async({options})=>{
+  }
+
+  async post_loader({options}){
     let print = (
       window.location.href.indexOf('?print-pdf')!=-1
       || window.location.href.indexOf('&print-pdf')!=-1
@@ -106,4 +106,4 @@ caph.components.slides = caph.makePlugin({
     });
     return;
   }
-});
+};

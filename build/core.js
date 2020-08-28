@@ -7,7 +7,7 @@ let sources = {
   'static': [
     'libraries/lzutf8-0.5.5/lzutf8.min.js',
     'core/utils.js',
-    'core/math.js',
+    //'core/math.js',
     'libraries/preact-10.4.6/preact.min.js',
     'libraries/preact-10.4.6/hooks.js',
     'libraries/htm-3.0.4/htm.js',
@@ -16,6 +16,7 @@ let sources = {
   ],
   'loader': 'core/dynamic-loader.js',
   'dynamic': [
+    'core/colors.css',
     'core/core.css',
     'core/menu.js',
     'core/katex.min.js',

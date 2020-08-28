@@ -1,6 +1,7 @@
 
-caph.components.figureEditor = caph.makePlugin({
-  component: ()=>{
+caph.plugins.figureEditor = new class extends caph.Plugin {
+  
+  render(){
     return html`
       <div id="fabric-editor-main" class="vbox fullscreen-layer hidden">
         <div id="fabric-editor-header" class="hbox space-between">
@@ -33,13 +34,16 @@ caph.components.figureEditor = caph.makePlugin({
         </div>
       </div>
     `;
-  },
-  loader: async()=>{
+  }
+  async loader(){
     await caph.load('caph-docs/libraries/fabric/fabric.js');
     await caph.load('caph-docs/libraries/mathjax2svg/tex-svg.js');
     await caph.load('caph-docs/libraries/split/split.js');
     await caph.load('caph-docs/libraries/split/split.css');
+    
     await caph.load('caph-docs/plugins/fabric/diagram.js');
+    await caph.load('caph-docs/plugins/fabric/plugin-fabric.js');
+
     await caph.load('caph-docs/plugins/figure-editor/figure-editor.js');
     await caph.load('caph-docs/plugins/figure-editor/figure-editor.css');
     await caph.load('caph-docs/libraries/codemirror-5.55.0/lib/codemirror.js');
@@ -53,8 +57,8 @@ caph.components.figureEditor = caph.makePlugin({
     await caph.load('caph-docs/libraries/codemirror-5.55.0/lib/codemirror.css');
     await caph.load('caph-docs/libraries/codemirror-5.55.0/theme/monokai.css');
     return;
-  },
-  post_loader: async()=>{
+  }
+  async post_loader(){
     let load = async (id)=>MyPromise.until(()=>
       document.querySelector(`#${id}`));
     let main = await load('fabric-editor-main');
@@ -67,4 +71,4 @@ caph.components.figureEditor = caph.makePlugin({
       hide:()=>{main.classList.add('hidden'); },
     });
   }
-});
+};

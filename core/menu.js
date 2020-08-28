@@ -38,6 +38,7 @@ caph.menu = new class{
       else hide();
     });
   }
+  
   create_about(){
     window.addEventListener('load', ()=>{
       let about = MyDocument.createElement('div',{

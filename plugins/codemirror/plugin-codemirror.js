@@ -1,6 +1,6 @@
+caph.plugins.codemirror = new class extends caph.Plugin {
 
-caph.components.codemirror = caph.makePlugin({
-  component: ({children, id=null, options={}, unindent=false, class:_class})=>{
+  render({children, id=null, options={}, unindent=false, class:_class}){
     let script = (x=>(Array.isArray(x)?x.join(''):x))(children);
     if(unindent){
       let lines = script.split('\n');
@@ -10,15 +10,15 @@ caph.components.codemirror = caph.makePlugin({
       script = lines.map(l=>l.slice(n)).join('\n');
     }
     if(!id) id='codemirror-'+Math.floor(1e12*Math.random());
-    preact.useEffect(()=>{ plugin(script, options); }, []);
-    const plugin = async(script, options)=>{
-      let div = await MyPromise.until(()=>
-        document.querySelector(`#${id}`));
-      caph.plugins.codemirror.render(div, script, options);
+    const load = async(script, options)=>{
+      const div = await MyPromise.until(()=>document.querySelector(`#${id}`));
+      this.cmRender(div, script, options);
     }
+    preact.useEffect(()=>{ load(script, options); }, []);
     return html`<div id=${id} class=${_class}/>`;
-  },
-  loader: async()=>{
+  }
+
+  async loader(){
     await caph.load('caph-docs/libraries/codemirror-5.55.0/lib/codemirror.js');
     await caph.load('caph-docs/libraries/codemirror-5.55.0/mode/javascript/javascript.js');
     await caph.load('caph-docs/libraries/codemirror-5.55.0/mode/python/python.js');
@@ -30,8 +30,25 @@ caph.components.codemirror = caph.makePlugin({
     await caph.load('caph-docs/libraries/codemirror-5.55.0/lib/codemirror.css');
     await caph.load('caph-docs/libraries/codemirror-5.55.0/theme/monokai.css');
     await caph.load('caph-docs/plugins/codemirror/codemirror.css');
-    await caph.load('caph-docs/plugins/codemirror/codemirror.js');
     return;
-  },
-});
- 
+  }
+
+  cmRender(div, code, cm_options={}){
+    cm_options = MyObject.deep_assign({
+      theme: caph.theme=='dark'?'monokai':'default',
+      indentUnit: 2,
+      tabSize: 2,
+      lineWrapping: true,
+      lineNumbers: true,
+      keyMap: 'sublime',
+      scrollPastEnd: false,
+      autoRefresh: true, // necessary for Reveal.js
+    }, cm_options);
+    
+    div.classList.add('codemirror-container');
+    const cm = CodeMirror(div, {
+      value: code,
+      ...cm_options,
+    });
+  }
+};

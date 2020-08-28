@@ -4,12 +4,12 @@ let utils = require('./tools.js');
 let baseDir = 'caph-docs/';
 
 let plugins = {
-  'plugin-document': 'plugins/document/document.js',
-  'plugin-slides': 'plugins/slides/slides.js',
-  'plugin-codemirror': 'plugins/codemirror/element.js',
-  'plugin-whiteboard': 'plugins/whiteboard/element.js',
-  'plugin-fabric': 'plugins/fabric/element.js',
-  'plugin-figure-editor': 'plugins/figure-editor/element.js',
+  'plugin-document':      'plugins/document/plugin-document.js',
+  'plugin-slides':        'plugins/slides/plugin-slides.js',
+  'plugin-codemirror':    'plugins/codemirror/plugin-codemirror.js',
+  'plugin-whiteboard':    'plugins/whiteboard/plugin-whiteboard.js',
+  'plugin-fabric':        'plugins/fabric/plugin-fabric.js',
+  'plugin-figure-editor': 'plugins/figure-editor/plugin-figure-editor.js',
 };
 
 
