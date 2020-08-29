@@ -18,15 +18,17 @@ next-version:
 caph.plugins.whiteboard = new class extends caph.Plugin {
 
   canvas = null;
+  hidden = true;
 
   render({children}){
     if(children&&children.length) throw 'Unexpected children';
     const [event, setEvent] = preact.useState(null);
     const [ready, setReady] = preact.useState(false);
     const [canvas, setCanvas] = preact.useState(false);
+    const [background, setBackground] = preact.useState(false);
     const [tool, setTool_] = preact.useState({
       brush:'pencil', width: 6, shadow: 0, color: '#005E7A88',
-      rgbColor:'#005E7A', alpha: 0.5,
+      rgbColor:'#005E7A', alpha: 0.7,
     });
 
     const setTool=(tool, canvas=null)=>{
@@ -65,11 +67,16 @@ caph.plugins.whiteboard = new class extends caph.Plugin {
       this.onClickCanvas(event, tool);
     }, [event]);
 
+    const {option} = preact.useContext(caph.contexts.menu);
+    this.hidden = option!='Whiteboard';
+    const _class = this.hidden?'hidden':'fullscreen-layer';
     return html`
-    <div id="whiteboard-main" class="fullscreen-layer hidden">
+    <div id="whiteboard-main" class=${_class}>
       <canvas id="whiteboard-canvas" class="whiteboard-canvas" />
-      <div class="whiteboard-background" />
-      <${canvas && this.mainMenu} canvas=${canvas} setTool=${(e)=>setTool(e)} tool=${tool}/>
+      <div class="whiteboard-background" hidden=${!background} />
+      <${canvas && this.mainMenu} canvas=${canvas}
+      setTool=${(e)=>setTool(e)} tool=${tool}
+      setBackground=${setBackground} background=${background}/>
     </div>`;
   }
 
@@ -79,16 +86,26 @@ caph.plugins.whiteboard = new class extends caph.Plugin {
     return;
   }
 
-  async post_loader({theme}){
+  async menuSettings({}){
     let main = await MyPromise.until(()=>
       document.querySelector('#whiteboard-main')
     );
-    caph.menu.pushOption('Whiteboard', {
-      show:()=>{main.classList.remove('hidden');main.hidden=false; },
-      hide:()=>{main.classList.add('hidden');main.hidden=true; },
+    const {addOption} = preact.useContext(caph.contexts.menu);
+    addOption('Whiteboard', {hold:true});
+    window.addEventListener('keydown', (e)=>{
+      if(event.isComposing || event.keyCode === 229)return;
+      if(e.keyCode==87) this.toggle(); // W key
+      if(!this.hidden&&e.keyCode==66) this.toggleBackground(); // B key
     });
     //caph.menu.onSelect('Whiteboard'); //for testing
     return;
+  }
+  toggle(){
+    const {setOption} = preact.useContext(caph.contexts.menu);
+    return setOption(this.hidden?'Whiteboard':'Default');
+  }
+  toggleBackground(){
+    console.warn('Not yet implemented');
   }
 
   exitText(){
@@ -122,14 +139,14 @@ caph.plugins.whiteboard = new class extends caph.Plugin {
     };
   }
 
-  mainMenu({canvas, setTool, tool}){
+  mainMenu({canvas, setTool, tool, background, setBackground}){
     const brushes = [
       {name:'pointer', icon:'🖱'},
       {name:'text', icon:'T'},
       {name:'pencil', icon:'✏'},
     ];
     const colors = [
-      '#eeffaa', '#ffeeaa', '#ffaaee', '#eeaaff', '#ffffff',
+      '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#000000', '#ffffff',
     ];
     const widths = [3, 6, 10, 20,];
     const addAlpha=(hex_color, opacity)=>{
@@ -180,6 +197,13 @@ caph.plugins.whiteboard = new class extends caph.Plugin {
         <input type="color" value=${tool.rgbColor} onchange="${(e)=>
           setTool({...tool, color: addAlpha(e.target.value, tool.alpha),
             rgbColor: e.target.value})}" />
+      </div>
+      <div>
+        <button onclick=${()=>setBackground(!background)}
+        style="background-color: ${background?'88':'00'}; margin:2px;
+        height: calc(100% - 4px)">
+          B
+        </button>
       </div>
       <div>
         ${brushes.map(e=>html`

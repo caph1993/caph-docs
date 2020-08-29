@@ -1,37 +1,38 @@
 
-html{
-  background: var(--background-2);
-  font-family: serif;
-}
 #caph-root{
+  background: var(--background-2);
   color: var(--text);
+  font-family: serif;
+  padding-bottom: calc(50vh - 5em);
+  padding-top: 3em;
+}
+#caph-body{
+  font-family: Latin Modern Roman, Computer Modern Roman, serif;
   background: var(--background);
   font-size: 1.2rem;
-  padding: 5em;
-  padding-top: 3.5em;
   margin: auto;
-  margin-bottom: calc(50vh - 5em);
-  margin-top: 3em;
+  padding: 5em;
+  padding-top: 3em;
   max-width: 30em;
   box-shadow: 0px 0px 1px 0px;
   text-align: justify;
 }
 @media only screen and (max-width: 600px) {
-  #caph-root{
+  #caph-body{
     padding: 0.5em;
     margin-top: 0.2em;
     max-width: calc(100vw - 2em);
   }
 }
 @media print {
-  #caph-root{
+  #caph-body{
     margin: initial;
     padding: initial;
     max-width: initial;
     background: initial;
     box-shadow: initial;
   }
-  html {
+  #caph-root {
     background: initial;
   }
 }

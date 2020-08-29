@@ -7,52 +7,15 @@
   <script src="../dist/caph-docs.js"></script>
   <!--script src="https://cdn.jsdelivr.net/gh/caph1993/caph-docs@3.0/dist/caph-docs.js"></script-->
   <script>
-    caph.loadPlugins = async ()=>{
-      //let url = 'https://cdn.jsdelivr.net/gh/caph1993/caph-docs@3.0/';
-      let url = '../';
-      Promise.all([
-        //caph.load(url+"dist/plugin-document.js"),
-        caph.load(url+"dist/plugin-slides.js"),
-        caph.load(url+"dist/plugin-codemirror.js"),
-        caph.load(url+"dist/plugin-whiteboard.js"),
-        caph.load(url+"dist/plugin-fabric.js"),
-        caph.load(url+"dist/plugin-figure-editor.js"),
-        caph.load(url+"dist/font-katex.css"),
-        caph.load(url+"dist/font-lmroman.css"),
-        caph.load(url+"dist/font-lmsans.css"),
-      ]);
-      caph.mathMacros = {
-        RR: '{\\mathbb R}',
-        smallP: '{\\small \\left( #1 \\right)}',
-      };
+    caph.mathMacros = {
+      RR: '{\\mathbb R}',
+      smallP: '{\\small \\left( #1 \\right)}',
     };
   </script>
-  <style type="text/css">
-    #caph-root {
-      font-family: Latin Modern Roman, serif;
-      counter-reset: h2counter h3counter;
-    }
-    h1, h2, h3 {text-align: left;}
-    .section:before {
-      counter-increment: h2counter;
-      content: counter(h2counter) ". ";
-    }
-    .section{
-      counter-reset: h3counter;
-    }
-    .subsection:before {
-      counter-increment: h3counter;
-      content: counter(h2counter) "." counter(h3counter) ". ";
-    }
-    .nocount:before { counter-increment: none; }
-    .hiddencount:before { content: none; }
-  </style>
 </head>
 
-<body id="caph-root" onload="caph.render()">
-  <!--div data-tag="whiteboard"></div-->
-  <!--div data-tag="figureEditor"></div-->
-  <div data-tag="slides" data-hyphenate="true">
+<body>
+<div data-tag="slides" data-plugins="whiteboard">
 <section>
   <h1>Caph-docs</h1>
 
@@ -191,6 +154,9 @@
   </div>
 </section>
 
+<section>
+  <div data-tag="mathjaxSvg">e^{i\pi}+1=0</div>
+</section>
 
   </div>
 </body>

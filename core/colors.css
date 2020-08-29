@@ -1,5 +1,5 @@
 
-html {
+#caph-root {
   --background: #fff;
   --background-2: #eee;
   --background-pre: #ddd;
@@ -8,10 +8,16 @@ html {
   --text-2: #224466;
   --box-shadow: rgba(0,0,0,0.75);
   --marp-green: #2F7F2F;
+
+  --loading-1: #f3f3f3;
+  --loading-2: #555;
+
+  --scrollbar-1: #90A4AE;
+  --scrollbar-2: #CFD8DC;
 }
 
 @media only screen {
-  html[data-theme='dark'] {
+  #caph-root[data-theme='dark']{
     --background: #282923;
     --background-2: #6d6e6a;
     --background-pre: #aaa;
@@ -24,9 +30,32 @@ html {
     --text-color-light: hsl(210, 15%, 35%);
     --text-color-richer: hsl(210, 50%, 72%);
     --text-color-highlight: hsl(25, 70%, 45%);
+
+    --loading-1: hsl(20, 90%, 50%);
+    --loading-2: #ccc;
+
+    --scrollbar-1: #888;
+    --scrollbar-2: #444;
   }
-  html[data-theme='dark'] .auto-dark{
+  #caph-root[data-theme='dark'] .auto-dark{
     filter: brightness(50%);
   }
+}
+
+/* Works on Chrome/Edge/Safari */
+#caph-root * {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-1) var(--scrollbar-2);
+}
+#caph-root *::-webkit-scrollbar {
+  width: 12px;
+}
+#caph-root *::-webkit-scrollbar-track {
+  background: var(--scrollbar-2);
+}
+#caph-root *::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-1);
+  border-radius: 20px;
+  border: 3px solid var(--scrollbar-2);
 }
 

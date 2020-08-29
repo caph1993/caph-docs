@@ -18,9 +18,6 @@ let sources = {
   'dynamic': [
     'core/colors.css',
     'core/core.css',
-    'core/menu.js',
-    'core/katex.min.js',
-    'core/katex-nofonts.min.css',
   ],
 };
 

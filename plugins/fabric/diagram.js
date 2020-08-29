@@ -429,7 +429,7 @@ CaphFabric.exposed_args = {
   HGrid: (...args)=>new CaphFabric.HGrid(...args),
   Node: (...args)=>new CaphFabric.Node(...args),
   Arrow: (...args)=>new CaphFabric.Arrow(...args),
-  draw: async function (canvas, {layout, width, height, maxVWidth=1, maxVHeight=1,
+  draw: async function (canvas, {layout, width, height, maxVWidth=0.95, maxVHeight=0.95,
       nodes={}, arrows=[], borders=false}={}){
     width = width || 500;
     height = height || width;

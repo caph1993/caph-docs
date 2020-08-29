@@ -1,5 +1,5 @@
-<!doctype html>
-<html lang="en" data-theme="dark">
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -7,29 +7,14 @@
   <script src="../dist/caph-docs.js"></script>
   <!--script src="https://cdn.jsdelivr.net/gh/caph1993/caph-docs@3.0/dist/caph-docs.js"></script-->
   <script>
-    caph.loadPlugins = async ()=>{
-      let url = 'https://cdn.jsdelivr.net/gh/caph1993/caph-docs@3.0/';
-      url = '../';
-      await Promise.all([
-        caph.load(url+"dist/font-katex.css"),
-        caph.load(url+"dist/font-lmroman.css"),
-        caph.load(url+"dist/font-lmsans.css"),
-        caph.load(url+"dist/plugin-document.js"),
-        caph.load(url+"dist/plugin-slides.js"),
-        caph.load(url+"dist/plugin-codemirror.js"),
-        caph.load(url+"dist/plugin-whiteboard.js"),
-        caph.load(url+"dist/plugin-fabric.js"),
-        caph.load(url+"dist/plugin-figure-editor.js"),
-      ]);
-      caph.mathMacros = {
-        RR: '{\\mathbb R}',
-        smallP: '{\\small \\left( #1 \\right)}',
-      };
+    caph.mathMacros = {
+      RR: '{\\mathbb R}',
+      smallP: '{\\small \\left( #1 \\right)}',
     };
   </script>
+
   <style type="text/css">
     #caph-root {
-      font-family: Latin Modern Roman, serif;
       counter-reset: h2counter h3counter;
     }
     h1, h2, h3 {text-align: left;}
@@ -49,10 +34,10 @@
   </style>
 </head>
 
-<body id="caph-root" onload="caph.render()">
-  <div data-tag="whiteboard"></div>
-  <div data-tag="figureEditor"></div>
-  <div data-tag="document" data-hyphenate="true">
+<body>
+<div data-tag="document" class="hyphenate"
+data-plugins="hyphenator whiteboard figureEditor autoScroll">
+
 <section>
   <h1>Caph-docs $\RR$</h1>
 

@@ -1,21 +1,38 @@
 caph.plugins.codemirror = new class extends caph.Plugin {
 
-  render({children, id=null, options={}, unindent=false, class:_class}){
-    let script = (x=>(Array.isArray(x)?x.join(''):x))(children);
-    if(unindent){
-      let lines = script.split('\n');
-      let n = lines.filter(l=>l.trim().length)
-        .map(l=>l.length-l.trimStart().length)
-        .reduce((p,c)=>Math.min(c,p), 1000);
-      script = lines.map(l=>l.slice(n)).join('\n');
-    }
-    if(!id) id='codemirror-'+Math.floor(1e12*Math.random());
-    const load = async(script, options)=>{
+  cm=null;
+
+  render({children, autoId, id, options={}, unindent=true, class:_class}){
+    let code = (x=>(Array.isArray(x)?x.join(''):x))(children);
+    if(unindent) code = caph.utils.unindent(code);
+    id = id||autoId;
+
+    const {getItem} = preact.useContext(caph.contexts.storage);
+    const darkTheme = getItem('darkTheme');
+    
+    const cmOptions = MyObject.deep_assign({
+      theme: darkTheme?'monokai':'default',
+      indentUnit: 2,
+      tabSize: 2,
+      lineWrapping: true,
+      lineNumbers: true,
+      keyMap: 'sublime',
+      scrollPastEnd: false,
+      autoRefresh: true, // necessary for Reveal.js
+    }, options);
+
+    preact.useEffect(async ()=>{
       const div = await MyPromise.until(()=>document.querySelector(`#${id}`));
-      this.cmRender(div, script, options);
-    }
-    preact.useEffect(()=>{ load(script, options); }, []);
-    return html`<div id=${id} class=${_class}/>`;
+      this.cm = CodeMirror(div, {value: code, ...cmOptions});
+    }, []);
+
+    preact.useEffect(async ()=>{
+      const cm = await MyPromise.until(()=>this.cm);
+      cm.setOption('theme', darkTheme?'monokai':'default');
+    }, [darkTheme]);
+
+    return html`
+    <div id=${id} class=${_class+' codemirror-container'}/>`;
   }
 
   async loader(){
@@ -33,22 +50,7 @@ caph.plugins.codemirror = new class extends caph.Plugin {
     return;
   }
 
-  cmRender(div, code, cm_options={}){
-    cm_options = MyObject.deep_assign({
-      theme: caph.theme=='dark'?'monokai':'default',
-      indentUnit: 2,
-      tabSize: 2,
-      lineWrapping: true,
-      lineNumbers: true,
-      keyMap: 'sublime',
-      scrollPastEnd: false,
-      autoRefresh: true, // necessary for Reveal.js
-    }, cm_options);
+  cmRender({div, code, cmOptions, darkTheme=false}){
     
-    div.classList.add('codemirror-container');
-    const cm = CodeMirror(div, {
-      value: code,
-      ...cm_options,
-    });
   }
 };

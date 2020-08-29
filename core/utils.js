@@ -120,12 +120,13 @@ class MyPromise{
 
 class MyDocument{
   static createElement(tag, {
-      style={}, id={}, classList=[], text=null, html=null,
+      style={}, id=null, classList=[], text=null, html=null,
       eventListeners={}, parent=null, where=null, ...attrs}={}){
     let e = document.createElement(tag, id?{id:id}:null);
     classList.forEach(s=>e.classList.add(s));
     if(text!=null) e.innerText = text;
     if(html!=null) e.innerHTML = html;
+    if(id!=null) e.id = id;
     MyObject.forEach(attrs, (value, key)=>e.setAttribute(key, value));
     MyObject.forEach(style, (value, key)=>e.style[key] = value);
     MyObject.forEach(eventListeners, (value, key)=>

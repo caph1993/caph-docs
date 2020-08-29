@@ -1,28 +1,20 @@
-// htm syntax
-
 caph.plugins.document = new class extends caph.Plugin{
-  render({children, class:_class}){
+  render({children, class:_class, plugins=""}){
     return html`
-    <div id="caph-root" class=${_class}>
-      ${children}
-    </div>`
+      ${plugins.split(' ').map(tag=>html`<${caph.Plugin.component(tag)}/>`)}
+      <div id="caph-body" class=${_class}>
+        ${children}
+      </div>`;
   }
   async loader({}){
     await caph.load('caph-docs/plugins/document/document.css');
-    caph.menu.pushOption('Dark / Light', {
-      show:()=>{ caph.setTheme(); caph.menu.onSelect(); },
-    });
-    caph.menu.pushOption('PDF print', {
-      show:()=>{ window.print(); caph.menu.onSelect(); },
-    });
+    caph.loadFont('lmroman');
     return;
   }
-  async post_loader({}){
-    let main = await MyPromise.until(()=>
-      document.querySelector('#caph-root')
-    );
-    await caph.load('caph-docs/libraries/Hyphenator-5.3.0/Hyphenator.min.js');
-    caph.scroll.initial_scroll();
-    return;
+  menuSettings(){
+    const {addOption, setOption} = preact.useContext(caph.contexts.menu);
+    addOption('PDF print', {
+      onEnter:()=>{ window.print(); setOption('Default'); },
+    });
   }
 };

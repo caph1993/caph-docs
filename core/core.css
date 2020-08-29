@@ -1,3 +1,5 @@
+body{margin:0;}
+
 .hbox{ display: flex; }
 .vbox{ display: flex; flex-direction: column; }
 .boxcenter{ justify-content: center; }
@@ -18,10 +20,10 @@
 }
 
 div.plugin-loading{
-  border: 5px solid #f3f3f3;
+  border: 5px solid var(--loading-2);
+  border-top: 5px solid var(--loading-1);
   -webkit-animation: spin 1s linear infinite;
   animation: spin 1s linear infinite;
-  border-top: 5px solid #555;
   border-radius: 50%;
   width: 20px;
   height: 20px;
@@ -40,28 +42,6 @@ div.plugin-loading-container{ width:100%; font-size: 1rem; }
   100% { transform: rotate(360deg); }
 }
 
-.caph-menu{
-  display: flex;
-  flex-direction: column;
-  position: fixed;
-  top: 0.3rem;
-  right: 0.3rem;
-  z-index: 10000;
-  opacity: 0;
-  background-color: #eee;
-  padding: 0.1rem;
-  border-radius: .3rem;
-}
-.caph-menu-multiple:hover, .caph-menu-shown{
-  opacity: 1;
-  box-shadow: 0px 0px 5px 0px rgba(0,0,0,0.75);
-} 
-
-@media print {
-  .caph-menu{
-    display: none;
-  }
-}
 .plugin-error{
   text-align: left;
   font-family: monospace;
@@ -83,19 +63,7 @@ div.plugin-loading-container{ width:100%; font-size: 1rem; }
   left: 0;
   z-index: 100;
 }
-.about-outer{
-  background:#fffa;
-  backdrop-filter: blur(4px);
-  padding: 3em 0em;
-}
-.about-inner{
-  max-width: calc(80vw - 2em);
-  background:#fff;
-  margin:auto;
-  background:#fff;
-  padding: 1.5em 2em 4em 2em;
-  border-radius: 1em;
-  font-family: monospace, arial;
-}
+
+
 .mspace{ min-width:0.25em; }
 .mord{ display: inline-block; }

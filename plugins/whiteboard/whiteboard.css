@@ -24,6 +24,7 @@
   left: 0;
   position: fixed;
   z-index: 100;
-  background: green;
-  opacity: 0.01;
+  opacity: 0.95;
+  background: var(--background);
+  backdrop-filter: blur(4px);
 }

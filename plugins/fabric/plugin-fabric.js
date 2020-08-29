@@ -23,9 +23,10 @@ caph.plugins.fabric = new class extends caph.Plugin {
     `;
   }
   async loader(){
-    caph.loadMathJaxMacros();
+    await caph.load('caph-docs/libraries/fabric/fabric.js');
     await caph.load('caph-docs/plugins/fabric/diagram.js');
-    await caph.load('caph-docs/libraries/mathjax2svg/tex-svg.js');
+    await caph.loadPluginDeep('mathjaxSvg');
+    await MyPromise.until(()=>caph.mathjax);
     return;
   }
 
