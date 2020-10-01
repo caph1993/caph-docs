@@ -36,7 +36,7 @@ CaphFabric.Element = class extends CaphFabric._Base{
     if(borders) canvas.add(this.make_border());
     this.element.set({ // center
       top: top+(height-this.height)/2,
-      left: left+(width-this.width)/2
+      left: left+(width-this.width)/2,
     });
     canvas.add(this.element);
   }
@@ -142,8 +142,8 @@ CaphFabric.Node = class extends CaphFabric.Element{
     return await this.load_svg(e.outerHTML);
   }
 
-  async load_content(canvas){
-    let text = await this.load_tex(this.text, canvas);
+  async load_content(canvas, {scale=1}={}){
+    let text = await this.load_tex(this.text, canvas, {scale});
     this.style.text.fill = this.style.text.stroke;
     text.set(this.style.text);
     let padding=this.style.box.padding;
@@ -206,7 +206,7 @@ CaphFabric.Arrow = class extends CaphFabric.Element{
     this.to.side = codes[sides[1]];
   }
 
-  async draw_on(canvas){
+  async draw_on(canvas, {scale=1}={}){
     this.parse_sides();
 
     this.from.point = ()=>this.from.node.side_midpoint(this.from.side);
@@ -258,7 +258,7 @@ CaphFabric.Arrow = class extends CaphFabric.Element{
         text: this.style.text,
         box: this.style.box,
       });
-      await text.load_content(canvas);
+      await text.load_content(canvas, {scale});
       text._draw_on(canvas, {
         width: Math.abs(x2-x1),
         height: Math.abs(y2-y1),
@@ -430,21 +430,21 @@ CaphFabric.exposed_args = {
   Node: (...args)=>new CaphFabric.Node(...args),
   Arrow: (...args)=>new CaphFabric.Arrow(...args),
   draw: async function (canvas, {layout, width, height, maxVWidth=0.95, maxVHeight=0.95,
-      nodes={}, arrows=[], borders=false}={}){
+      nodes={}, arrows=[], borders=false, scale=1}={}){
     width = width || 500;
     height = height || width;
-    const scale = Math.min(1,
+    const frame_scale = Math.min(1,
       (window.innerWidth*maxVWidth)/width,
       (window.innerHeight*maxVHeight)/height,
     );
-    width = Math.floor(scale*width);
-    height = Math.floor(scale*height);
+    width = Math.floor(frame_scale*width);
+    height = Math.floor(frame_scale*height);
     let lnodes = Object.values(nodes);
     layout = layout || new CaphFabric.Tree(lnodes);
-    for(let u of lnodes) await u.load_content(canvas);
-    for(let a of arrows) await a.load_content(canvas);
+    for(let u of lnodes) await u.load_content(canvas, {scale});
+    for(let a of arrows) await a.load_content(canvas, {scale});
     await layout.draw_on(canvas, {width, height, borders});
-    for(let a of arrows) await a.draw_on(canvas);
+    for(let a of arrows) await a.draw_on(canvas, {scale});
     // Force size again (hotfix for small devices)
   },
   light_palette:{

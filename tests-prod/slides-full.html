@@ -1,11 +1,9 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-
+  <!--script src="https://cdn.jsdelivr.net/gh/caph1993/caph-docs@latest/dist/caph-docs.js"></script-->
   <script src="../dist/caph-docs.js"></script>
-  <!--script src="https://cdn.jsdelivr.net/gh/caph1993/caph-docs@3.0/dist/caph-docs.js"></script-->
   <script>
     caph.mathMacros = {
       RR: '{\\mathbb R}',
@@ -91,7 +89,7 @@
       await draw(canvas, {
         nodes:n, arrows, layout,
         width:500, height:150,
-        borders: false,
+        borders: false, scale:2.0,
       });
     }
     </script>
@@ -138,7 +136,7 @@
       await draw(canvas, {
         nodes:n, arrows, layout,
         width:500, height:150,
-        borders: false,
+        borders: false, scale:1.5,
       });
     }
   </script>

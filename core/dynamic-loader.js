@@ -163,7 +163,7 @@ class ResourcesLoader{
         }
       }
       parent.insertAdjacentElement(where, e);
-      setTimeout(()=>done||_err(['Timeout (5s) loading source:', e]), 5000);
+      setTimeout(()=>done||_err(['Timeout (12s) loading source:', e]), 12000);
     });
   };
 

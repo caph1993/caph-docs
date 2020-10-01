@@ -46,6 +46,14 @@ class MyArray{
     initialValue = initialValue||1e10;
     return arr.reduce((p,c)=>Math.min(p,c), initialValue);
   }
+  static zeros(n){
+    const l = [];
+    for(const i=0;i<n;i++)l.push(0);
+    return l;
+  }
+  static arange(n){
+    return MyArray.zeros.map((z,i)=>i);
+  }
   static sEquality(a,b){
     if (a === b) return true;
     if (a == null || b == null) return false;
