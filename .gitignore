@@ -1,1 +1,4 @@
-tests-prod/test.html
+.*
+!.gitignore
+__*
+!__init__.py

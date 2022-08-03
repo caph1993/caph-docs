@@ -1,13 +1,13 @@
 const FIELD = '\ue000', QUOTES = '\ue001'
 
-export default function htm (statics) {
+export default function htm(statics) {
   let h = this, prev = 0, current = [], field = 0, args, name, value, quotes = [], quote = 0, last
   current.root = true
 
   const evaluate = (str, parts = [], raw) => {
     let i = 0
     str = !raw && str === QUOTES ?
-      quotes[quote++].slice(1,-1) :
+      quotes[quote++].slice(1, -1) :
       str.replace(/\ue001/g, m => quotes[quote++])
 
     if (!str) return str
@@ -28,12 +28,12 @@ export default function htm (statics) {
 
   statics
     .join(FIELD)
+    .replace(/[^\\]\$(.*?)\$/g, '<math>$1</math>') // KEY PART!!!!!
     .replace(/<!--[^]*-->/g, '')
     .replace(/<!\[CDATA\[[^]*\]\]>/g, '')
     .replace(/('|")[^\1]*?\1/g, match => (quotes.push(match), QUOTES))
     // .replace(/^\s*\n\s*|\s*\n\s*$/g,'')
     .replace(/\s+/g, ' ')
-
     // ...>text<... sequence
     .replace(/(?:^|>)([^<]*)(?:$|<)/g, (match, text, idx, str) => {
       let close, tag
@@ -48,7 +48,7 @@ export default function htm (statics) {
             else if (!i) {
               tag = evaluate(part)
               // <p>abc<p>def, <tr><td>x<tr>
-              while (htm.close[current[1]+tag]) up()
+              while (htm.close[current[1] + tag]) up()
               current = [current, tag, null]
               if (htm.empty[tag]) close = tag
             }
@@ -75,7 +75,6 @@ export default function htm (statics) {
     })
 
   if (!current.root) up()
-
   return current.length > 1 ? current : current[0]
 }
 

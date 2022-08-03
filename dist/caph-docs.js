@@ -18,154 +18,154 @@ exports={};
 //core/utils.js
 exports={};
 
-function assert(condition, ...messages){
-  if(condition) return;
+function assert(condition, ...messages) {
+  if (condition) return;
   throw new Error(...messages);
 }
 
-function sleep(ms){
-  return new Promise((ok,err)=>setTimeout(ok, ms));
+function sleep(ms) {
+  return new Promise((ok, err) => setTimeout(ok, ms));
 }
 
-class MyBoolean{
-  static assert(condition, ...messages){
-    if(condition) return;
+class MyBoolean {
+  static assert(condition, ...messages) {
+    if (condition) return;
     throw new Error(...messages);
   }
-  static all(arr){
-    for(let x of arr) if(!x) return false;
+  static all(arr) {
+    for (let x of arr) if (!x) return false;
     return true;
   }
-  static any(arr){
-    for(let x of arr) if(x) return true;
+  static any(arr) {
+    for (let x of arr) if (x) return true;
     return false;
   }
-  static assert_all(arr, ...messages) { assert(all(arr), ...messages);}
-  static assert_any(arr, ...messages) { assert(any(arr), ...messages);}
+  static assert_all(arr, ...messages) { assert(all(arr), ...messages); }
+  static assert_any(arr, ...messages) { assert(any(arr), ...messages); }
 }
 
 
-class MyArray{
-  static any(arr){
-    for(let x of arr) if(x) return true;
+class MyArray {
+  static any(arr) {
+    for (let x of arr) if (x) return true;
     return false;
   }
-  static all(arr){
-    for(let x of arr) if(!x) return false;
+  static all(arr) {
+    for (let x of arr) if (!x) return false;
     return true;
   }
-  static sum(arr){
-    return arr.reduce((p,c)=>p+c, 0);
+  static sum(arr) {
+    return arr.reduce((p, c) => p + c, 0);
   }
-  static max(arr, initialValue){
-    initialValue = initialValue||0;
-    return arr.reduce((p,c)=>Math.max(p,c), initialValue);
+  static max(arr, initialValue) {
+    initialValue = initialValue || 0;
+    return arr.reduce((p, c) => Math.max(p, c), initialValue);
   }
-  static min(arr, initialValue){
-    initialValue = initialValue||1e10;
-    return arr.reduce((p,c)=>Math.min(p,c), initialValue);
+  static min(arr, initialValue) {
+    initialValue = initialValue || 1e10;
+    return arr.reduce((p, c) => Math.min(p, c), initialValue);
   }
-  static zeros(n){
+  static zeros(n) {
     const l = [];
-    for(const i=0;i<n;i++)l.push(0);
+    for (const i = 0; i < n; i++)l.push(0);
     return l;
   }
-  static arange(n){
-    return MyArray.zeros.map((z,i)=>i);
+  static arange(n) {
+    return MyArray.zeros.map((z, i) => i);
   }
-  static sEquality(a,b){
+  static sEquality(a, b) {
     if (a === b) return true;
     if (a == null || b == null) return false;
     if (a.length !== b.length) return false;
-    for(let i=0; i<a.length; ++i) if (a[i]!=b[i]) return false;
+    for (let i = 0; i < a.length; ++i) if (a[i] != b[i]) return false;
     return true;
   }
-  static hEquality(a,b){
+  static hEquality(a, b) {
     if (a === b) return true;
     if (a == null || b == null) return false;
     if (a.length !== b.length) return false;
-    for(let i=0; i<a.length; ++i) if (a[i]!==b[i]) return false;
+    for (let i = 0; i < a.length; ++i) if (a[i] !== b[i]) return false;
     return true;
   }
 }
 
-class MyPromise{
-  static async sleep(ms){
-    await new Promise((ok,err)=>setTimeout(ok, ms));
+class MyPromise {
+  static async sleep(ms) {
+    await new Promise((ok, err) => setTimeout(ok, ms));
   }
-  static async finish_all(promises, {debug=false}={}){
+  static async finish_all(promises, { debug = false } = {}) {
     // Ensures completion of all promises even if some throw exceptions
-    return await new Promise((ok, err)=>{
-      if(promises.length==0) return ok([]);
-      let any_error=false;
+    return await new Promise((ok, err) => {
+      if (promises.length == 0) return ok([]);
+      let any_error = false;
       let cnt = 0;
-      let outs = promises.map((p)=>null);
-      Promise.all(promises.map(async (p, i)=>{
-        try{ outs[i] = await p; }
-        catch(e){
-          any_error=true; outs[i] = e;
-          if(debug) console.error(...e);
+      let outs = promises.map((p) => null);
+      Promise.all(promises.map(async (p, i) => {
+        try { outs[i] = await p; }
+        catch (e) {
+          any_error = true; outs[i] = e;
+          if (debug) console.error(...e);
         }
         cnt++;
-        if(cnt==promises.length){
-          if(any_error) err(outs);
+        if (cnt == promises.length) {
+          if (any_error) err(outs);
           else ok(outs);
         }
       }));
     });
   }
-  static async finish_all_log(promises){
-    try{ var outs = await MyPromise.finish_all(promises); }
-    catch(err){
+  static async finish_all_log(promises) {
+    try { var outs = await MyPromise.finish_all(promises); }
+    catch (err) {
       var outs = err; console.error(...err);
-      err.forEach(e=>console.warn(...e));
+      err.forEach(e => console.warn(...e));
     }
     return outs;
   }
-  static async until(func, {ms=200, timeout=null}={}){
-    if(timeout && ms>timeout) ms = timeout/10;
+  static async until(func, { ms = 200, timeout = null } = {}) {
+    if (timeout && ms > timeout) ms = timeout / 10;
     let t0 = (new Date()).getTime();
     let value;
-    while(!(value=await func())){
-      if(timeout && (new Date()).getTime()>timeout)
+    while (!(value = await func())) {
+      if (timeout && (new Date()).getTime() > timeout)
         throw MyPromise.Timeout;
       await sleep(ms);
     }
     return value;
   }
   static Timeout = new Error('Timeout');
-  static async timeout(promise, ms){
+  static async timeout(promise, ms) {
     let finished = false;
     let [resp, _] = await Promise.all([
-      promise.then(e=>{ finished=true; return e;}),
-      MyPromise.until(()=>finished, {timeout:ms})
+      promise.then(e => { finished = true; return e; }),
+      MyPromise.until(() => finished, { timeout: ms })
     ]);
     return resp;
   }
 }
 
 
-class MyDocument{
+class MyDocument {
   static createElement(tag, {
-      style={}, id=null, classList=[], text=null, html=null,
-      eventListeners={}, parent=null, where=null, ...attrs}={}){
-    let e = document.createElement(tag, id?{id:id}:null);
-    classList.forEach(s=>e.classList.add(s));
-    if(text!=null) e.innerText = text;
-    if(html!=null) e.innerHTML = html;
-    if(id!=null) e.id = id;
-    MyObject.forEach(attrs, (value, key)=>e.setAttribute(key, value));
-    MyObject.forEach(style, (value, key)=>e.style[key] = value);
-    MyObject.forEach(eventListeners, (value, key)=>
+    style = {}, id = null, classList = [], text = null, html = null,
+    eventListeners = {}, parent = null, where = null, ...attrs } = {}) {
+    let e = document.createElement(tag, id ? { id: id } : null);
+    classList.forEach(s => e.classList.add(s));
+    if (text != null) e.innerText = text;
+    if (html != null) e.innerHTML = html;
+    if (id != null) e.id = id;
+    MyObject.forEach(attrs, (value, key) => e.setAttribute(key, value));
+    MyObject.forEach(style, (value, key) => e.style[key] = value);
+    MyObject.forEach(eventListeners, (value, key) =>
       e.addEventListener(key, value));
-    if(parent || where){
-      parent = parent||document.body;
-      where = where||'beforeend';
+    if (parent || where) {
+      parent = parent || document.body;
+      where = where || 'beforeend';
       parent.insertAdjacentElement(where, e);
     }
     return e;
   }
-  static right_click(element){
+  static right_click(element) {
     element.focus();
     if (window.CustomEvent) {
       element.dispatchEvent(new CustomEvent('contextmenu'));
@@ -176,21 +176,21 @@ class MyDocument{
     } else { // Internet Explorer
       element.fireEvent('oncontextmenu');
     }
-    return;
-    element.focus();
-    let e = element.ownerDocument.createEvent('MouseEvents');
-    e.initMouseEvent('contextmenu', true, true,
-      element.ownerDocument.defaultView, 1, 0, 0, 0, 0, false,
-      false, false, false, 2, null);
-    return !element.dispatchEvent(e);
+    // return;
+    // element.focus();
+    // let e = element.ownerDocument.createEvent('MouseEvents');
+    // e.initMouseEvent('contextmenu', true, true,
+    //   element.ownerDocument.defaultView, 1, 0, 0, 0, 0, false,
+    //   false, false, false, 2, null);
+    // return !element.dispatchEvent(e);
   }
 }
 
-class MyObject{
+class MyObject {
 
-  static indexBy(arr, key){
+  static indexBy(arr, key) {
     let M = {};
-    arr.forEach((obj)=>{
+    arr.forEach((obj) => {
       let value = obj[key];
       M[value] = obj;
     });
@@ -200,91 +200,91 @@ class MyObject{
   /**
   @param {((value:any, key?:any, obj?:any)=>(any))} func
   */
-  static map(obj, func){
+  static map(obj, func) {
     return MyObject._object_op('map', obj, func);
   }
 
   /**
   @param {((value:any, key?:any, obj?:any)=>(bool|any))} func
   */
-  static filter(obj, func){
+  static filter(obj, func) {
     return MyObject._object_op('filter', obj, func);
   }
 
   /**
   @param {((value:any, key?:any, obj?:any)=>(any))} func
   */
-  static apply(obj, func){
+  static apply(obj, func) {
     return MyObject._object_op('apply', obj, func);
   }
 
   /**
   @param {((value:any, key?:any, obj?:any)=>(any))} func
   */
-  static forEach(obj, func){
+  static forEach(obj, func) {
     return MyObject._object_op('forEach', obj, func);
   }
 
-  static _object_op(op, src, func){
-    assert(1<=func.length && func.length<=3);
+  static _object_op(op, src, func) {
+    assert(1 <= func.length && func.length <= 3);
     let dest = {};
-    for(let key of Object.keys(src)){
+    for (let key of Object.keys(src)) {
       let value = src[key]
       let result = MyObject._func(func, value, key);
-      if(op=='map') dest[key] = result;
-      else if(op=='filter'){ if(result) dest[key] = value; }
-      else if(op=='apply') src[key] = result;
-      else if(op=='forEach') 1==1;
+      if (op == 'map') dest[key] = result;
+      else if (op == 'filter') { if (result) dest[key] = value; }
+      else if (op == 'apply') src[key] = result;
+      else if (op == 'forEach') 1 == 1;
     }
-    return (op=='map'||op=='filter')? dest : null;
+    return (op == 'map' || op == 'filter') ? dest : null;
   }
 
-  static _func(func, value, key){
+  static _func(func, value, key) {
     return (
-      func.length==1? func(value)
-      : func.length==2? func(value,key)
-      : func(value, key, src)
+      func.length == 1 ? func(value)
+        : func.length == 2 ? func(value, key)
+          : func(value, key, src)
     );
   }
 
-  static reduce_dots(obj){
+  static reduce_dots(obj) {
     // converts {'a.b':1, 'a.c':2, b:3} into {a:{b:1,c:2}, 'b':3}. Returns copy (shallow or deep)
-    let dotted = MyObject.object_filter(obj, (v,k)=>k.indexOf('.')>=0);
-    let no_dots = MyObject.object_filter(obj, (v,k)=>k.indexOf('.')==-1);
-    if(Object.keys(dotted).length==0) return no_dots;
-    MyObject.object_forEach(dotted, (v,k)=>{
+    let dotted = MyObject.object_filter(obj, (v, k) => k.indexOf('.') >= 0);
+    let no_dots = MyObject.object_filter(obj, (v, k) => k.indexOf('.') == -1);
+    if (Object.keys(dotted).length == 0) return no_dots;
+    MyObject.object_forEach(dotted, (v, k) => {
       let start = k.slice(0, k.indexOf('.'));
-      let end = k.slice(k.indexOf('.')+1);
-      no_dots[start] = no_dots[start]||{};
+      let end = k.slice(k.indexOf('.') + 1);
+      no_dots[start] = no_dots[start] || {};
       no_dots[start][end] = v;
     });
     return MyObject.reduce_dots(no_dots);
   }
 
-  static deep_assign(obj, ...objs){
-    for(let o of objs){
-      if(!o) continue;
-      for(let key of Object.keys(o)){
-        if(obj[key]===undefined || typeof(o[key])!="object") obj[key] = o[key];
+  static deep_assign(obj, ...objs) {
+    for (let o of objs) {
+      if (!o) continue;
+      for (let key of Object.keys(o)) {
+        if (obj[key] === undefined || typeof (o[key]) != "object") obj[key] = o[key];
         else MyObject.deep_assign(obj[key], o[key]);
       }
     }
     return obj;
   }
 
-  static deep_copy(obj, ...objs){
-    if(obj===undefined) return undefined;
-    if(obj===null) return null;
-    if(Array.isArray(obj))
-      return obj.map(x=>MyObject.deep_copy(x));
-    if(typeof(obj)=="object")
-      return MyObject.map(obj, value=>MyObject.deep_copy(value));
-    if(typeof(obj)=="function")
+  static deep_copy(obj, ...objs) {
+    if (obj === undefined) return undefined;
+    if (obj === null) return null;
+    if (Array.isArray(obj))
+      return obj.map(x => MyObject.deep_copy(x));
+    if (typeof (obj) == "object")
+      return MyObject.map(obj, value => MyObject.deep_copy(value));
+    if (typeof (obj) == "function")
       return obj; // DOES NOT CREATE COPY FOR FUNCTIONS
     return MyObject.deep_assign(obj, ...objs);
   }
 
-  static deep_default(default_obj, ...objs){
+  static deep_default(default_obj, ...objs) {
     let obj = MyObject.deep_copy(default_obj);
     return MyObject.deep_assign(obj, ...objs);
   }
@@ -292,23 +292,23 @@ class MyObject{
   /**
   @param {((value:any, key?:any, obj?:any)=>(bool|any))} filter_func
   */
-  static find(obj, filter_func){
-    for(let key in obj)
-      if(MyObject._func(filter_func, obj[key], key))
+  static find(obj, filter_func) {
+    for (let key in obj)
+      if (MyObject._func(filter_func, obj[key], key))
         return key;
     return null;
   }
-  static toEntries(obj){
-    return Object.keys(obj).map(k=>[k, obj[k]]);
+  static toEntries(obj) {
+    return Object.keys(obj).map(k => [k, obj[k]]);
   }
 }
 
 
-class MyDecorators{
-  static once(fn){
+class MyDecorators {
+  static once(fn) {
     let returnValue, canRun = true;
-    return function runOnce(){
-      if(canRun) {
+    return function runOnce() {
+      if (canRun) {
         returnValue = fn.apply(this, arguments);
         canRun = false;
       }
@@ -318,17 +318,17 @@ class MyDecorators{
 }
 
 
-function get_property_handler(object, property){
+function get_property_handler(object, property) {
   let access, proto = object;
   object._hidden_modified = false;
-  while(!access){
+  while (!access) {
     proto = Object.getPrototypeOf(proto);
     access = Object.getOwnPropertyDescriptor(proto, property);
   }
   return access;
 }
 
-function update_property_handler(object, property, create_handler){
+function update_property_handler(object, property, create_handler) {
   let prev = get_property_handler(object, property);
   Object.defineProperty(object, property, create_handler(prev));
 }
@@ -352,12 +352,137 @@ exports={};
 for(let key in hooks) preact[key]=hooks[key];
 delete window.hooks;
 
-//libraries/htm-3.0.4/htm.js
+//libraries/xhtm-1.5.3/htm.js
 exports={};
-!function(){var n=function(t,e,s,u){var r;e[0]=0;for(var h=1;h<e.length;h++){var p=e[h++],a=e[h]?(e[0]|=p?1:2,s[e[h++]]):e[++h];3===p?u[0]=a:4===p?u[1]=Object.assign(u[1]||{},a):5===p?(u[1]=u[1]||{})[e[++h]]=a:6===p?u[1][e[++h]]+=a+"":p?(r=t.apply(a,n(t,a,s,["",null])),u.push(r),a[0]?e[0]|=2:(e[h-2]=0,e[h]=r)):u.push(a)}return u},t=new Map,e=function (e) {
-  e=[...e.map(caph.mathString)]; /* Math support */ var s=t.get(this);return s||(s=new Map,t.set(this,s)),(s=n(this,s.get(e)||(s.set(e,s=function(n){for(var t,e,s=1,u="",r="",h=[0],p=function(n){1===s&&(n||(u=u.replace(/^\s*\n\s*|\s*\n\s*$/g,"")))?h.push(0,n,u):3===s&&(n||u)?(h.push(3,n,u),s=2):2===s&&"..."===u&&n?h.push(4,n,0):2===s&&u&&!n?h.push(5,0,!0,u):s>=5&&((u||!n&&5===s)&&(h.push(s,0,u,e),s=6),n&&(h.push(s,n,0,e),s=6)),u=""},a=0;a<n.length;a++){a&&(1===s&&p(),p(a));for(var o=0;o<n[a].length;o++)t=n[a][o],1===s?"<"===t?(p(),h=[h],s=3):u+=t:4===s?"--"===u&&">"===t?(s=1,u=""):u=t+u[0]:r?t===r?r="":u+=t:'"'===t||"'"===t?r=t:">"===t?(p(),s=1):s&&("="===t?(s=5,e=u,u=""):"/"===t&&(s<5||">"===n[a][o+1])?(p(),3===s&&(h=h[0]),s=h,(h=h[0]).push(2,0,s),s=0):" "===t||"\t"===t||"\n"===t||"\r"===t?(p(),s=2):u+=t),3===s&&"!--"===u&&(s=4,h=h[0])}return p(),h}(e)),s),arguments,[])).length>1?s:s[0]};"undefined"!=typeof module?module.exports=e:self.htm=e}();
+const FIELD = '\ue000', QUOTES = '\ue001'
 
+window.htm = function(statics) {
+  let h = this, prev = 0, current = [], field = 0, args, name, value, quotes = [], quote = 0, last
+  current.root = true
+
+  const evaluate = (str, parts = [], raw) => {
+    let i = 0
+    str = !raw && str === QUOTES ?
+      quotes[quote++].slice(1, -1) :
+      str.replace(/\ue001/g, m => quotes[quote++])
+
+    if (!str) return str
+    str.replace(/\ue000/g, (match, idx) => {
+      if (idx) parts.push(str.slice(i, idx))
+      i = idx + 1
+      return parts.push(arguments[++field])
+    })
+    if (i < str.length) parts.push(str.slice(i))
+    return parts.length > 1 ? parts : parts[0]
+  }
+
+  // close level
+  const up = () => {
+    [current, last, ...args] = current
+    current.push(h(last, ...args))
+  }
+
+  statics
+    .join(FIELD)
+    .replace(/[^\\]\$(.*?)\$/g, '<math>$1</math>') // KEY PART!!!!!
+    .replace(/<!--[^]*-->/g, '')
+    .replace(/<!\[CDATA\[[^]*\]\]>/g, '')
+    .replace(/('|")[^\1]*?\1/g, match => (quotes.push(match), QUOTES))
+    // .replace(/^\s*\n\s*|\s*\n\s*$/g,'')
+    .replace(/\s+/g, ' ')
+    // ...>text<... sequence
+    .replace(/(?:^|>)([^<]*)(?:$|<)/g, (match, text, idx, str) => {
+      let close, tag
+      if (idx) {
+        str.slice(prev, idx)
+          // <abc/> → <abc />
+          .replace(/(\S)\/$/, '$1 /')
+          .split(' ').map((part, i) => {
+            if (part[0] === '/') {
+              close = tag || part.slice(1) || 1
+            }
+            else if (!i) {
+              tag = evaluate(part)
+              // <p>abc<p>def, <tr><td>x<tr>
+              while (htm.close[current[1] + tag]) up()
+              current = [current, tag, null]
+              if (htm.empty[tag]) close = tag
+            }
+            else if (part) {
+              let props = current[2] || (current[2] = {})
+              if (part.slice(0, 3) === '...') {
+                Object.assign(props, arguments[++field])
+              }
+              else {
+                [name, value] = part.split('=')
+                props[evaluate(name)] = value ? evaluate(value) : true
+              }
+            }
+          })
+      }
+      if (close) {
+        up()
+        // if last child is closable - close it too
+        while (last !== close && htm.close[last]) up()
+      }
+      prev = idx + match.length
+
+      if (text && text !== ' ') evaluate((last = 0, text), current, true)
+    })
+
+  if (!current.root) up()
+  return current.length > 1 ? current : current[0]
+}
+
+// self-closing elements
+htm.empty = {}
+
+// optional closing elements
+htm.close = {}
 if(Object.keys(exports).length){window['htm']=exports;}
+exports={};
+
+//libraries/xhtm-1.5.3/index.js
+exports={};
+htm = window.htm;
+
+'area base br col command embed hr img input keygen link meta param source track wbr ! !doctype ? ?xml'.split(' ').map(v => htm.empty[v] = htm.empty[v.toUpperCase()] = true)
+
+// https://html.spec.whatwg.org/multipage/syntax.html#optional-tags
+// closed by the corresponding tag or end of parent content
+let close = {
+  'li': '',
+  'dt': 'dd',
+  'dd': 'dt',
+  'p': 'address article aside blockquote details div dl fieldset figcaption figure footer form h1 h2 h3 h4 h5 h6 header hgroup hr main menu nav ol pre section table',
+  'rt': 'rp',
+  'rp': 'rt',
+  'optgroup': '',
+  'option': 'optgroup',
+  'caption': 'tbody thead tfoot tr colgroup',
+  'colgroup': 'thead tbody tfoot tr caption',
+  'thead': 'tbody tfoot caption',
+  'tbody': 'tfoot caption',
+  'tfoot': 'caption',
+  'tr': 'tbody tfoot',
+  'td': 'th tr',
+  'th': 'td tr tbody',
+}
+for (let tag in close) {
+  [...close[tag].split(' '), tag].map(closer => {
+    htm.close[tag] =
+    htm.close[tag.toUpperCase()] =
+    htm.close[tag + closer] =
+    htm.close[tag.toUpperCase() + closer] =
+    htm.close[tag + closer.toUpperCase()] =
+    htm.close[tag.toUpperCase() + closer.toUpperCase()] =
+    true
+  })
+}
+
+window.htm = htm;
+
+if(Object.keys(exports).length){window['index']=exports;}
 exports={};
 
 window.html = htm.bind(preact.createElement);
@@ -368,49 +493,49 @@ window.caph_requirements = JSON.parse(LZUTF8.decompress("W3sicmVmIjoiY2FwaC1kb2N
 
 
 
-class ResourcesLoader{
-  dist=null;
-  mathTag='katex';
+class ResourcesLoader {
+  dist = null;
+  mathTag = 'katex';
   mathMacros = {};
   plugins = {};
   contexts = {};
   utils = {
-    unindent:(text)=>{
+    unindent: (text) => {
       let lines = text.split('\n');
-      let n = lines.filter(l=>l.trim().length)
-        .map(l=>l.length-l.trimStart().length)
-        .reduce((p,c)=>Math.min(c,p), 1000);
-      return lines.map(l=>l.slice(n)).join('\n');
+      let n = lines.filter(l => l.trim().length)
+        .map(l => l.length - l.trimStart().length)
+        .reduce((p, c) => Math.min(c, p), 1000);
+      return lines.map(l => l.slice(n)).join('\n');
     }
   };
   components = {};
-  _attachments=[];
+  _attachments = [];
   _loadStatus = {};
 
   setPreReady;
-  _preReady = new Promise((setter, _)=>this.setPreReady=setter);
-  preReady = ()=>this._preReady;
+  _preReady = new Promise((setter, _) => this.setPreReady = setter);
+  preReady = () => this._preReady;
   setReady;
-  _ready = new Promise((setter, _)=>this.setReady=setter);
-  ready = ()=>this._ready;
+  _ready = new Promise((setter, _) => this.setReady = setter);
+  ready = () => this._ready;
 
   _required = [
-    {ref: 'caph-docs/core/colors.css',},
-    {ref: 'caph-docs/core/core.css',},
-    //{ref: 'caph-docs/core/katex.min.js',},
-    //{ref: 'caph-docs/core/katex-nofonts.min.css',},
+    { ref: 'caph-docs/core/colors.css', },
+    { ref: 'caph-docs/core/core.css', },
+    //{ ref: 'caph-docs/core/katex.min.js', },
+    //{ ref: 'caph-docs/core/katex-nofonts.min.css', },
   ];
-  
-  constructor(required_attachments){
-    for(let a of required_attachments) this.attach(a);
-    this.dist = '../disst';
-    for(const e of document.querySelectorAll('script')){
-      if(e.src.endsWith('/caph-docs.js'))
-      this.dist = e.src.slice(0,-13);
+
+  constructor(required_attachments) {
+    for (let a of required_attachments) this.attach(a);
+    this.dist = '../dist';
+    for (const e of document.querySelectorAll('script')) {
+      if (e.src.endsWith('/caph-docs.js'))
+        this.dist = e.src.slice(0, -13);
     }
 
     this.div = document.getElementById('core-sources');
-    if(!this.div){
+    if (!this.div) {
       this.div = MyDocument.createElement('div', {
         id: 'core-sources',
         parent: document.head,
@@ -418,150 +543,149 @@ class ResourcesLoader{
       });
     }
     const metaContent = document.querySelector('meta[content]');
-    if(!metaContent) MyDocument.createElement('div', {
+    if (!metaContent) MyDocument.createElement('div', {
       parent: document.head,
       where: 'afterbegin',
       name: 'viewport',
-      content: window.innerWidth > 960?
+      content: window.innerWidth > 960 ?
         'width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no'
         : 'width=1024'
     });
-    (async()=>{
-      for(let s of this._required){
+    (async () => {
+      for (let s of this._required) {
         await this.load(s.ref, {
-          parent:this.div,
+          parent: this.div,
           afterPreReady: false,
         });
       }
       this.setPreReady();
     })();
-    window.onload = ()=>this.loadRoot();
+    window.onload = () => this.loadRoot();
   }
 
-  getAttachment(ref){
-    for(let e of this._attachments) if(e.ref==ref) return e.content;
+  getAttachment(ref) {
+    for (let e of this._attachments) if (e.ref == ref) return e.content;
     return null;
   }
-  attach(...attachments){
-    for(let s of attachments){
-      if(this.getAttachment(s.ref)===null) this._attachments.push(s);
-      else this._attachments.forEach(a=>{
-        if(a.ref==s.ref) a.content=s.content;
+  attach(...attachments) {
+    for (let s of attachments) {
+      if (this.getAttachment(s.ref) === null) this._attachments.push(s);
+      else this._attachments.forEach(a => {
+        if (a.ref == s.ref) a.content = s.content;
       });
     }
   }
 
-  async load(ref, {attrs={}, parent=null, where='beforeend',
-      auto_attrs=true, afterPreReady=true}={}){
+  async load(ref, { attrs = {}, parent = null, where = 'beforeend',
+    auto_attrs = true, afterPreReady = true } = {}) {
     // Load an external script or style by inserting relative to parent
-    if(afterPreReady) await this.preReady();
-    if(parent==null) parent=this.div;
+    if (afterPreReady) await this.preReady();
+    if (parent == null) parent = this.div;
     const ext = ref.split('.').pop();
-    let tag = ext=='js'? 'script': ext=='css'? 'link' : null;
-    if(tag==null) throw new Error('Only .js and .css files can be _sources. Got: '+ext+' '+ref);
+    let tag = ext == 'js' ? 'script' : ext == 'css' ? 'link' : null;
+    if (tag == null) throw new Error('Only .js and .css files can be _sources. Got: ' + ext + ' ' + ref);
     let defaults = {};
-    if(auto_attrs && tag=='link') defaults={rel:'stylesheet', type:'text/css'};
-    Object.keys(attrs).forEach(k=>defaults[k]=attrs[k]);
+    if (auto_attrs && tag == 'link') defaults = { rel: 'stylesheet', type: 'text/css' };
+    Object.keys(attrs).forEach(k => defaults[k] = attrs[k]);
     let content = this.getAttachment(ref);
-    if(content && tag=='link') tag = 'style';
+    if (content && tag == 'link') tag = 'style';
     attrs = defaults;
-    if(content){
+    if (content) {
       delete attrs.src;
       delete attrs.href;
     } else {
-      if(tag=='script') attrs.src = ref;
-      if(tag=='link') attrs.href = ref;
+      if (tag == 'script') attrs.src = ref;
+      if (tag == 'link') attrs.href = ref;
     }
-    try{
+    try {
       await this._load_elem(ref, tag, attrs, parent, where, content);
-    } catch(err){
+    } catch (err) {
       console.log(err);
       throw err;
     }
   }
-  async loadPlugin(tag){
-    const tag_snake = tag.replace(/[A-Z]/g, (x)=>`-${x.toLowerCase()}`);
+  async loadPlugin(tag) {
+    const tag_snake = tag.replace(/[A-Z]/g, (x) => `-${x.toLowerCase()}`);
     return await this.load(`${this.dist}/plugin-${tag_snake}.js`);
   }
-  async loadPluginDeep(tag){
+  async loadPluginDeep(tag) {
     await this.loadPlugin(tag);
     await this.plugins[tag].loader();
   }
-  async loadFont(name){
+  async loadFont(name) {
     return await this.load(`${this.dist}/font-${name}.css`);
   }
 
-  async _load_elem(ref, tag, attrs, parent, where, content){
+  async _load_elem(ref, tag, attrs, parent, where, content) {
     // Handle concurrent calls to load_elem(...) about the same ref
-    if(!this._loadStatus[ref]){
-      this._loadStatus[ref]=1;
-      try{
+    if (!this._loadStatus[ref]) {
+      this._loadStatus[ref] = 1;
+      try {
         await this.__load_elem(ref, tag, attrs, parent, where, content);
-        this._loadStatus[ref]=2;
-      } catch(err){
-        this._loadStatus[ref]=0;
+        this._loadStatus[ref] = 2;
+      } catch (err) {
+        this._loadStatus[ref] = 0;
         throw err;
       }
     }
-    while(this._loadStatus[ref]==1){ // If being loaded in other thread...
+    while (this._loadStatus[ref] == 1) { // If being loaded in other thread...
       await sleep(80);
     }
   }
 
-  __load_elem(ref, tag, attrs, parent, where, content){
-    return new Promise((_ok, _err)=>{
+  __load_elem(ref, tag, attrs, parent, where, content) {
+    return new Promise((_ok, _err) => {
       let e = document.createElement(tag);
       let done = false;
-      e.onload = ()=>{if(!done){ done=true; _ok(); }};
-      e.onerror = (x)=>{if(!done){ done=true; _err(x); }}; // HTTP errors only
+      e.onload = () => { if (!done) { done = true; _ok(); } };
+      e.onerror = (x) => { if (!done) { done = true; _err(x); } }; // HTTP errors only
       Object.keys(attrs).map(key => e.setAttribute(key, attrs[key]));
-      if(content){
-        let r = window._loaded_resources||{};
+      if (content) {
+        let r = window._loaded_resources || {};
         window._loaded_resources = r;
         r[ref] = false;
         content += `\nwindow._loaded_resources['${ref}']=true;\n`;
         e.innerHTML = content;
-        if(tag=='script'){
-          (async()=>{
-            while(!r[ref]) await sleep(100);
-            done=true; _ok();
+        if (tag == 'script') {
+          (async () => {
+            while (!r[ref]) await sleep(100);
+            done = true; _ok();
           })();
-        } else if(tag=='style'){
+        } else if (tag == 'style') {
           let ms = 10;
-          setTimeout(()=>{done=true, _ok()}, ms);
+          setTimeout(() => { done = true, _ok() }, ms);
         }
       }
       parent.insertAdjacentElement(where, e);
-      setTimeout(()=>done||_err(['Timeout (12s) loading source:', e]), 12000);
+      setTimeout(() => done || _err(['Timeout (12s) loading source:', e]), 12000);
     });
   };
 
 
-  async loadRoot(){
+  async loadRoot() {
     await this.preReady();
     const rootElements = [
       ...document.querySelectorAll('[data-tag="document"]'),
       ...document.querySelectorAll('[data-tag="slides"]'),
     ];
-    if(rootElements.length==0)
+    if (rootElements.length == 0)
       console.warn('Caph-docs was loaded but not used: No element found with data-tag="document" or data-tag="slides".');
-    else{
-      if(rootElements.length>1)
+    else {
+      if (rootElements.length > 1)
         console.warn("Several root elements for caph-docs. Using the first one.");
       await this._loadRoot(rootElements[0]);
-
     }
   }
-  async _loadRoot(rootElement){
+  async _loadRoot(rootElement) {
 
     function tagToComponent(type, props, ...children) {
-      let tag = props&&props['data-tag'];
-      if(tag){
-        for(const k in props) if(k.startsWith('data-')){
+      let tag = props && props['data-tag'];
+      if (tag) {
+        for (const k in props) if (k.startsWith('data-')) {
           const strValue = props[k];
           delete props[k];
-          let value = strValue.length?strValue:'true';
-          try{ value=eval(`(${value})`); }catch(error){}
+          let value = strValue.length ? strValue : 'true';
+          try { value = eval(`(${value})`); } catch (error) { }
           props[k.slice(5)] = value;
         }
         delete props['tag'];
@@ -569,29 +693,29 @@ class ResourcesLoader{
       }
       return preact.h(type, props, children);
     }
-    
+
     const dataParser = htm.bind(tagToComponent);
-    const vdom = dataParser([`
+    const vDom = dataParser([`
       <div data-tag="main">
         ${this.fixSelfClosing(rootElement.outerHTML)}
       </div>
     `]);
-    const sibling = MyDocument.createElement('div',{
+    const sibling = MyDocument.createElement('div', {
       'parent': rootElement,
       'where': 'afterend',
     });
     rootElement.parentNode.removeChild(rootElement);
-    preact.render(vdom, sibling.parentNode, sibling);
+    preact.render(vDom, sibling.parentNode, sibling);
     this.setReady();
   }
 
-  fixSelfClosing(text){
+  fixSelfClosing(text) {
     // parse html before feeding to htm
     // because htm does not support self-closing tags by default
     // Convert self-closing tags to temporary divs
-    const tags='area base br col command embed hr img input keygen link meta param source track wbr';
-    for(const tag of tags.split(' ')){
-      const reg = new RegExp(`<${tag}(.*?)\/?>`, 'g'); 
+    const tags = 'area base br col command embed hr img input keygen link meta param source track wbr';
+    for (const tag of tags.split(' ')) {
+      const reg = new RegExp(`<${tag}(.*?)\/?>`, 'g');
       text = text.replace(reg, `<div data-tag="selfClosing" data-htmlTag="${tag}" $1></div>`);
     }
     return text;
@@ -599,42 +723,42 @@ class ResourcesLoader{
 
 
   entities = {
-    '&nbsp;': '\\ ', '&amp;' :'&', '&gt;' :'>', '&lt;' :'<',
-    '&quot;' :'"', '&apos;' :"'",
-    '&cent;' :'¢', '&pound;' :'£', '&yen;' :'¥',
-    '&euro;' :'€', '&copy;' :'©', '&reg;' :'®',
+    '&nbsp;': '\\ ', '&amp;': '&', '&gt;': '>', '&lt;': '<',
+    '&quot;': '"', '&apos;': "'",
+    '&cent;': '¢', '&pound;': '£', '&yen;': '¥',
+    '&euro;': '€', '&copy;': '©', '&reg;': '®',
   };
-  replace(s, obj){ // Undo xthm replacements
-    if(obj==undefined) obj=this.entities;
-    for(const key in obj) s = s.replace(new RegExp(key, 'g'), obj[key]);
+  replace(s, obj) { // Undo xhtm replacements
+    if (obj == undefined) obj = this.entities;
+    for (const key in obj) s = s.replace(new RegExp(key, 'g'), obj[key]);
     return s;
   }
-  mathString(text){
+  mathString(text) {
     const regularExpression = /\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)|\$[^\$\\]*(?:\\.[^\$\\]*)*\$/g;
     const latexMatch = text.match(regularExpression);
-    
-    if(!latexMatch) return text; // no math in text
+
+    if (!latexMatch) return text; // no math in text
 
     const blockRegularExpression = /\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]/g;
-    
-    const stripDollars = (stringToStrip) =>(
-      (stringToStrip[0] === "$" && stringToStrip[1] !== "$")?
+
+    const stripDollars = (stringToStrip) => (
+      (stringToStrip[0] === "$" && stringToStrip[1] !== "$") ?
         stringToStrip.slice(1, -1)
         : stringToStrip.slice(2, -2)
     );
 
-    const getDisplay = (stringToDisplay) =>(
+    const getDisplay = (stringToDisplay) => (
       stringToDisplay.match(blockRegularExpression) ? "block" : "inline"
     );
-    let parser = (formula, mode)=>`
+    let parser = (formula, mode) => `
       <script data-tag="${caph.mathTag}" data-mode="${mode}" type="text/math">
         ${formula}
       </script>`.trim();
-    
+
     let result = [];
     text.split(regularExpression).forEach((s, index) => {
       result.push(caph.replace(s));
-      if(latexMatch[index]) {
+      if (latexMatch[index]) {
         const x = latexMatch[index];
         const mode = getDisplay(x);
         let formula = caph.replace(stripDollars(x));
@@ -644,66 +768,92 @@ class ResourcesLoader{
     });
     return result.join('');
   }
+
+
 }
 
-window.caph_requirements = window.caph_requirements||[];
+window.caph_requirements = window.caph_requirements || [];
 var caph = new ResourcesLoader(window.caph_requirements);
 delete window.caph_requirements;
-window.html = htm.bind(preact.createElement);
+window.raw_html = htm.bind(preact.createElement);
 
-caph.Plugin = class{
-  
+COUNTER = 0
+
+function tagToComponent(type, props, ...children) {
+  if (type == 'math') {
+    props = props || {};
+    props['data-tag'] = caph.mathTag;
+  }
+  let tag = props && props['data-tag'];
+  if (tag) {
+    for (const k in props) if (k.startsWith('data-')) {
+      const strValue = props[k];
+      delete props[k];
+      let value = strValue.length ? strValue : 'true';
+      try { value = eval(`(${value})`); } catch (error) { }
+      props[k.slice(5)] = value;
+    }
+    delete props['tag'];
+    type = caph.Plugin.component(tag);
+    console.log(COUNTER++);
+  }
+  return preact.h(type, props, children);
+}
+window.html = htm.bind(tagToComponent);
+
+
+caph.Plugin = class {
+
   loadInline = false;
   _loaded = false;
-  
-  loader(){}
 
-  post_loader(){}
-  
-  render({}){
+  loader() { }
+
+  post_loader() { }
+
+  render({ }) {
     console.error('Override the render method of this object:', this);
-    return html`<div>Override the render method</div>`;
+    return raw_html`<div>Override the render method</div>`;
   }
 
-  static component(tag){
-    return function(){
+  static component(tag) {
+    return function () {
       const [starting, setStarting] = preact.useState(true);
       const [plugin, setPlugin] = preact.useState(null);
       const [ready, setReady] = preact.useState(false);
       const [error, setError] = preact.useState(null);
       const [loadInline, setLoadInline] = preact.useState(true);
       // load as inline before plugin is even loaded
-      preact.useEffect(async ()=>{
+      preact.useEffect(async () => {
         await sleep(200); setStarting(false);
       }, []);
 
-      preact.useEffect(async ()=>{
+      preact.useEffect(async () => {
         await caph.loadPlugin(tag);
-        const plugin = await MyPromise.until(()=>caph.plugins[tag]);
-        setPlugin(()=>plugin);
+        const plugin = await MyPromise.until(() => caph.plugins[tag]);
+        setPlugin(() => plugin);
         setLoadInline(plugin.loadInline);
-        try{
-          if(!plugin._loaded && plugin.loader){
+        try {
+          if (!plugin._loaded && plugin.loader) {
             await plugin.loader(plugin, ...arguments);
             plugin._loaded = true;
           }
           setReady(true);
-          if(plugin.post_loader) await plugin.post_loader(plugin, ...arguments);
-          if(plugin.menuSettings) await plugin.menuSettings(plugin, ...arguments);
-        } catch(err){ setError(err); console.error(err); }
+          if (plugin.post_loader) await plugin.post_loader(plugin, ...arguments);
+          if (plugin.menuSettings) await plugin.menuSettings(plugin, ...arguments);
+        } catch (err) { setError(err); console.error(err); }
       }, []);
 
-      arguments[0].autoId=(arguments.id||arguments.autoId||
-        tag+'-'+Math.floor(1e12*Math.random()));
+      arguments[0].autoId = (arguments.id || arguments.autoId ||
+        tag + '-' + Math.floor(1e12 * Math.random()));
       //console.log(tag, arguments);
-      return html`${
-      !error&&ready&&plugin&&plugin.render?
+      return raw_html`${!error && ready && plugin && plugin.render ?
         plugin.render.apply(plugin, arguments)
         :
-        starting? html``: html`
-          <div style="display:${loadInline?'inline':'block'}"
+        starting ? raw_html`` : raw_html`
+          <div style="display:${loadInline ? 'inline' : 'block'}"
               class="hbox align-center space-around flex plugin-loading-container">
-            ${error?`${tag}-error`:html`
+            ${error ? `${tag}-error` : raw_html`
               <span>${tag}</span> <div class="plugin-loading"/>`}
           </div>
       `}`;
