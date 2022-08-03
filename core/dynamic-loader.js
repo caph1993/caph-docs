@@ -275,7 +275,74 @@ class ResourcesLoader {
     return result.join('');
   }
 
+  _plugin_components = {};
+  plugin_component(tag, ...args) {
+    // component that renders a plugin, or loading while loading
+    const cache = this._plugin_components;
+    if (cache[tag]) {
+      // Possibly shortcut cache to load directly:
+      const plugin = caph.plugins[tag];
+      if (plugin && (plugin._loaded || plugin._load_error) && plugin.render) {
+        cache[tag] = plugin.render.bind(plugin);
+        console.log(cache[tag])
+      }
+      return cache[tag];
+    }
+    cache[tag] = function (...args) {
+      const [starting, setStarting] = preact.useState(true);
+      const [plugin, setPlugin] = preact.useState(caph.plugins[tag] || null);
+      const [ready, setReady] = preact.useState(!!(plugin && plugin._loaded));
+      const [error, setError] = preact.useState((plugin && plugin._load_error) || null);
+      const [loadInline, setLoadInline] = preact.useState(plugin ? plugin.loadInline : true);
+      // load always as inline before plugin is even loaded
+      preact.useEffect(async () => {
+        await sleep(200);
+        setStarting(false);
+        const plugin = await MyPromise.until(() => caph.plugins[tag]);
+        console.log(plugin);
+        setPlugin(plugin);
+        setLoadInline(plugin.loadInline);
+        await MyPromise.until(() => plugin._loaded || plugin._load_error);
+        if (plugin._load_error) return setError(plugin._load_error);
+        if (plugin._loaded) return setReady(true);
+      }, []);
 
+      // args[0].autoId = (args.id || args.autoId ||
+      //   tag + '-' + Math.floor(1e12 * Math.random()));
+      // console.log(tag, args);
+      return raw_html`${!error && ready && plugin && plugin.render ?
+        plugin.render.apply(plugin, args)
+        :
+        starting ? raw_html`` : raw_html`
+          <div style="display:${loadInline ? 'inline' : 'block'}"
+              class="hbox align-center space-around flex plugin-loading-container">
+            ${error ? `${tag}-error` : raw_html`
+              <span>${tag}</span> <div class="plugin-loading"/>`}
+          </div>
+      `}`;
+    }
+    const load_plugin = async () => {
+      await caph.loadPlugin(tag);
+      const plugin = await MyPromise.until(() => caph.plugins[tag]);
+      try {
+        if (!plugin._loaded && plugin.loader) {
+          await plugin.loader(plugin, ...args);
+          plugin._loaded = true;
+        }
+        if (plugin.post_loader) {
+          await plugin.post_loader(plugin, ...args);
+          plugin._loaded_post = true;
+        }
+        if (plugin.menuSettings) {
+          await plugin.menuSettings(plugin, ...args);
+          plugin._loaded_menu = true;
+        }
+      } catch (err) { plugin._load_error = err || true; console.error(err); }
+    }
+    console.log("HEY")
+    load_plugin();
+    return cache[tag];
+  }
 }
 
 window.caph_requirements = window.caph_requirements || [];
@@ -283,7 +350,6 @@ var caph = new ResourcesLoader(window.caph_requirements);
 delete window.caph_requirements;
 window.raw_html = htm.bind(preact.createElement);
 
-COUNTER = 0
 
 function tagToComponent(type, props, ...children) {
   if (type == 'math') {
@@ -300,8 +366,8 @@ function tagToComponent(type, props, ...children) {
       props[k.slice(5)] = value;
     }
     delete props['tag'];
-    type = caph.Plugin.component(tag);
-    console.log(COUNTER++);
+    type = caph.plugin_component(tag);
+    console.log(type);
   }
   return preact.h(type, props, children);
 }
@@ -312,6 +378,9 @@ caph.Plugin = class {
 
   loadInline = false;
   _loaded = false;
+  _loaded_post = false;
+  _loaded_menu = false;
+  _load_error = false;
 
   loader() { }
 
@@ -320,50 +389,6 @@ caph.Plugin = class {
   render({ }) {
     console.error('Override the render method of this object:', this);
     return raw_html`<div>Override the render method</div>`;
-  }
-
-  static component(tag) {
-    return function () {
-      const [starting, setStarting] = preact.useState(true);
-      const [plugin, setPlugin] = preact.useState(null);
-      const [ready, setReady] = preact.useState(false);
-      const [error, setError] = preact.useState(null);
-      const [loadInline, setLoadInline] = preact.useState(true);
-      // load as inline before plugin is even loaded
-      preact.useEffect(async () => {
-        await sleep(200); setStarting(false);
-      }, []);
-
-      preact.useEffect(async () => {
-        await caph.loadPlugin(tag);
-        const plugin = await MyPromise.until(() => caph.plugins[tag]);
-        setPlugin(() => plugin);
-        setLoadInline(plugin.loadInline);
-        try {
-          if (!plugin._loaded && plugin.loader) {
-            await plugin.loader(plugin, ...arguments);
-            plugin._loaded = true;
-          }
-          setReady(true);
-          if (plugin.post_loader) await plugin.post_loader(plugin, ...arguments);
-          if (plugin.menuSettings) await plugin.menuSettings(plugin, ...arguments);
-        } catch (err) { setError(err); console.error(err); }
-      }, []);
-
-      arguments[0].autoId = (arguments.id || arguments.autoId ||
-        tag + '-' + Math.floor(1e12 * Math.random()));
-      //console.log(tag, arguments);
-      return raw_html`${!error && ready && plugin && plugin.render ?
-        plugin.render.apply(plugin, arguments)
-        :
-        starting ? raw_html`` : raw_html`
-          <div style="display:${loadInline ? 'inline' : 'block'}"
-              class="hbox align-center space-around flex plugin-loading-container">
-            ${error ? `${tag}-error` : raw_html`
-              <span>${tag}</span> <div class="plugin-loading"/>`}
-          </div>
-      `}`;
-    }
   }
 }
 
