@@ -9,10 +9,6 @@ let sources = {
     'core/utils.js',
     'libraries/preact-10.4.6/preact.min.js',
     'libraries/preact-10.4.6/hooks.js',
-    // 'libraries/htm-3.0.4/htm.js',
-    //'core/math.js',
-    'libraries/xhtm-1.5.3/htm.js',
-    'libraries/xhtm-1.5.3/index.js',
   ],
   'loader': 'core/dynamic-loader.js',
   'dynamic': [
@@ -64,7 +60,7 @@ function parseContent(path) {
 async function main() {
   let static = '';
   for (let path of sources.static) static += parseContent(path) + '\n';
-  static += `window.html = htm.bind(preact.createElement);\n`;
+  //static += `window.html = htm.bind(preact.createElement);\n`;
   let loader = '' + fs.readFileSync(sources.loader);
 
   let dynamic = sources.dynamic.map(path => (

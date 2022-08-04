@@ -1,4 +1,4 @@
-const FIELD = '\ue000', QUOTES = '\ue001'
+const FIELD = '\ue000', QUOTES = '\ue001';
 
 export default function htm(statics) {
   let h = this, prev = 0, current = [], field = 0, args, name, value, quotes = [], quote = 0, last
@@ -26,9 +26,16 @@ export default function htm(statics) {
     current.push(h(last, ...args))
   }
 
+  // statics
+  //   .join(FIELD)
+  //   .replace(/([^\\])\$(.*?[^\\])\$/g, (match, p1, p2) => {
+  //     //p2 = p2.replace(/\$/g, '$')
+  //     // console.log(p2)
+  //     return `${p1}<math>${p2}</math>`
+  //   }) // KEY PART!!!!!
   statics
     .join(FIELD)
-    .replace(/[^\\]\$(.*?)\$/g, '<math>$1</math>') // KEY PART!!!!!
+    .replace(/([^\\])\$(.*?[^\\])\$/g, '$1<caphMath>$2</caphMath>') // KEY PART!!!!!
     .replace(/<!--[^]*-->/g, '')
     .replace(/<!\[CDATA\[[^]*\]\]>/g, '')
     .replace(/('|")[^\1]*?\1/g, match => (quotes.push(match), QUOTES))

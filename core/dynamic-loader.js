@@ -21,15 +21,13 @@ class ResourcesLoader {
   setPreReady;
   _preReady = new Promise((setter, _) => this.setPreReady = setter);
   preReady = () => this._preReady;
-  setReady;
-  _ready = new Promise((setter, _) => this.setReady = setter);
-  ready = () => this._ready;
+  // setReady;
+  // _ready = new Promise((setter, _) => this.setReady = setter);
+  // ready = () => this._ready;
 
   _required = [
     { ref: 'caph-docs/core/colors.css', },
     { ref: 'caph-docs/core/core.css', },
-    //{ ref: 'caph-docs/core/katex.min.js', },
-    //{ ref: 'caph-docs/core/katex-nofonts.min.css', },
   ];
 
   constructor(required_attachments) {
@@ -66,7 +64,17 @@ class ResourcesLoader {
       }
       this.setPreReady();
     })();
-    window.onload = () => this.loadRoot();
+  }
+
+  async createElementReplace(rootElement, vDom = null) {
+    vDom = vDom || dataParser([`${rootElement.outerHTML}`]);
+    const sibling = MyDocument.createElement('div', {
+      'parent': rootElement,
+      'where': 'afterend',
+    });
+    rootElement.parentNode.removeChild(rootElement);
+    preact.render(vDom, sibling.parentNode, sibling);
+    //this.setReady();
   }
 
   getAttachment(ref) {
@@ -168,127 +176,20 @@ class ResourcesLoader {
   };
 
 
-  async loadRoot() {
-    await this.preReady();
-    const rootElements = [
-      ...document.querySelectorAll('[data-tag="document"]'),
-      ...document.querySelectorAll('[data-tag="slides"]'),
-    ];
-    if (rootElements.length == 0)
-      console.warn('Caph-docs was loaded but not used: No element found with data-tag="document" or data-tag="slides".');
-    else {
-      if (rootElements.length > 1)
-        console.warn("Several root elements for caph-docs. Using the first one.");
-      await this._loadRoot(rootElements[0]);
-    }
-  }
-  async _loadRoot(rootElement) {
-
-    function tagToComponent(type, props, ...children) {
-      let tag = props && props['data-tag'];
-      if (tag) {
-        for (const k in props) if (k.startsWith('data-')) {
-          const strValue = props[k];
-          delete props[k];
-          let value = strValue.length ? strValue : 'true';
-          try { value = eval(`(${value})`); } catch (error) { }
-          props[k.slice(5)] = value;
-        }
-        delete props['tag'];
-        type = caph.Plugin.component(tag);
-      }
-      return preact.h(type, props, children);
-    }
-
-    const dataParser = htm.bind(tagToComponent);
-    const vDom = dataParser([`
-      <div data-tag="main">
-        ${this.fixSelfClosing(rootElement.outerHTML)}
-      </div>
-    `]);
-    const sibling = MyDocument.createElement('div', {
-      'parent': rootElement,
-      'where': 'afterend',
-    });
-    rootElement.parentNode.removeChild(rootElement);
-    preact.render(vDom, sibling.parentNode, sibling);
-    this.setReady();
-  }
-
-  fixSelfClosing(text) {
-    // parse html before feeding to htm
-    // because htm does not support self-closing tags by default
-    // Convert self-closing tags to temporary divs
-    const tags = 'area base br col command embed hr img input keygen link meta param source track wbr';
-    for (const tag of tags.split(' ')) {
-      const reg = new RegExp(`<${tag}(.*?)\/?>`, 'g');
-      text = text.replace(reg, `<div data-tag="selfClosing" data-htmlTag="${tag}" $1></div>`);
-    }
-    return text;
-  }
-
-
-  entities = {
-    '&nbsp;': '\\ ', '&amp;': '&', '&gt;': '>', '&lt;': '<',
-    '&quot;': '"', '&apos;': "'",
-    '&cent;': '¢', '&pound;': '£', '&yen;': '¥',
-    '&euro;': '€', '&copy;': '©', '&reg;': '®',
-  };
-  replace(s, obj) { // Undo xhtm replacements
-    if (obj == undefined) obj = this.entities;
-    for (const key in obj) s = s.replace(new RegExp(key, 'g'), obj[key]);
-    return s;
-  }
-  mathString(text) {
-    const regularExpression = /\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)|\$[^\$\\]*(?:\\.[^\$\\]*)*\$/g;
-    const latexMatch = text.match(regularExpression);
-
-    if (!latexMatch) return text; // no math in text
-
-    const blockRegularExpression = /\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]/g;
-
-    const stripDollars = (stringToStrip) => (
-      (stringToStrip[0] === "$" && stringToStrip[1] !== "$") ?
-        stringToStrip.slice(1, -1)
-        : stringToStrip.slice(2, -2)
-    );
-
-    const getDisplay = (stringToDisplay) => (
-      stringToDisplay.match(blockRegularExpression) ? "block" : "inline"
-    );
-    let parser = (formula, mode) => `
-      <script data-tag="${caph.mathTag}" data-mode="${mode}" type="text/math">
-        ${formula}
-      </script>`.trim();
-
-    let result = [];
-    text.split(regularExpression).forEach((s, index) => {
-      result.push(caph.replace(s));
-      if (latexMatch[index]) {
-        const x = latexMatch[index];
-        const mode = getDisplay(x);
-        let formula = caph.replace(stripDollars(x));
-        const block = parser(formula, mode);
-        result.push(block);
-      }
-    });
-    return result.join('');
-  }
-
   _plugin_components = {};
-  plugin_component(tag, ...args) {
+  plugin_component(tag) {
     // component that renders a plugin, or loading while loading
     const cache = this._plugin_components;
     if (cache[tag]) {
-      // Possibly shortcut cache to load directly:
+      //Possibly shortcut cache to load directly:
       const plugin = caph.plugins[tag];
       if (plugin && (plugin._loaded || plugin._load_error) && plugin.render) {
         cache[tag] = plugin.render.bind(plugin);
-        console.log(cache[tag])
       }
       return cache[tag];
     }
-    cache[tag] = function (...args) {
+    const this_raw_html = this.raw_html.bind(this);
+    cache[tag] = function ({ children, ...props }) {
       const [starting, setStarting] = preact.useState(true);
       const [plugin, setPlugin] = preact.useState(caph.plugins[tag] || null);
       const [ready, setReady] = preact.useState(!!(plugin && plugin._loaded));
@@ -299,7 +200,6 @@ class ResourcesLoader {
         await sleep(200);
         setStarting(false);
         const plugin = await MyPromise.until(() => caph.plugins[tag]);
-        console.log(plugin);
         setPlugin(plugin);
         setLoadInline(plugin.loadInline);
         await MyPromise.until(() => plugin._loaded || plugin._load_error);
@@ -307,72 +207,239 @@ class ResourcesLoader {
         if (plugin._loaded) return setReady(true);
       }, []);
 
-      // args[0].autoId = (args.id || args.autoId ||
-      //   tag + '-' + Math.floor(1e12 * Math.random()));
-      // console.log(tag, args);
-      return raw_html`${!error && ready && plugin && plugin.render ?
-        plugin.render.apply(plugin, args)
+      return this_raw_html`${!error && ready && plugin && plugin.render ?
+        plugin.render({ children, ...props })
         :
-        starting ? raw_html`` : raw_html`
-          <div style="display:${loadInline ? 'inline' : 'block'}"
-              class="hbox align-center space-around flex plugin-loading-container">
-            ${error ? `${tag}-error` : raw_html`
-              <span>${tag}</span> <div class="plugin-loading"/>`}
-          </div>
-      `}`;
+        !error ?
+          this_raw_html`<code class="flashing">${children}</code>`
+          :
+          this_raw_html`${tag}-error`
+        }`
     }
     const load_plugin = async () => {
       await caph.loadPlugin(tag);
       const plugin = await MyPromise.until(() => caph.plugins[tag]);
       try {
         if (!plugin._loaded && plugin.loader) {
-          await plugin.loader(plugin, ...args);
+          await plugin.loader(plugin);
           plugin._loaded = true;
         }
         if (plugin.post_loader) {
-          await plugin.post_loader(plugin, ...args);
+          await plugin.post_loader(plugin);
           plugin._loaded_post = true;
         }
         if (plugin.menuSettings) {
-          await plugin.menuSettings(plugin, ...args);
+          await plugin.menuSettings(plugin);
           plugin._loaded_menu = true;
         }
       } catch (err) { plugin._load_error = err || true; console.error(err); }
     }
-    console.log("HEY")
     load_plugin();
     return cache[tag];
+  }
+
+  _html_createElement(raw_mode, type, props, ...children) {
+    if (!raw_mode) {
+      if (type == 'caphMath') {
+        props = props || {};
+        props['data-tag'] = this.mathTag;
+      }
+      let tag = props && props['data-tag'];
+      if (tag) {
+        for (const k in props) if (k.startsWith('data-')) {
+          const strValue = props[k];
+          delete props[k];
+          let value = strValue.length ? strValue : 'true';
+          try { value = eval(`(${value})`); } catch (error) { }
+          props[k.slice(5)] = value;
+        }
+        delete props['tag'];
+        type = this.plugin_component(tag);
+      }
+    }
+    children = children.map(x => this._is_string(x) ? this._html_replace_entities(x) : x)
+    return preact.createElement(type, props, ...children);
+  }
+  _is_string(obj) {
+    return Object.prototype.toString.call(obj) === "[object String]";
+  }
+
+  _html_entities = {
+    '&nbsp;': '\\ ', '&amp;': '&', '&gt;': '>', '&lt;': '<',
+    '&quot;': '"', '&apos;': "'",
+    '&cent;': '¢', '&pound;': '£', '&yen;': '¥',
+    '&euro;': '€', '&copy;': '©', '&reg;': '®',
+  };
+
+  _html_replace_entities(s, obj) {
+    if (obj == undefined) obj = this._html_entities;
+    for (const key in obj) s = s.replace(new RegExp(key, 'g'), obj[key]);
+    return s;
+  }
+
+  _html(raw_mode, strings, ...values) {
+    // based on xhtm, which is based on htm.
+    // fixes issues with html entities and allows for plugin tags. 
+    const f = this._html;
+    if (f.empty === undefined) this._html_init();
+    let prev = 0, current = [], field = 0, args, name, value, quotes = [], quote = 0, last;
+    current.root = true;
+
+    const evaluate = (str, parts = [], raw) => {
+      let i = 0;
+      str = !raw && str === f.QUOTES ?
+        quotes[quote++].slice(1, -1) :
+        str.replace(f.regex_QUOTES, m => quotes[quote++]);
+      if (!str) return str;
+      str.replace(f.regex_FIELD, (match, idx) => {
+        if (idx) parts.push(str.slice(i, idx));
+        i = idx + 1;
+        return parts.push(values[field++]);
+      })
+      if (i < str.length) parts.push(str.slice(i));
+      return parts.length > 1 ? parts : parts[0];
+    }
+    // close level
+    const up = () => {
+      [current, last, ...args] = current;
+      current.push(this._html_createElement(raw_mode, last, ...args));
+    }
+    let s = strings.join(f.FIELD);
+    if (!raw_mode) {
+      s = s.replace(/\\\$/g, f.ESCAPED_DOLLAR);
+      s = s.replace(/([^\\])\$(.*?[^\\])\$/g, (match, p1, p2) => {
+        const i = match.search(/\<|\>/);
+        if (i != -1) {
+          match = match.replace(f.regex_ESCAPED_DOLLAR, '\\\$');
+          match = match.replace(/</gi, '&lt;').replace(/>/gi, '&gt;');
+          console.error('KaTeX Can not parse the following:', match);
+          return `<span class="tooltip">
+            <span>
+              Parsed error: <code class="flashing">${match}</code>
+            </span>
+            <div class="tooltip-text" style="width:30em">
+              1. In tex, use \\lt and \\gt instead of &lt; and &gt;.
+              <br/>
+              2. In html, use \\$ instead of $.
+              <br/>
+              This prevents any parsing misunderstanding.
+            </div>
+          </span>`;
+        }
+        p2 = p2.replace(f.regex_ESCAPED_DOLLAR, '\\\$');
+        return `${p1}<caphMath>${p2}</caphMath>`;
+      });
+      s = s.replace(f.regex_ESCAPED_DOLLAR, '$'); // \$ in html becomes $
+    }
+    s = s.replace(/<!--[^]*-->/g, '');
+    s = s.replace(/<!\[CDATA\[[^]*\]\]>/g, '');
+    s = s.replace(/('|")[^\1]*?\1/g, match => (quotes.push(match), f.QUOTES));
+    // .replace(/^\s*\n\s*|\s*\n\s*$/g,'')
+    s = s.replace(/\s+/g, ' ');
+    // ...>text<... sequence
+    s = s.replace(/(?:^|>)([^<]*)(?:$|<)/g, (match, text, idx, str) => {
+      let close, tag;
+      if (idx) {
+        let ss = str.slice(prev, idx);
+        // <abc/> → <abc />
+        ss = ss.replace(/(\S)\/$/, '$1 /');
+        ss.split(' ').map((part, i) => {
+          if (part[0] === '/') {
+            close = tag || part.slice(1) || 1;
+          }
+          else if (!i) {
+            tag = evaluate(part);
+            // <p>abc<p>def, <tr><td>x<tr>
+            while (f.close[current[1] + tag]) up();
+            current = [current, tag, null];
+            if (f.empty[tag]) close = tag;
+          }
+          else if (part) {
+            let props = current[2] || (current[2] = {});
+            if (part.slice(0, 3) === '...') {
+              Object.assign(props, values[field++]);
+            }
+            else {
+              [name, value] = part.split('=');
+              props[evaluate(name)] = value ? evaluate(value) : true;
+            }
+          }
+        })
+      }
+      if (close) {
+        up();
+        // if last child is closable - close it too
+        while (last !== close && f.close[last]) up();
+      }
+      prev = idx + match.length;
+      if (text && text !== ' ') evaluate((last = 0, text), current, true);
+    });
+    if (!current.root) up();
+    return current.length > 1 ? current : current[0];
+  }
+
+  html(strings, ...values) {
+    return this._html(false, strings, ...values);
+  }
+  raw_html(strings, ...values) {
+    return this._html(true, strings, ...values);
+  }
+
+  _html_init() {
+    const f = this._html;
+    f.empty = {}
+    f.close = {}
+    f.FIELD = '\ue000';
+    f.QUOTES = '\ue001';
+    f.ESCAPED_DOLLAR = '\ue002';
+    f.regex_FIELD = new RegExp(f.FIELD, 'g');
+    f.regex_QUOTES = new RegExp(f.QUOTES, 'g');
+    f.regex_ESCAPED_DOLLAR = new RegExp(f.ESCAPED_DOLLAR, 'g');
+
+    'area base br col command embed hr img input keygen link meta param source track wbr ! !doctype ? ?xml'.split(' ').map(v => f.empty[v] = f.empty[v.toUpperCase()] = true)
+
+    // https://html.spec.whatwg.org/multipage/syntax.html#optional-tags
+    // closed by the corresponding tag or end of parent content
+    let close = {
+      'li': '',
+      'dt': 'dd',
+      'dd': 'dt',
+      'p': 'address article aside blockquote details div dl fieldset figcaption figure footer form h1 h2 h3 h4 h5 h6 header hgroup hr main menu nav ol pre section table',
+      'rt': 'rp',
+      'rp': 'rt',
+      'optgroup': '',
+      'option': 'optgroup',
+      'caption': 'tbody thead tfoot tr colgroup',
+      'colgroup': 'thead tbody tfoot tr caption',
+      'thead': 'tbody tfoot caption',
+      'tbody': 'tfoot caption',
+      'tfoot': 'caption',
+      'tr': 'tbody tfoot',
+      'td': 'th tr',
+      'th': 'td tr tbody',
+    };
+    for (let tag in close) {
+      [...close[tag].split(' '), tag].map(closer => {
+        f.close[tag] =
+          f.close[tag.toUpperCase()] =
+          f.close[tag + closer] =
+          f.close[tag.toUpperCase() + closer] =
+          f.close[tag + closer.toUpperCase()] =
+          f.close[tag.toUpperCase() + closer.toUpperCase()] =
+          true;
+      })
+    }
   }
 }
 
 window.caph_requirements = window.caph_requirements || [];
-var caph = new ResourcesLoader(window.caph_requirements);
+const caph = new ResourcesLoader(window.caph_requirements);
 delete window.caph_requirements;
-window.raw_html = htm.bind(preact.createElement);
+// window.raw_html = htm.bind(preact.createElement);
 
 
-function tagToComponent(type, props, ...children) {
-  if (type == 'math') {
-    props = props || {};
-    props['data-tag'] = caph.mathTag;
-  }
-  let tag = props && props['data-tag'];
-  if (tag) {
-    for (const k in props) if (k.startsWith('data-')) {
-      const strValue = props[k];
-      delete props[k];
-      let value = strValue.length ? strValue : 'true';
-      try { value = eval(`(${value})`); } catch (error) { }
-      props[k.slice(5)] = value;
-    }
-    delete props['tag'];
-    type = caph.plugin_component(tag);
-    console.log(type);
-  }
-  return preact.h(type, props, children);
-}
-window.html = htm.bind(tagToComponent);
-
+window.html = caph.html.bind(caph);
+window.raw_html = caph.raw_html.bind(caph);
 
 caph.Plugin = class {
 
