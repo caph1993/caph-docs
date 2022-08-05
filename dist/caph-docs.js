@@ -355,7 +355,7 @@ delete window.hooks;
 
 
 
-window.caph_requirements = JSON.parse(LZUTF8.decompress("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", {inputEncoding: 'Base64'}));
+window.caph_requirements = JSON.parse(LZUTF8.decompress("W3sicmVmIjoiY2FwaC1kb2NzL2NvcmUvY29sb3JzLmNzcyIsImNvbnRlbnQiOiJcbiPFKXJvb3Qge1xuICAtLWJhY2tncm91bmQ6ICNmZmY70BctMjogI2VlZdIZcHJlOiAjZGRkxxt0ZXh0OiAjMjQyOTLIL8QULXN0cm9uZzogIzE0MTkxzRvEXTIyNDQ2Nshgb3gtc2hhZG93OiByZ2JhKDAsxQIuNzUpxyNtYXJwLWdyZWVuxD1GN0YyRjtcbsYcbG9hZGluZy0x5ADOM8QCxzXIGcRxNTU1yTFzY3JvbGxiYXLFMzkwQTRBRcczyhvENUNGRDhEQztcbn3EO0BtZWRpYSBvbmx5IHNj5ACM5gFR6gFhW2RhdGEtdGhlbWU9J2RhcmsnXcUi8QF1MjgyOTLmAKfOHMV3NmQ2ZTZh1B7mAX9hYcod5wGBZjhmOGYyzRbqAYPoAePJGsVlN2Q4ZcoY8QGEMTAwLMgE6AGKzUXlAnEtbm9ybWFsOiBoc2woMjEwLCAxMCUsIDYyJcQw0S5saWdodMwtNSUsIDM11i1yaWNoZXLLLjXEWzfXW2hpZ2jMXzUsIDfEMDTGXsgy6wItxScwLCA5xCc1MMtXyCXkAShjY2PLP+4COzg4OMk0yhrENjQ0NMUaff8CISddIC5hdXRvLcQN5wIsZmlsdOQA+GJy5ADPbmVzcyjpAJ595wKMLyogV29ya3Mgb24gQ2hyb21lL0VkZ2UvU2FmYXJpICov7QP4KuYCqeoAo3dpZHRoOiB0aGluxVfKGuUBTTogdmFyKO0A7inREzLkAJJ9zmg6Oi13ZWJraXTKKMZ7x3ExMnB43zbHXnRyYWNrxjzsAzr/AIXaT2h1bWLQT/oA7eUBFWJvcmRlci1yYWRpdXM6IDIw5QC8yBg6IDNweCBzb2xpZNFB6ACWXG4ifSz5BbByZfEFri7JJS1lcnJvcuUAsecApiNjZTExMTHGWsspZmxhc2hpbmfFLOgA+mFuaW1hdGlvbjogxCpEb2NzRscoQcgbIDFzIGxpbmVhciBpbmZpbml05gWn3zzbPH1cbkBrZXlmcmFtZXPbPeUAqzAlIHsgb3BhY2l0eTogMC4zO+YDLjEwzhoxxRh9In1d", {inputEncoding: 'Base64'}));
 
 
 
@@ -364,6 +364,7 @@ class ResourcesLoader {
   mathTag = 'katex';
   mathMacros = {};
   plugins = {};
+  plugin_loaders = {};
   contexts = {};
   utils = {
     unindent: (text) => {
@@ -377,13 +378,18 @@ class ResourcesLoader {
   components = {};
   _attachments = [];
   _loadStatus = {};
+  recommended_style = `
+  code{
+    /*background-color: var(--background-pre);*/
+    display: inline;
+    padding: 0em 0.25em;
+    border-radius: 0.2em;
+    font-size: 0.8em;
+  };`
 
   setPreReady;
   _preReady = new Promise((setter, _) => this.setPreReady = setter);
   preReady = () => this._preReady;
-  // setReady;
-  // _ready = new Promise((setter, _) => this.setReady = setter);
-  // ready = () => this._ready;
 
   _required = [
     { ref: 'caph-docs/core/colors.css', },
@@ -482,10 +488,6 @@ class ResourcesLoader {
     const tag_snake = tag.replace(/[A-Z]/g, (x) => `-${x.toLowerCase()}`);
     return await this.load(`${this.dist}/plugin-${tag_snake}.js`);
   }
-  async loadPluginDeep(tag) {
-    await this.loadPlugin(tag);
-    await this.plugins[tag].loader();
-  }
   async loadFont(name) {
     return await this.load(`${this.dist}/font-${name}.css`);
   }
@@ -535,75 +537,85 @@ class ResourcesLoader {
     });
   };
 
+  // template literal parsers
 
-  _plugin_components = {};
-  plugin_component(tag) {
-    // component that renders a plugin, or loading while loading
-    const cache = this._plugin_components;
-    if (cache[tag]) {
-      //Possibly shortcut cache to load directly:
-      const plugin = caph.plugins[tag];
-      if (plugin && (plugin._loaded || plugin._load_error) && plugin.render) {
-        cache[tag] = plugin.render.bind(plugin);
-      }
-      return cache[tag];
-    }
-    const this_raw_html = this.raw_html.bind(this);
-    cache[tag] = function ({ children, ...props }) {
-      const [starting, setStarting] = preact.useState(true);
-      const [plugin, setPlugin] = preact.useState(caph.plugins[tag] || null);
-      const [ready, setReady] = preact.useState(!!(plugin && plugin._loaded));
-      const [error, setError] = preact.useState((plugin && plugin._load_error) || null);
-      const [loadInline, setLoadInline] = preact.useState(plugin ? plugin.loadInline : true);
-      // load always as inline before plugin is even loaded
-      preact.useEffect(async () => {
-        await sleep(200);
-        setStarting(false);
-        const plugin = await MyPromise.until(() => caph.plugins[tag]);
-        setPlugin(plugin);
-        setLoadInline(plugin.loadInline);
-        await MyPromise.until(() => plugin._loaded || plugin._load_error);
-        if (plugin._load_error) return setError(plugin._load_error);
-        if (plugin._loaded) return setReady(true);
-      }, []);
 
-      return this_raw_html`${!error && ready && plugin && plugin.render ?
-        plugin.render({ children, ...props })
-        :
-        !error ?
-          this_raw_html`<code class="flashing">${children}</code>`
-          :
-          this_raw_html`${tag}-error`
-        }`
-    }
-    const load_plugin = async () => {
-      await caph.loadPlugin(tag);
-      const plugin = await MyPromise.until(() => caph.plugins[tag]);
-      try {
-        if (!plugin._loaded && plugin.loader) {
-          await plugin.loader(plugin);
-          plugin._loaded = true;
-        }
-        if (plugin.post_loader) {
-          await plugin.post_loader(plugin);
-          plugin._loaded_post = true;
-        }
-        if (plugin.menuSettings) {
-          await plugin.menuSettings(plugin);
-          plugin._loaded_menu = true;
-        }
-      } catch (err) { plugin._load_error = err || true; console.error(err); }
-    }
-    load_plugin();
-    return cache[tag];
+  make_parsers(config) {
+    const raw = (strings, ...values) => this._html(config, strings, ...values);
+    const non_raw = ({ raw: strings }, ...values) => this._html(config, strings, ...values);
+    return [raw, non_raw];
+  }
+  html({ raw: strings }, ...values) {
+    const config = { parse_math: true, parse_components: true, unescape_html: true };
+    return this._html(config, strings, ...values);
   }
 
-  _html_createElement(raw_mode, type, props, ...children) {
-    if (!raw_mode) {
-      if (type == 'caphMath') {
-        props = props || {};
-        props['data-tag'] = this.mathTag;
-      }
+  html_alt(strings, ...values) {
+    const config = { parse_math: true, parse_components: true, unescape_html: true };
+    return this._html(config, strings, ...values);
+  }
+
+  html_plain({ raw: strings }, ...values) {
+    const config = { parse_math: false, parse_components: true };
+    return this._html(config, strings, ...values);
+  }
+  html_plain_unescape(strings, ...values) {
+    const config = { parse_math: false, parse_components: false };
+    return this._html(config, strings, ...values);
+  }
+
+  _html_init() {
+    const f = this._html;
+    f.empty = {}
+    f.close = {}
+    f.FIELD = '\ue000';
+    f.QUOTES = '\ue001';
+    f.ESCAPED_DOLLAR = '\ue002';
+    f.regex_FIELD = new RegExp(f.FIELD, 'g');
+    f.regex_QUOTES = new RegExp(f.QUOTES, 'g');
+    f.regex_ESCAPED_DOLLAR = new RegExp(f.ESCAPED_DOLLAR, 'g');
+
+    'area base br col command embed hr img input keygen link meta param source track wbr ! !doctype ? ?xml'.split(' ').map(v => f.empty[v] = f.empty[v.toUpperCase()] = true)
+
+    // https://html.spec.whatwg.org/multipage/syntax.html#optional-tags
+    // closed by the corresponding tag or end of parent content
+    let close = {
+      'li': '',
+      'dt': 'dd',
+      'dd': 'dt',
+      'p': 'address article aside blockquote details div dl fieldset figcaption figure footer form h1 h2 h3 h4 h5 h6 header hgroup hr main menu nav ol pre section table',
+      'rt': 'rp',
+      'rp': 'rt',
+      'optgroup': '',
+      'option': 'optgroup',
+      'caption': 'tbody thead tfoot tr colgroup',
+      'colgroup': 'thead tbody tfoot tr caption',
+      'thead': 'tbody tfoot caption',
+      'tbody': 'tfoot caption',
+      'tfoot': 'caption',
+      'tr': 'tbody tfoot',
+      'td': 'th tr',
+      'th': 'td tr tbody',
+    };
+    for (let tag in close) {
+      [...close[tag].split(' '), tag].map(closer => {
+        f.close[tag] =
+          f.close[tag.toUpperCase()] =
+          f.close[tag + closer] =
+          f.close[tag.toUpperCase() + closer] =
+          f.close[tag + closer.toUpperCase()] =
+          f.close[tag.toUpperCase() + closer.toUpperCase()] =
+          true;
+      })
+    }
+  }
+
+  _html_createElement({ parse_math, parse_components, unescape_html }, type, props, ...children) {
+    if (parse_math && type == 'caphMath') {
+      props = props || {};
+      props['data-tag'] = this.mathTag;
+    }
+    if (parse_components) {
       let tag = props && props['data-tag'];
       if (tag) {
         for (const k in props) if (k.startsWith('data-')) {
@@ -614,32 +626,48 @@ class ResourcesLoader {
           props[k.slice(5)] = value;
         }
         delete props['tag'];
-        type = this.plugin_component(tag);
+        if (!this.plugin_loaders[tag]) {
+          const plugin_loader = new this.PluginLoader(tag);
+          this.plugin_loaders[tag] = plugin_loader.render.bind(plugin_loader);
+        }
+        type = this.plugin_loaders[tag];
       }
+      // children = children.map(x => this._is_string(x) ? this._html_safe(x) : x);
     }
-    children = children.map(x => this._is_string(x) ? this._html_replace_entities(x) : x)
+    if (unescape_html) {
+      children = children.map(x => this._is_string(x) ? this._html_safe_undo(x) : x);
+    }
     return preact.createElement(type, props, ...children);
   }
+
+  _html_safe(str) {
+    // converts < into &lt
+    return new Option(str).innerHTML;
+  }
+  _html_safe_undo(str) {
+    // converts &lt into <
+    const doc = new DOMParser().parseFromString(str, "text/html");
+    const text = doc.documentElement.textContent;
+    return text;
+  }
+
+  _parse_html_string(str_html) {
+    const config = {
+      parse_math: false,
+      parse_components: false,
+      unescape_html: true,
+    };
+    return this._html(config, [str_html]);
+  }
+
   _is_string(obj) {
     return Object.prototype.toString.call(obj) === "[object String]";
   }
 
-  _html_entities = {
-    '&nbsp;': '\\ ', '&amp;': '&', '&gt;': '>', '&lt;': '<',
-    '&quot;': '"', '&apos;': "'",
-    '&cent;': '¢', '&pound;': '£', '&yen;': '¥',
-    '&euro;': '€', '&copy;': '©', '&reg;': '®',
-  };
-
-  _html_replace_entities(s, obj) {
-    if (obj == undefined) obj = this._html_entities;
-    for (const key in obj) s = s.replace(new RegExp(key, 'g'), obj[key]);
-    return s;
-  }
-
-  _html(raw_mode, strings, ...values) {
+  _html(config, strings, ...values) {
+    const { parse_math, parse_components, unescape_html } = config;
     // based on xhtm, which is based on htm.
-    // fixes issues with html entities and allows for plugin tags. 
+    // fixes issues with html entities and allows for plugin tags.
     const f = this._html;
     if (f.empty === undefined) this._html_init();
     let prev = 0, current = [], field = 0, args, name, value, quotes = [], quote = 0, last;
@@ -662,20 +690,20 @@ class ResourcesLoader {
     // close level
     const up = () => {
       [current, last, ...args] = current;
-      current.push(this._html_createElement(raw_mode, last, ...args));
+      const elem = this._html_createElement(config, last, ...args);
+      current.push(elem);
     }
     let s = strings.join(f.FIELD);
-    if (!raw_mode) {
+    if (parse_math) {
       s = s.replace(/\\\$/g, f.ESCAPED_DOLLAR);
-      s = s.replace(/([^\\])\$(.*?[^\\])\$/g, (match, p1, p2) => {
+      s = s.replace(/([^\\]|^)\$(.*?[^\\])\$/g, (match, p1, p2) => {
         const i = match.search(/\<|\>/);
         if (i != -1) {
           match = match.replace(f.regex_ESCAPED_DOLLAR, '\\\$');
-          match = match.replace(/</gi, '&lt;').replace(/>/gi, '&gt;');
-          console.error('KaTeX Can not parse the following:', match);
-          return `<span class="tooltip">
+          console.error('Math parsing error for the following string:', match);
+          return this.html`< span class="tooltip" >
             <span>
-              Parsed error: <code class="flashing">${match}</code>
+              Parsed error: <code class="flashing">${this._html_safe(match)}</code>
             </span>
             <div class="tooltip-text" style="width:30em">
               1. In tex, use \\lt and \\gt instead of &lt; and &gt;.
@@ -684,10 +712,10 @@ class ResourcesLoader {
               <br/>
               This prevents any parsing misunderstanding.
             </div>
-          </span>`;
+          </span > `;
         }
         p2 = p2.replace(f.regex_ESCAPED_DOLLAR, '\\\$');
-        return `${p1}<caphMath>${p2}</caphMath>`;
+        return `${p1} <caphMath>${p2}</caphMath>`;
       });
       s = s.replace(f.regex_ESCAPED_DOLLAR, '$'); // \$ in html becomes $
     }
@@ -737,85 +765,101 @@ class ResourcesLoader {
     if (!current.root) up();
     return current.length > 1 ? current : current[0];
   }
-
-  html(strings, ...values) {
-    return this._html(false, strings, ...values);
-  }
-  raw_html(strings, ...values) {
-    return this._html(true, strings, ...values);
-  }
-
-  _html_init() {
-    const f = this._html;
-    f.empty = {}
-    f.close = {}
-    f.FIELD = '\ue000';
-    f.QUOTES = '\ue001';
-    f.ESCAPED_DOLLAR = '\ue002';
-    f.regex_FIELD = new RegExp(f.FIELD, 'g');
-    f.regex_QUOTES = new RegExp(f.QUOTES, 'g');
-    f.regex_ESCAPED_DOLLAR = new RegExp(f.ESCAPED_DOLLAR, 'g');
-
-    'area base br col command embed hr img input keygen link meta param source track wbr ! !doctype ? ?xml'.split(' ').map(v => f.empty[v] = f.empty[v.toUpperCase()] = true)
-
-    // https://html.spec.whatwg.org/multipage/syntax.html#optional-tags
-    // closed by the corresponding tag or end of parent content
-    let close = {
-      'li': '',
-      'dt': 'dd',
-      'dd': 'dt',
-      'p': 'address article aside blockquote details div dl fieldset figcaption figure footer form h1 h2 h3 h4 h5 h6 header hgroup hr main menu nav ol pre section table',
-      'rt': 'rp',
-      'rp': 'rt',
-      'optgroup': '',
-      'option': 'optgroup',
-      'caption': 'tbody thead tfoot tr colgroup',
-      'colgroup': 'thead tbody tfoot tr caption',
-      'thead': 'tbody tfoot caption',
-      'tbody': 'tfoot caption',
-      'tfoot': 'caption',
-      'tr': 'tbody tfoot',
-      'td': 'th tr',
-      'th': 'td tr tbody',
-    };
-    for (let tag in close) {
-      [...close[tag].split(' '), tag].map(closer => {
-        f.close[tag] =
-          f.close[tag.toUpperCase()] =
-          f.close[tag + closer] =
-          f.close[tag.toUpperCase() + closer] =
-          f.close[tag + closer.toUpperCase()] =
-          f.close[tag.toUpperCase() + closer.toUpperCase()] =
-          true;
-      })
-    }
-  }
 }
 
 window.caph_requirements = window.caph_requirements || [];
 const caph = new ResourcesLoader(window.caph_requirements);
 delete window.caph_requirements;
-// window.raw_html = htm.bind(preact.createElement);
-
 
 window.html = caph.html.bind(caph);
-window.raw_html = caph.raw_html.bind(caph);
 
 caph.Plugin = class {
 
   loadInline = false;
-  _loaded = false;
-  _loaded_post = false;
-  _loaded_menu = false;
-  _load_error = false;
 
-  loader() { }
+  async loader() { }
 
-  post_loader() { }
+  async post_loader() { }
 
-  render({ }) {
+  async menuSettings() { }
+
+  render({ children, ...props }) {
     console.error('Override the render method of this object:', this);
-    return raw_html`<div>Override the render method</div>`;
+    return html_plain`< div > Override the render method</div > `;
+  }
+}
+
+caph.PluginLoader = class extends caph.Plugin {
+
+  constructor(tag, loadInline = false) {
+    super();
+    this.tag = tag;
+    this.loadInline = loadInline;
+    this.loader().then(() => this.post_loader())
+  }
+
+  plugin = null;
+  error = null;
+  render_ready = false;
+
+  async loader() {
+    // 1. Put the plugin script in the document head
+    await caph.loadPlugin(this.tag);
+    // 2. Wait for the browser to load the script
+    this.plugin = await MyPromise.until(() => caph.plugins[this.tag]);
+  }
+
+  async post_loader() {
+    // 3. Wait for the plugin to initialize its own dependencies
+    try {
+      await this.plugin.loader();
+      this.render_ready = true;
+    } catch (err) {
+      this.error = err || true;
+      console.error(err);
+    }
+    await this.plugin.post_loader().catch(console.error);
+    await this.plugin.menuSettings().catch(console.error);
+  }
+
+  render({ children, ...props }) {
+    return this.temporal_render({ children, ...props });
+  }
+
+  temporal_render({ children, ...props }) {
+    const [_, setTrigger] = preact.useState(0);
+
+    preact.useEffect(async () => {
+      await MyPromise.until(() => this.render_ready || this.error);
+      setTrigger(Math.random() * 1e12); // refresh the component
+    }, []);
+
+
+    if (this.render_ready) {
+      return this.final_render({ children, ...props });
+    }
+    if (this.error) {
+      return caph.html_plain`
+        <code class="caph-docs-flashing caph-docs-error"
+          title=${caph._html_safe(this.error)}>
+          ${children}
+        </code>`;
+    }
+    return caph.html_plain`
+        <code class="caph-docs-flashing" title=${`${this.tag} is loading...`}>
+          ${children}
+        </code>
+      `;
+  }
+
+  final_render({ children, ...props }) {
+    this.render = this.final_render; // override the render method
+    try {
+      return this.plugin.render({ children, ...props });
+    } catch (err) {
+      console.error(`Rendering error in plugin ${this.tag}:`, err);
+      return caph.html`<code class="flashing">${children}</code>`;
+    }
   }
 }
 
