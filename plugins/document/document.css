@@ -1,12 +1,12 @@
 
-#caph-root{
+.caph-document-parent{
   background: var(--background-2);
   color: var(--text);
   font-family: serif;
   padding-bottom: calc(50vh - 5em);
   padding-top: 3em;
 }
-#caph-body{
+.caph-document{
   font-family: Latin Modern Roman, Computer Modern Roman, serif;
   background: var(--background);
   font-size: 1.2rem;
@@ -18,21 +18,21 @@
   text-align: justify;
 }
 @media only screen and (max-width: 600px) {
-  #caph-body{
+  .caph-document{
     padding: 0.5em;
     margin-top: 0.2em;
     max-width: calc(100vw - 2em);
   }
 }
 @media print {
-  #caph-body{
+  .caph-document{
     margin: initial;
     padding: initial;
     max-width: initial;
     background: initial;
     box-shadow: initial;
   }
-  #caph-root {
+  .caph-document-parent {
     background: initial;
   }
 }
@@ -45,12 +45,6 @@ pre{
   border-radius: 0.2em;
 };
 
-span.katex.display.formula{
-  text-align: center;
-}
-span.katex{
-  font-size: 1em;
-}
 /*.katex{ filter: contrast(130%); }*/
 
 table{

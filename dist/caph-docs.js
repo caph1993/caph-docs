@@ -355,13 +355,13 @@ delete window.hooks;
 
 
 
-window.caph_requirements = JSON.parse(LZUTF8.decompress("W3sicmVmIjoiY2FwaC1kb2NzL2NvcmUvY29sb3JzLmNzcyIsImNvbnRlbnQiOiJcbiPFKXJvb3Qge1xuICAtLWJhY2tncm91bmQ6ICNmZmY70BctMjogI2VlZdIZcHJlOiAjZGRkxxt0ZXh0OiAjMjQyOTLIL8QULXN0cm9uZzogIzE0MTkxzRvEXTIyNDQ2Nshgb3gtc2hhZG93OiByZ2JhKDAsxQIuNzUpxyNtYXJwLWdyZWVuxD1GN0YyRjtcbsYcbG9hZGluZy0x5ADOM8QCxzXIGcRxNTU1yTFzY3JvbGxiYXLFMzkwQTRBRcczyhvENUNGRDhEQztcbn3EO0BtZWRpYSBvbmx5IHNj5ACM5gFR6gFhW2RhdGEtdGhlbWU9J2RhcmsnXcUi8QF1MjgyOTLmAKfOHMV3NmQ2ZTZh1B7mAX9hYcod5wGBZjhmOGYyzRbqAYPoAePJGsVlN2Q4ZcoY8QGEMTAwLMgE6AGKzUXlAnEtbm9ybWFsOiBoc2woMjEwLCAxMCUsIDYyJcQw0S5saWdodMwtNSUsIDM11i1yaWNoZXLLLjXEWzfXW2hpZ2jMXzUsIDfEMDTGXsgy6wItxScwLCA5xCc1MMtXyCXkAShjY2PLP+4COzg4OMk0yhrENjQ0NMUaff8CISddIC5hdXRvLcQN5wIsZmlsdOQA+GJy5ADPbmVzcyjpAJ595wKMLyogV29ya3Mgb24gQ2hyb21lL0VkZ2UvU2FmYXJpICov7QP4KuYCqeoAo3dpZHRoOiB0aGluxVfKGuUBTTogdmFyKO0A7inREzLkAJJ9zmg6Oi13ZWJraXTKKMZ7x3ExMnB43zbHXnRyYWNrxjzsAzr/AIXaT2h1bWLQT/oA7eUBFWJvcmRlci1yYWRpdXM6IDIw5QC8yBg6IDNweCBzb2xpZNFB6ACWXG4ifSz5BbByZfEFri7JJS1lcnJvcuUAsecApiNjZTExMTHGWsspZmxhc2hpbmfFLOgA+mFuaW1hdGlvbjogxCpEb2NzRscoQcgbIDFzIGxpbmVhciBpbmZpbml05gWn3zzbPH1cbkBrZXlmcmFtZXPbPeUAqzAlIHsgb3BhY2l0eTogMC4zO+YDLjEwzhoxxRh9In1d", {inputEncoding: 'Base64'}));
+window.caph_requirements = JSON.parse(LZUTF8.decompress("W3sicmVmIjoiY2FwaC1kb2NzL2NvcmUvcGx1Z2luLWxvYWRlci5jc3MiLCJjb250ZW50IjoiLskuLWVycm9ye1xuICBjb2xvcjogI2NlMTExMTtcbn1cbsspZmxhc2hpbmfFLC13ZWJraXQtYW5pbWF0aW9uOiDEKkRvY3NGxyhByBsgMXMgbGluZWFyIGluZmluaXRlO8RE3zzbPH1cbkBrZXlmcmFtZXPbPeUAqzAlIHsgb3BhY2l0eTogMC4zOyB9xBgxMM4aMcUYfSJ9XQ==", {inputEncoding: 'Base64'}));
 
 
 
 class ResourcesLoader {
   dist = null;
-  mathTag = 'katex';
+  mathPlugin = 'katex';
   mathMacros = {};
   plugins = {};
   plugin_loaders = {};
@@ -392,8 +392,8 @@ class ResourcesLoader {
   preReady = () => this._preReady;
 
   _required = [
-    { ref: 'caph-docs/core/colors.css', },
-    { ref: 'caph-docs/core/core.css', },
+    //{ ref: 'caph-docs/core/colors.css', },
+    //{ ref: 'caph-docs/core/core.css', },
   ];
 
   constructor(required_attachments) {
@@ -439,7 +439,7 @@ class ResourcesLoader {
       'where': 'afterend',
     });
     rootElement.parentNode.removeChild(rootElement);
-    preact.render(vDom, sibling.parentNode, sibling);
+    preact.Component(vDom, sibling.parentNode, sibling);
     //this.setReady();
   }
 
@@ -485,8 +485,8 @@ class ResourcesLoader {
     }
   }
   async loadPlugin(tag) {
-    const tag_snake = tag.replace(/[A-Z]/g, (x) => `-${x.toLowerCase()}`);
-    return await this.load(`${this.dist}/plugin-${tag_snake}.js`);
+    if (this.plugins[tag]) return; // already loaded
+    return await this.load(`${this.dist}/plugin-${tag}.js`);
   }
   async loadFont(name) {
     return await this.load(`${this.dist}/font-${name}.css`);
@@ -540,32 +540,23 @@ class ResourcesLoader {
   // template literal parsers
 
 
-  make_parsers(config) {
-    const raw = (strings, ...values) => this._html(config, strings, ...values);
-    const non_raw = ({ raw: strings }, ...values) => this._html(config, strings, ...values);
-    return [raw, non_raw];
-  }
-  html({ raw: strings }, ...values) {
-    const config = { parse_math: true, parse_components: true, unescape_html: true };
-    return this._html(config, strings, ...values);
+  parse({ raw: strings }, ...values) {
+    return this._parse(true, strings, ...values);
   }
 
-  html_alt(strings, ...values) {
-    const config = { parse_math: true, parse_components: true, unescape_html: true };
-    return this._html(config, strings, ...values);
+  parseEsc(strings, ...values) {
+    return this._parse(true, strings, ...values);
   }
 
-  html_plain({ raw: strings }, ...values) {
-    const config = { parse_math: false, parse_components: true };
-    return this._html(config, strings, ...values);
+  parseNoMarkup({ raw: strings }, ...values) {
+    return this._parse(false, strings, ...values);
   }
-  html_plain_unescape(strings, ...values) {
-    const config = { parse_math: false, parse_components: false };
-    return this._html(config, strings, ...values);
+  parseNoMarkupEsc(strings, ...values) {
+    return this._parse(false, strings, ...values);
   }
 
-  _html_init() {
-    const f = this._html;
+  _parse_init() {
+    const f = this._parse;
     f.empty = {}
     f.close = {}
     f.FIELD = '\ue000';
@@ -610,66 +601,45 @@ class ResourcesLoader {
     }
   }
 
-  _html_createElement({ parse_math, parse_components, unescape_html }, type, props, ...children) {
-    if (parse_math && type == 'caphMath') {
-      props = props || {};
-      props['data-tag'] = this.mathTag;
+  plugin(key) {
+    if (!this.plugin_loaders[key]) {
+      const plugin_loader = new this.PluginLoader(key);
+      this.plugin_loaders[key] = plugin_loader.Component.bind(plugin_loader);
     }
-    if (parse_components) {
-      let tag = props && props['data-tag'];
-      if (tag) {
-        for (const k in props) if (k.startsWith('data-')) {
-          const strValue = props[k];
-          delete props[k];
-          let value = strValue.length ? strValue : 'true';
-          try { value = eval(`(${value})`); } catch (error) { }
-          props[k.slice(5)] = value;
-        }
-        delete props['tag'];
-        if (!this.plugin_loaders[tag]) {
-          const plugin_loader = new this.PluginLoader(tag);
-          this.plugin_loaders[tag] = plugin_loader.render.bind(plugin_loader);
-        }
-        type = this.plugin_loaders[tag];
-      }
-      // children = children.map(x => this._is_string(x) ? this._html_safe(x) : x);
+    return this.plugin_loaders[key];
+  }
+
+  createElement(type, props, ...children) {
+    if (type == 'caph-docs') {
+      const pluginKey = props && props['plugin'];
+      if (pluginKey) type = this.plugin(pluginKey);
+      else console.warn('caph-docs tag without plugin attribute');
     }
-    if (unescape_html) {
-      children = children.map(x => this._is_string(x) ? this._html_safe_undo(x) : x);
-    }
+    children = children.map(
+      x => this._is_string(x) ? this._html_safe_undo(x) : x);
     return preact.createElement(type, props, ...children);
   }
 
+
+  _is_string(obj) {
+    return Object.prototype.toString.call(obj) === "[object String]";
+  }
   _html_safe(str) {
-    // converts < into &lt
+    // e.g. converts < into &lt;
     return new Option(str).innerHTML;
   }
   _html_safe_undo(str) {
-    // converts &lt into <
+    // e.g. converts &lt; into <
     const doc = new DOMParser().parseFromString(str, "text/html");
     const text = doc.documentElement.textContent;
     return text;
   }
 
-  _parse_html_string(str_html) {
-    const config = {
-      parse_math: false,
-      parse_components: false,
-      unescape_html: true,
-    };
-    return this._html(config, [str_html]);
-  }
-
-  _is_string(obj) {
-    return Object.prototype.toString.call(obj) === "[object String]";
-  }
-
-  _html(config, strings, ...values) {
-    const { parse_math, parse_components, unescape_html } = config;
+  _parse(parse_math, strings, ...values) {
     // based on xhtm, which is based on htm.
     // fixes issues with html entities and allows for plugin tags.
-    const f = this._html;
-    if (f.empty === undefined) this._html_init();
+    const f = this._parse;
+    if (f.empty === undefined) this._parse_init();
     let prev = 0, current = [], field = 0, args, name, value, quotes = [], quote = 0, last;
     current.root = true;
 
@@ -690,7 +660,7 @@ class ResourcesLoader {
     // close level
     const up = () => {
       [current, last, ...args] = current;
-      const elem = this._html_createElement(config, last, ...args);
+      const elem = this.createElement(last, ...args);
       current.push(elem);
     }
     let s = strings.join(f.FIELD);
@@ -700,22 +670,12 @@ class ResourcesLoader {
         const i = match.search(/\<|\>/);
         if (i != -1) {
           match = match.replace(f.regex_ESCAPED_DOLLAR, '\\\$');
-          console.error('Math parsing error for the following string:', match);
-          return this.html`< span class="tooltip" >
-            <span>
-              Parsed error: <code class="flashing">${this._html_safe(match)}</code>
-            </span>
-            <div class="tooltip-text" style="width:30em">
-              1. In tex, use \\lt and \\gt instead of &lt; and &gt;.
-              <br/>
-              2. In html, use \\$ instead of $.
-              <br/>
-              This prevents any parsing misunderstanding.
-            </div>
-          </span > `;
+          console.error('Parsing error:', match);
+          const safe = this._html_safe(match);
+          return `<caph-docs plugin="parse-error">${safe}</>`;
         }
         p2 = p2.replace(f.regex_ESCAPED_DOLLAR, '\\\$');
-        return `${p1} <caphMath>${p2}</caphMath>`;
+        return `${p1}<caph-docs plugin=${this.mathPlugin}>${p2}</>`;
       });
       s = s.replace(f.regex_ESCAPED_DOLLAR, '$'); // \$ in html becomes $
     }
@@ -771,21 +731,17 @@ window.caph_requirements = window.caph_requirements || [];
 const caph = new ResourcesLoader(window.caph_requirements);
 delete window.caph_requirements;
 
-window.html = caph.html.bind(caph);
-
 caph.Plugin = class {
-
-  loadInline = false;
 
   async loader() { }
 
-  async post_loader() { }
+  async postLoader() { }
 
-  async menuSettings() { }
+  async menuLoader() { }
 
-  render({ children, ...props }) {
-    console.error('Override the render method of this object:', this);
-    return html_plain`< div > Override the render method</div > `;
+  Component({ children, ...props }) {
+    console.error('Override the Component method of this object:', this);
+    return caph.parse`<div> Override the Component method </div> `;
   }
 }
 
@@ -795,12 +751,13 @@ caph.PluginLoader = class extends caph.Plugin {
     super();
     this.tag = tag;
     this.loadInline = loadInline;
-    this.loader().then(() => this.post_loader())
+    this.loader().then(() => this.postLoader())
+    caph.load('caph-docs/core/plugin-loader.css');
   }
 
   plugin = null;
   error = null;
-  render_ready = false;
+  renderReady = false;
 
   async loader() {
     // 1. Put the plugin script in the document head
@@ -809,57 +766,80 @@ caph.PluginLoader = class extends caph.Plugin {
     this.plugin = await MyPromise.until(() => caph.plugins[this.tag]);
   }
 
-  async post_loader() {
+  async postLoader() {
     // 3. Wait for the plugin to initialize its own dependencies
     try {
       await this.plugin.loader();
-      this.render_ready = true;
+      this.renderReady = true;
     } catch (err) {
       this.error = err || true;
       console.error(err);
     }
-    await this.plugin.post_loader().catch(console.error);
-    await this.plugin.menuSettings().catch(console.error);
+    this.plugin.postLoader().catch(console.error);
+    this.plugin.menuLoader().catch(console.error);
   }
 
-  render({ children, ...props }) {
-    return this.temporal_render({ children, ...props });
+  Component({ children, ...props }) {
+    // eventually overridden by FinalComponent
+    return this.TemporalComponent({ children, ...props });
   }
 
-  temporal_render({ children, ...props }) {
+  TemporalComponent({ children, ...props }) {
     const [_, setTrigger] = preact.useState(0);
 
     preact.useEffect(async () => {
-      await MyPromise.until(() => this.render_ready || this.error);
-      setTrigger(Math.random() * 1e12); // refresh the component
+      await MyPromise.until(() => this.renderReady || this.error);
+      setTrigger(Math.random() * 1e12); // refresh this component
     }, []);
 
-
-    if (this.render_ready) {
-      return this.final_render({ children, ...props });
-    }
-    if (this.error) {
-      return caph.html_plain`
-        <code class="caph-docs-flashing caph-docs-error"
-          title=${caph._html_safe(this.error)}>
-          ${children}
-        </code>`;
-    }
-    return caph.html_plain`
-        <code class="caph-docs-flashing" title=${`${this.tag} is loading...`}>
-          ${children}
-        </code>
-      `;
+    if (this.renderReady) return this.FinalComponent({ children, ...props });
+    else if (this.error) return this._loadErrorComponent({ children });
+    else return this._loadingComponent({ children });
   }
 
-  final_render({ children, ...props }) {
-    this.render = this.final_render; // override the render method
+  FinalComponent({ children, ...props }) {
+    this.Component = this.FinalComponent; // override the Component method
     try {
-      return this.plugin.render({ children, ...props });
+      return this.plugin.Component({ children, ...props });
     } catch (err) {
       console.error(`Rendering error in plugin ${this.tag}:`, err);
-      return caph.html`<code class="flashing">${children}</code>`;
+      return caph.parse`<code class="flashing">${children}</code>`;
     }
+  }
+
+  _loadingComponent({ children }) {
+    return caph.parse`
+    <code class="caph-docs-flashing" title=${`${this.tag} is loading...`}>
+      ${children}
+    </code>`;
+  }
+
+  _loadErrorComponent({ children }) {
+    return caph.parse`
+      <code class="caph-docs-flashing caph-docs-error"
+        title=${caph._html_safe(this.error)}>
+        ${children}
+      </code>`;
+  }
+}
+
+caph.plugins.mathParseError = new class extends caph.Plugin {
+
+  Component({ children }) {
+    return caph.parse`
+    <span class="tooltip">
+      <span>
+        Parsed error: <code class="flashing">${children}</code>
+      </span>
+      <!--div class="tooltip-text" style="width:30em">
+        1. In tex, use \\lt and \\gt instead of &lt; and &gt;.
+        <br/>
+        2. In html, use \\$ instead of $.
+        <br/>
+        This prevents any parsing misunderstanding.
+      </div-->
+    </span > 
+    `;
   }
 }
 

@@ -12,8 +12,7 @@ let sources = {
   ],
   'loader': 'core/dynamic-loader.js',
   'dynamic': [
-    'core/colors.css',
-    'core/core.css',
+    'core/plugin-loader.css',
   ],
 };
 
