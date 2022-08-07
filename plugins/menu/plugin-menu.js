@@ -1,6 +1,6 @@
 caph.plugins['menu'] = new class extends caph.Plugin {
   Component({ }) {
-    const { options, setOption, option } = preact.useContext(caph.contexts.menu);
+    const { options, setOption, option } = caph.preact.useContext(caph.contexts.menu);
     const _class = option == 'Default' ? '' : 'shown';
     return caph.parse`
       <select id="caph-menu" class=${_class} value=${option}
@@ -10,16 +10,17 @@ caph.plugins['menu'] = new class extends caph.Plugin {
         `)}
       </select>`;
   }
+
   async loader() {
     await caph.load('caph-docs/plugins/menu/menu.css');
   }
-  menuLoader() {
-    const { setItem, getItem } = preact.useContext(caph.contexts.storage);
-    const { addOption } = preact.useContext(caph.contexts.menu);
-    console.log(addOption)
+
+  async menuLoader({ addOption }) {
+    const { setItem, getItem } = caph.preact.useContext(caph.contexts.storage);
     addOption('Day / Night', {
       onEnter: () => setItem('darkTheme', !getItem('darkTheme')),
       hold: false,
     });
   }
+
 }

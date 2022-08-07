@@ -1,6 +1,6 @@
 caph.plugins.about = new class extends caph.Plugin {
   Component() {
-    const { option } = preact.useContext(caph.contexts.menu);
+    const { option } = caph.preact.useContext(caph.contexts.menu);
     const _class = option == 'About' ? 'fullscreen-layer caph-about-outer' : 'hidden';
     return caph.parse`
       <div class=${_class}>
@@ -19,8 +19,8 @@ caph.plugins.about = new class extends caph.Plugin {
   async loader() {
     await caph.load('caph-docs/plugins/about/about.css');
   }
-  menuSettings() {
-    const { addOption } = preact.useContext(caph.contexts.menu);
+
+  async menuLoader({ addOption }) {
     addOption('About', { hold: true });
   }
 }

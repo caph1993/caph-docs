@@ -14,8 +14,7 @@ caph.plugins.document = new class extends caph.Plugin {
     caph.loadFont('lmroman');
     return;
   }
-  menuSettings() {
-    const { addOption, setOption } = preact.useContext(caph.contexts.menu);
+  async menuLoader({ addOption, setOption }) {
     addOption('PDF print', {
       onEnter: () => { window.print(); setOption('Default'); },
     });
