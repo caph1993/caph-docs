@@ -1,4 +1,9 @@
 caph.plugins['core-menu'] = new class extends caph.Plugin {
+
+  async loader() {
+    await caph.load('caph-docs/plugins/core-menu/core-menu.css');
+  }
+
   Component({ }) {
     const menu = preact.useContext(caph.contexts['core-menu']);
     const _class = menu.option == 'Default' ? '' : 'shown';
@@ -9,10 +14,6 @@ caph.plugins['core-menu'] = new class extends caph.Plugin {
           <option value=${s}>${s}</option>
         `)}
       </select>`;
-  }
-
-  async loader() {
-    await caph.load('caph-docs/plugins/core-menu/core-menu.css');
   }
 
   // async menuLoader({ addOption }) {

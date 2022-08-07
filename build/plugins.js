@@ -4,11 +4,10 @@ let utils = require('./tools.js');
 let baseDir = 'caph-docs/';
 
 let plugins = {
-  'plugin-main': 'plugins/main/plugin-main.js',
   'plugin-core-menu': 'plugins/core-menu/plugin-core-menu.js',
-  'plugin-about': 'plugins/about/plugin-about.js',
+  'plugin-core-about': 'plugins/core-about/plugin-core-about.js',
+  'plugin-gtag': 'plugins/gtag/plugin-gtag.js',
   'plugin-katex': 'plugins/katex/plugin-katex.js',
-  'plugin-self-closing': 'plugins/self-closing/plugin-self-closing.js',
   'plugin-document': 'plugins/document/plugin-document.js',
   'plugin-slides': 'plugins/slides/plugin-slides.js',
   'plugin-codemirror': 'plugins/codemirror/plugin-codemirror.js',

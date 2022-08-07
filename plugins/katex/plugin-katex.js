@@ -7,10 +7,7 @@ caph.plugins['katex'] = new class extends caph.Plugin {
       caph.katex.__defineMacro(`\\${key}`, caph.mathMacros[key]);
     }
     await caph.load('caph-docs/plugins/katex/katex.css');
-  }
-
-  async postLoader() {
-    caph.loadFont('katex');
+    caph.loadFont('katex'); // don't wait
   }
 
   Component({ children, mode = 'inline' }) {

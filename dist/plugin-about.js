@@ -13,7 +13,6 @@ caph.plugins.about = new class extends caph.Plugin {
     }, [])
 
     const { option } = preact.useContext(caph.contexts['core-menu']);
-    console.log('about', option);
     const _class = option == 'About' ? 'fullscreen-layer caph-about-outer' : 'hidden';
     return caph.parse`
       <div class=${_class}>
