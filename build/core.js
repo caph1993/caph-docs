@@ -9,6 +9,7 @@ let sources = {
     'core/utils.js',
     'libraries/preact-10.4.6/preact.min.js',
     'libraries/preact-10.4.6/hooks.js',
+    //'libraries/preact-router-3.2.1/preact-router.js',
   ],
   'loader': 'core/dynamic-loader.js',
   'dynamic': [

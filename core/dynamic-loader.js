@@ -1,4 +1,4 @@
-/* lzutf8, utils, preact, preact hook are injected below this comment*/
+/* lzutf8, utils, preact, preact hook are injected above this comment*/
 
 const caph = new class {
   dist = null;
@@ -18,16 +18,6 @@ const caph = new class {
   };
   _attachments = [];
   _loadStatus = {};
-  recommended_style = `
-  code{
-    /*background-color: var(--background-pre);*/
-    display: inline;
-    padding: 0em 0.25em;
-    border-radius: 0.2em;
-    font-size: 0.8em;
-  };`
-
-  contexts = {};
 
   constructor() {
     const requirements = window.caph_requirements || [];
@@ -49,9 +39,10 @@ const caph = new class {
       });
     }
     this._loadMenu();
+
   }
 
-  async _loadMenu() {
+  _loadMenu() {
     // this.contexts['core-storage'] = new class extends this.HeadlessContext {
     //   storage = {}
     //   constructor() {
@@ -127,18 +118,21 @@ const caph = new class {
       return this.parse`
         <${this.contexts['core-menu'].Provider} value=${menu}>
           <${caph.plugin('core-menu')} />
-          <${caph.plugin('about')} />
+          <${caph.plugin('core-about')} />
         </>
       `;
     }
-
-    await MyPromise.until(() => document.body);
-    const node = MyDocument.createElement('div', {
-      parent: document.body,
-      where: 'afterbegin',
-      id: 'core-body',
-    })
-    preact.render(this.parse`<${MenuComponent}/>`, node);
+    async function inject(vDom) {
+      await MyPromise.until(() => document.body);
+      // const node = MyDocument.createElement('div', {
+      //   parent: document.body,
+      //   where: 'afterbegin',
+      //   id: 'core-body',
+      // })
+      const node = document.body;
+      preact.render(vDom, node);
+    }
+    inject(this.parse`<${MenuComponent}/>`);
   }
   // const metaContent = document.querySelector('meta[content]');
   // if (!metaContent) MyDocument.createElement('div', {
@@ -161,6 +155,18 @@ const caph = new class {
   //   //this.setReady();
   // }
 
+  fileMode = (window.location.protocol == 'file:');
+  href(route) {
+    if (!this.fileMode) return new URL(route, location.href).href;
+    const path = location.pathname;
+    const params = new URLSearchParams(location.search);
+    const missing = params.get('') || '';
+    let base = new URL(route, `file://${path}/${missing}`).href;
+    params.delete('');
+    params.append('', base.slice(path.length + 8));
+    return `${path}?${params.toString()}`;
+  }
+
   getAttachment(ref) {
     for (let e of this._attachments) if (e.ref == ref) return e.content;
     return null;
@@ -174,8 +180,10 @@ const caph = new class {
     }
   }
 
-  async load(ref, { attrs = {}, parent = null, where = 'beforeend',
-    auto_attrs = true } = {}) {
+  async load(ref, {
+    attrs = {}, parent = null, where = 'beforeend',
+    auto_attrs = true
+  } = {}) {
     if (parent == null) parent = this.div;
     const ext = ref.split('.').pop();
     let tag = ext == 'js' ? 'script' : ext == 'css' ? 'link' : null;
@@ -533,6 +541,36 @@ caph.PluginLoader = class extends caph.Plugin {
 }
 
 caph.plugins.mathParseError = new class extends caph.Plugin {
+  Component({ children }) {
+    return caph.parse`
+    <span class="tooltip">
+      <span>
+        Parsed error: <code class="flashing">${children}</code>
+      </span>
+      <!--div class="tooltip-text" style="width:30em">
+        1. In tex, use \\lt and \\gt instead of &lt; and &gt;.
+        <br/>
+        2. In html, use \\$ instead of $.
+        <br/>
+        This prevents any parsing misunderstanding.
+      </div-->
+    </span > 
+    `;
+  }
+}
+
+caph.plugins['core-router'] = new class extends caph.Plugin {
+  // A router that supports single page applications without a server
+
+  async loader() {
+    // 1. Put the plugin script in the document head
+    await caph.loadPlugin(this.key);
+    // 2. Wait for the browser to load the script
+    this.plugin = await MyPromise.until(() => caph.plugins[this.key]);
+    // 3. Start but don't wait for the plugin loader
+    this.pluginLoader();
+  }
+
 
   Component({ children }) {
     return caph.parse`
