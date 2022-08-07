@@ -1,6 +1,6 @@
+/* lzutf8, utils, preact, preact hook are injected below this comment*/
 
-class ResourcesLoader {
-  preact;
+const caph = new class {
   dist = null;
   mathPlugin = 'katex';
   mathMacros = {};
@@ -16,7 +16,6 @@ class ResourcesLoader {
       return lines.map(l => l.slice(n)).join('\n');
     }
   };
-  components = {};
   _attachments = [];
   _loadStatus = {};
   recommended_style = `
@@ -28,17 +27,13 @@ class ResourcesLoader {
     font-size: 0.8em;
   };`
 
-  setPreReady;
-  _preReady = new Promise((setter, _) => this.setPreReady = setter);
-  preReady = () => this._preReady;
+  contexts = {};
 
-  _required = [
-    //{ ref: 'caph-docs/core/colors.css', },
-    //{ ref: 'caph-docs/core/core.css', },
-  ];
-
-  constructor(required_attachments) {
-    for (let a of required_attachments) this.attach(a);
+  constructor() {
+    const requirements = window.caph_requirements || [];
+    window.caph_requirements = requirements;
+    delete window.caph_requirements;
+    for (let a of requirements) this.attach(a);
     this.dist = '../dist';
     for (const e of document.querySelectorAll('script')) {
       if (e.src.endsWith('/caph-docs.js'))
@@ -53,37 +48,118 @@ class ResourcesLoader {
         where: 'beforeend',
       });
     }
-    const metaContent = document.querySelector('meta[content]');
-    if (!metaContent) MyDocument.createElement('div', {
-      parent: document.head,
-      where: 'afterbegin',
-      name: 'viewport',
-      content: window.innerWidth > 960 ?
-        'width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no'
-        : 'width=1024'
-    });
-    (async () => {
-      for (let s of this._required) {
-        await this.load(s.ref, {
-          parent: this.div,
-          afterPreReady: false,
-        });
-      }
-      this.preact = window.preact;
-      this.setPreReady();
-    })();
+    this._loadMenu();
   }
 
-  async createElementReplace(rootElement, vDom = null) {
-    vDom = vDom || dataParser([`${rootElement.outerHTML}`]);
-    const sibling = MyDocument.createElement('div', {
-      'parent': rootElement,
-      'where': 'afterend',
-    });
-    rootElement.parentNode.removeChild(rootElement);
-    preact.Component(vDom, sibling.parentNode, sibling);
-    //this.setReady();
+  async _loadMenu() {
+    // this.contexts['core-storage'] = new class extends this.HeadlessContext {
+    //   storage = {}
+    //   constructor() {
+    //     super();
+    //     const st = { ...window.localStorage };
+    //     for (let k in st) {
+    //       try { this.storage[k] = JSON.parse(st[k]); }
+    //       catch (err) { }
+    //     }
+    //   }
+    //   value() {
+    //     return {
+    //       storage: this.storage,
+    //       getItem: this.getItem.bind(this),
+    //       setItem: this.setItem.bind(this),
+    //     };
+    //   }
+    //   getItem(key) { return this.storage[key]; }
+    //   setItem(key, value) {
+    //     this.storage[key] = value;
+    //     window.localStorage.setItem(key, JSON.stringify(value));
+    //     this.update();
+    //   }
+    // }
+
+    const menuObject = new class {
+      constructor() {
+        this.addOption('Default', { hold: true });
+        this.latest = this.option = 'Default';
+      }
+
+      options = [];
+      onEnter = {};
+      onExit = {};
+      hold = {};
+      addOption(option, { onEnter, onExit, hold } = {}) {
+        this.onEnter[option] = onEnter;
+        this.onExit[option] = onExit;
+        this.hold[option] = hold;
+        if (this.options[option]) return;
+        this.options.push(option);
+        this.options[option] = 1;
+        if (this.option) this.update();
+      }
+      setOption(option) {
+        if (this.hold[option]) {
+          this.onExit[this.latest] && this.onExit[this.latest]();
+          this.latest = this.option;
+          this.option = option;
+          this.update();
+        }
+        this.onEnter[option] && this.onEnter[option]();
+      }
+      value() {
+        return {
+          option: this.option,
+          options: this.options,
+          addOption: this.addOption.bind(this),
+          setOption: this.setOption.bind(this),
+        };
+      }
+    }
+    this.contexts['core-menu'] = preact.createContext();
+
+    const MenuComponent = ({ }) => {
+      const [trigger, setTrigger] = preact.useState(0);
+      menuObject.update = () => setTrigger(Math.random());
+
+      const menu = preact.useMemo(() => {
+        return menuObject.value();
+      }, [trigger]);
+
+      return this.parse`
+        <${this.contexts['core-menu'].Provider} value=${menu}>
+          <${caph.plugin('core-menu')} />
+          <${caph.plugin('about')} />
+        </>
+      `;
+    }
+
+    await MyPromise.until(() => document.body);
+    const node = MyDocument.createElement('div', {
+      parent: document.body,
+      where: 'afterbegin',
+      id: 'core-body',
+    })
+    preact.render(this.parse`<${MenuComponent}/>`, node);
   }
+  // const metaContent = document.querySelector('meta[content]');
+  // if (!metaContent) MyDocument.createElement('div', {
+  //   parent: document.head,
+  //   where: 'afterbegin',
+  //   name: 'viewport',
+  //   content: window.innerWidth > 960 ?
+  //     'width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no'
+  //     : 'width=1024'
+  // });
+
+  // async createElementReplace(rootElement, vDom = null) {
+  //   vDom = vDom || dataParser([`${rootElement.outerHTML}`]);
+  //   const sibling = MyDocument.createElement('div', {
+  //     'parent': rootElement,
+  //     'where': 'afterend',
+  //   });
+  //   rootElement.parentNode.removeChild(rootElement);
+  //   preact.Component(vDom, sibling.parentNode, sibling);
+  //   //this.setReady();
+  // }
 
   getAttachment(ref) {
     for (let e of this._attachments) if (e.ref == ref) return e.content;
@@ -99,9 +175,7 @@ class ResourcesLoader {
   }
 
   async load(ref, { attrs = {}, parent = null, where = 'beforeend',
-    auto_attrs = true, afterPreReady = true } = {}) {
-    // Load an external script or style by inserting relative to parent
-    if (afterPreReady) await this.preReady();
+    auto_attrs = true } = {}) {
     if (parent == null) parent = this.div;
     const ext = ref.split('.').pop();
     let tag = ext == 'js' ? 'script' : ext == 'css' ? 'link' : null;
@@ -369,22 +443,16 @@ class ResourcesLoader {
   }
 }
 
-window.caph_requirements = window.caph_requirements || [];
-const caph = new ResourcesLoader(window.caph_requirements);
-delete window.caph_requirements;
 
 caph.Plugin = class {
 
   async loader() { }
 
-  async postLoader() { }
-
-  async menuLoader({ option, options, addOption, setOption }) { }
-
   Component({ children, ...props }) {
     console.error('Override the Component method of this object:', this);
     return caph.parse`<div> Override the Component method </div> `;
   }
+
 }
 
 caph.PluginLoader = class extends caph.Plugin {
@@ -393,7 +461,7 @@ caph.PluginLoader = class extends caph.Plugin {
     super();
     this.key = key;
     this.loadInline = loadInline;
-    this.loader().then(() => this.postLoader())
+    this.loader();
     caph.load('caph-docs/core/plugin-loader.css');
   }
 
@@ -406,10 +474,11 @@ caph.PluginLoader = class extends caph.Plugin {
     await caph.loadPlugin(this.key);
     // 2. Wait for the browser to load the script
     this.plugin = await MyPromise.until(() => caph.plugins[this.key]);
+    // 3. Start but don't wait for the plugin loader
+    this.pluginLoader();
   }
 
-  async postLoader() {
-    // 3. Wait for the plugin to initialize its own dependencies
+  async pluginLoader() {
     try {
       await this.plugin.loader();
       this.renderReady = true;
@@ -417,14 +486,6 @@ caph.PluginLoader = class extends caph.Plugin {
       this.error = err || true;
       console.error(err);
     }
-
-    // HOTFIX
-    this.plugin.postLoader().catch(console.error);
-    const ctx = await MyPromise.until(() =>
-      caph.contexts.menu && preact.useContext(caph.contexts.menu));
-    this.plugin.menuLoader(ctx).catch(console.error);
-    // MyPromise.until(() => preact.useContext).then(() =>
-    //   this.plugin.menuLoader().catch(console.error));
   }
 
   Component({ children, ...props }) {
@@ -490,103 +551,3 @@ caph.plugins.mathParseError = new class extends caph.Plugin {
     `;
   }
 }
-
-caph.plugins['main'] = new class extends caph.Plugin {
-  loadInline = false;
-
-  async loader() {
-    caph.contexts = {
-      storage: caph.preact.createContext(),
-      menu: caph.preact.createContext(),
-      darkTheme: caph.preact.createContext(false),
-    }
-  }
-
-  Component({ children }) {
-    const menu = this.Menu;
-    const [menuWrapper, setMenu] = caph.preact.useState(menu.exposed());
-    menu.update = () => setMenu(menu.exposed());
-
-    const storage = this.Storage;
-    const [storageWrapper, setStorage] = caph.preact.useState(storage.exposed());
-    storage.update = () => setStorage(storage.exposed());
-
-    return caph.parse`
-      <div id="caph-root" data-theme=${storage.getItem('darkTheme') ? 'dark' : 'light'}>
-        <${caph.contexts.storage.Provider} value=${storageWrapper}>
-          <${caph.contexts.menu.Provider} value=${menuWrapper}>
-            <${caph.plugin('menu')}/>
-            <${caph.plugin('about')}/>
-            ${children}
-          </>
-        </>
-      </div>`;
-  }
-
-  Storage = new class {
-    storage = {}
-    constructor() {
-      const st = { ...window.localStorage };
-      for (let k in st) {
-        try { this.storage[k] = JSON.parse(st[k]); }
-        catch (err) { }
-      }
-    }
-    setItem(key, value) {
-      this.storage[key] = value;
-      window.localStorage.setItem(key, JSON.stringify(value));
-      this.update();
-    }
-    getItem(key) { return this.storage[key]; }
-    update() { throw 'Abstract method' }
-    exposed() {
-      return {
-        storage: this.storage,
-        getItem: this.getItem.bind(this),
-        setItem: this.setItem.bind(this),
-      }
-    }
-  }
-
-  Menu = new class {
-    option = null;
-    latest = null;
-    options = [];
-    onEnter = {};
-    onExit = {};
-    hold = {};
-    _options = {};
-    constructor() {
-      this.addOption('Default', { hold: true });
-      this.latest = this.option = 'Default';
-    }
-    addOption(option, { onEnter, onExit, hold } = {}) {
-      this.onEnter[option] = onEnter;
-      this.onExit[option] = onExit;
-      this.hold[option] = hold;
-      if (this.options[option]) return;
-      this.options.push(option);
-      this.options[option] = 1;
-      if (this.option) this.update();
-    }
-    setOption(option) {
-      if (this.hold[option]) {
-        this.onExit[this.latest] && this.onExit[this.latest]();
-        this.latest = this.option;
-        this.option = option;
-        this.update();
-      }
-      this.onEnter[option] && this.onEnter[option]();
-    }
-    update() { throw 'Abstract method' }
-    exposed() {
-      return {
-        option: this.option,
-        options: this.options,
-        addOption: this.addOption.bind(this),
-        setOption: this.setOption.bind(this),
-      }
-    }
-  }
-};
-

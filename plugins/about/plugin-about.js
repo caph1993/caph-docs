@@ -1,6 +1,17 @@
 caph.plugins.about = new class extends caph.Plugin {
+
+  async loader() {
+    await caph.load('caph-docs/plugins/about/about.css');
+  }
+
   Component() {
-    const { option } = caph.preact.useContext(caph.contexts.menu);
+    preact.useEffect(() => {
+      const { addOption } = preact.useContext(caph.contexts['core-menu']);
+      addOption('About', { hold: true });
+    }, [])
+
+    const { option } = preact.useContext(caph.contexts['core-menu']);
+    console.log('about', option);
     const _class = option == 'About' ? 'fullscreen-layer caph-about-outer' : 'hidden';
     return caph.parse`
       <div class=${_class}>
@@ -16,11 +27,5 @@ caph.plugins.about = new class extends caph.Plugin {
         </div>
       </div>`;
   }
-  async loader() {
-    await caph.load('caph-docs/plugins/about/about.css');
-  }
 
-  async menuLoader({ addOption }) {
-    addOption('About', { hold: true });
-  }
 }
