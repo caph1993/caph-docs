@@ -526,6 +526,11 @@ const caph = new class {
     params.append('', base.slice(path.length + 8));
     return `${path}?${params.toString()}`;
   }
+  currentRoute() {
+    if (!this.fileMode) return location.pathname;
+    const params = new URLSearchParams(location.search);
+    return params.get('') || '';
+  }
 
   getAttachment(ref) {
     for (let e of this._attachments) if (e.ref == ref) return e.content;
