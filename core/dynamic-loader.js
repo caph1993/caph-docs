@@ -4,9 +4,6 @@ const caph = new class {
   dist = null;
   mathPlugin = 'katex';
   mathMacros = {};
-  plugins = {};
-  plugin_loaders = {};
-  contexts = {};
   utils = {
     unindent: (text) => {
       let lines = text.split('\n');
@@ -42,6 +39,7 @@ const caph = new class {
 
   }
 
+  contexts = {};
   _loadMenu() {
     // this.contexts['core-storage'] = new class extends this.HeadlessContext {
     //   storage = {}
@@ -166,8 +164,13 @@ const caph = new class {
     params.append('', base.slice(path.length + 8));
     return `${path}?${params.toString()}`;
   }
+  baseUrl = '/';
   currentRoute() {
-    if (!this.fileMode) return location.pathname;
+    if (!this.fileMode) {
+      const out = location.pathname;
+      if (!out.startsWith(this.baseUrl)) console.warn(`${out} does not start with ${this.baseUrl}`);
+      return out.slice(this.baseUrl.length);
+    }
     const params = new URLSearchParams(location.search);
     return params.get('') || '';
   }
@@ -213,12 +216,24 @@ const caph = new class {
       throw err;
     }
   }
+
+  plugins = {};
   async loadPlugin(tag) {
     if (this.plugins[tag]) return; // already loaded
     return await this.load(`${this.dist}/plugin-${tag}.js`);
   }
   async loadFont(name) {
     return await this.load(`${this.dist}/font-${name}.css`);
+  }
+  pages = {}
+  async loadPage(url) {
+    //assert(this._URL_is_absolute(url))
+    if (this.pages[url]) return; // already loaded
+    return await this.load(url);
+  }
+  _URL_is_absolute(url) {
+    //https://stackoverflow.com/q/10687099
+    return new URL(document.baseURI).origin !== new URL(url, document.baseURI).origin;
   }
 
   async _load_elem(ref, tag, attrs, parent, where, content) {
@@ -330,12 +345,21 @@ const caph = new class {
     }
   }
 
+  pluginLoaders = {};
   plugin(key) {
-    if (!this.plugin_loaders[key]) {
-      const plugin_loader = new this.PluginLoader(key);
-      this.plugin_loaders[key] = plugin_loader.Component.bind(plugin_loader);
+    if (!this.pluginLoaders[key]) {
+      const pluginLoader = new this.PluginLoader(key);
+      this.pluginLoaders[key] = pluginLoader.Component.bind(pluginLoader);
     }
-    return this.plugin_loaders[key];
+    return this.pluginLoaders[key];
+  }
+  pageLoaders = {};
+  page(relUrl) {
+    if (!this.pageLoaders[relUrl]) {
+      const pageLoader = new this.PageLoader(relUrl);
+      this.pageLoaders[relUrl] = pageLoader.Component.bind(pageLoader);
+    }
+    return this.pageLoaders[relUrl];
   }
 
   createElement(type, props, ...children) {
@@ -470,10 +494,9 @@ caph.Plugin = class {
 
 caph.PluginLoader = class extends caph.Plugin {
 
-  constructor(key, loadInline = false) {
+  constructor(name) {
     super();
-    this.key = key;
-    this.loadInline = loadInline;
+    this.name = name;
     this.loader();
     caph.load('caph-docs/core/plugin-loader.css');
   }
@@ -483,10 +506,11 @@ caph.PluginLoader = class extends caph.Plugin {
   renderReady = false;
 
   async loader() {
+    const key = this.name;
     // 1. Put the plugin script in the document head
-    await caph.loadPlugin(this.key);
+    await caph.loadPlugin(key);
     // 2. Wait for the browser to load the script
-    this.plugin = await MyPromise.until(() => caph.plugins[this.key]);
+    this.plugin = await MyPromise.until(() => caph.plugins[key]);
     // 3. Start but don't wait for the plugin loader
     this.pluginLoader();
   }
@@ -524,14 +548,14 @@ caph.PluginLoader = class extends caph.Plugin {
     try {
       return this.plugin.Component({ children, ...props });
     } catch (err) {
-      console.error(`Rendering error in plugin ${this.key}:`, err);
+      console.error(`Rendering error in plugin ${this.name}:`, err);
       return caph.parse`<code class="flashing">${children}</code>`;
     }
   }
 
   _loadingComponent({ children }) {
     return caph.parse`
-    <code class="caph-docs-flashing" title=${`${this.key} is loading...`}>
+    <code class="caph-docs-flashing" title=${`${this.name} is loading...`}>
       ${children}
     </code>`;
   }
@@ -561,6 +585,19 @@ caph.plugins.mathParseError = new class extends caph.Plugin {
       </div-->
     </span > 
     `;
+  }
+}
+caph.PageLoader = class extends caph.PluginLoader {
+  constructor(relUrl) {
+    super(relUrl);
+  }
+  async loader() {
+    console.log(this.name)
+    const url = new URL(this.name, document.baseURI).href;
+    console.log(url);
+    await caph.loadPage(url);
+    this.plugin = await MyPromise.until(() => caph.pages[url]);
+    this.pluginLoader();
   }
 }
 
