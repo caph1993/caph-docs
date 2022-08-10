@@ -660,21 +660,20 @@ const caph = new class {
   }
 
   _parse_init() {
-    const f = this._parse;
-    f.empty = {}
-    f.close = {}
-    f.FIELD = '\ue000';
-    f.QUOTES = '\ue001';
-    f.ESCAPED_DOLLAR = '\ue002';
-    f.regex_FIELD = new RegExp(f.FIELD, 'g');
-    f.regex_QUOTES = new RegExp(f.QUOTES, 'g');
-    f.regex_ESCAPED_DOLLAR = new RegExp(f.ESCAPED_DOLLAR, 'g');
+    // copied from xhtm
+    const empty = {}
+    const FIELD = '\ue000';
+    const QUOTES = '\ue001';
+    const ESCAPED_DOLLAR = '\ue002';
+    const regex_FIELD = new RegExp(FIELD, 'g');
+    const regex_QUOTES = new RegExp(QUOTES, 'g');
+    const regex_ESCAPED_DOLLAR = new RegExp(ESCAPED_DOLLAR, 'g');
 
-    'area base br col command embed hr img input keygen link meta param source track wbr ! !doctype ? ?xml'.split(' ').map(v => f.empty[v] = f.empty[v.toUpperCase()] = true)
+    'area base br col command embed hr img input keygen link meta param source track wbr ! !doctype ? ?xml'.split(' ').map(v => empty[v] = empty[v.toUpperCase()] = true)
 
     // https://html.spec.whatwg.org/multipage/syntax.html#optional-tags
     // closed by the corresponding tag or end of parent content
-    let close = {
+    const close = {
       'li': '',
       'dt': 'dd',
       'dd': 'dt',
@@ -694,32 +693,33 @@ const caph = new class {
     };
     for (let tag in close) {
       [...close[tag].split(' '), tag].map(closer => {
-        f.close[tag] =
-          f.close[tag.toUpperCase()] =
-          f.close[tag + closer] =
-          f.close[tag.toUpperCase() + closer] =
-          f.close[tag + closer.toUpperCase()] =
-          f.close[tag.toUpperCase() + closer.toUpperCase()] =
+        close[tag] =
+          close[tag.toUpperCase()] =
+          close[tag + closer] =
+          close[tag.toUpperCase() + closer] =
+          close[tag + closer.toUpperCase()] =
+          close[tag.toUpperCase() + closer.toUpperCase()] =
           true;
       })
     }
+    this._parseEnv = { empty, close, FIELD, QUOTES, ESCAPED_DOLLAR, regex_FIELD, regex_QUOTES, regex_ESCAPED_DOLLAR }
   }
 
-  plugin_loaders = {};
+  pluginLoaders = {};
   plugin(key) {
-    if (!this.plugin_loaders[key]) {
-      const plugin_loader = new this.PluginLoader(key);
-      this.plugin_loaders[key] = plugin_loader.Component.bind(plugin_loader);
+    if (!this.pluginLoaders[key]) {
+      const pluginLoader = new this.PluginLoader(key);
+      this.pluginLoaders[key] = pluginLoader.Component.bind(pluginLoader);
     }
-    return this.plugin_loaders[key];
+    return this.pluginLoaders[key];
   }
-  page_loaders = {};
+  pageLoaders = {};
   page(relUrl) {
-    if (!this.page_loaders[relUrl]) {
-      const page_loader = new this.PageLoader(relUrl);
-      this.page_loaders[relUrl] = page_loader.Component.bind(page_loader);
+    if (!this.pageLoaders[relUrl]) {
+      const pageLoader = new this.PageLoader(relUrl);
+      this.pageLoaders[relUrl] = pageLoader.Component.bind(pageLoader);
     }
-    return this.page_loaders[relUrl];
+    return this.pageLoaders[relUrl];
   }
 
   createElement(type, props, ...children) {
@@ -747,22 +747,26 @@ const caph = new class {
     const text = doc.documentElement.textContent;
     return text;
   }
-
+  _html_is_valid_attr_key(key) {
+    return /^[a-zA-Z_:][a-zA-Z0-9_:.-]*$/.test(key);
+  }
   _parse(parse_math, strings, ...values) {
-    // based on xhtm, which is based on htm.
-    // fixes issues with html entities and allows for plugin tags.
-    const f = this._parse;
-    if (f.empty === undefined) this._parse_init();
+    // based on xhtm, which is based on htm. Differences:
+    // 1. Replaces html entities
+    // 2. Parses math markup.
+    // 3. Solves some errors instead of blocking.
+    if (this._parseEnv === undefined) this._parse_init();
+    const { empty, close, FIELD, QUOTES, ESCAPED_DOLLAR, regex_FIELD, regex_QUOTES, regex_ESCAPED_DOLLAR } = this._parseEnv;
     let prev = 0, current = [], field = 0, args, name, value, quotes = [], quote = 0, last;
     current.root = true;
 
     const evaluate = (str, parts = [], raw) => {
       let i = 0;
-      str = !raw && str === f.QUOTES ?
+      str = !raw && str === QUOTES ?
         quotes[quote++].slice(1, -1) :
-        str.replace(f.regex_QUOTES, m => quotes[quote++]);
+        str.replace(regex_QUOTES, m => quotes[quote++]);
       if (!str) return str;
-      str.replace(f.regex_FIELD, (match, idx) => {
+      str.replace(regex_FIELD, (match, idx) => {
         if (idx) parts.push(str.slice(i, idx));
         i = idx + 1;
         return parts.push(values[field++]);
@@ -776,61 +780,78 @@ const caph = new class {
       const elem = this.createElement(last, ...args);
       current.push(elem);
     }
-    let s = strings.join(f.FIELD);
+    const setAttr = (props, key, value) => {
+      if (this._html_is_valid_attr_key(key))
+        return props[key] = value;
+      // Fix the error to avoid blocking the whole render process
+      const tag = current[1];
+      console.error(`Parsing error near <${tag} ... ${key}.`)
+      if (key[0] == '<') {
+        const newTag = key.slice(1);
+        console.warn(`Ignoring <${tag}. Assuming <${newTag}...`);
+        current[1] = newTag;
+      }
+    }
+    let s = strings.join(FIELD);
     if (parse_math) {
-      s = s.replace(/\\\$/g, f.ESCAPED_DOLLAR);
+      s = s.replace(/\\\$/g, ESCAPED_DOLLAR);
       s = s.replace(/([^\\]|^)\$(.*?[^\\])\$/g, (match, p1, p2) => {
-        const i = match.search(/\<|\>/);
-        if (i != -1) {
-          match = match.replace(f.regex_ESCAPED_DOLLAR, '\\\$');
-          console.error('Parsing error:', match);
-          const safe = this._html_safe(match);
-          return `<caph-docs plugin="parse-error">${safe}</>`;
-        }
-        p2 = p2.replace(f.regex_ESCAPED_DOLLAR, '\\\$');
+        // const i = match.search(/\<|\>/);
+        // if (i != -1) {
+        //   match = match.replace(regex_ESCAPED_DOLLAR, '\\\$');
+        //   console.error('Parsing error:', match);
+        //   const safe = this._html_safe(match);
+        //   return `<caph-docs plugin="core-error">${safe}</>`;
+        // }
+        p2 = p2.replace(/\</g, '\\lt ');
+        p2 = p2.replace(/\>/g, '\\gt ');
+        p2 = p2.replace(regex_ESCAPED_DOLLAR, '\\\$');
         return `${p1}<caph-docs plugin=${this.mathPlugin}>${p2}</>`;
       });
-      s = s.replace(f.regex_ESCAPED_DOLLAR, '$'); // \$ in html becomes $
+      s = s.replace(regex_ESCAPED_DOLLAR, '$'); // \$ in html becomes $
     }
     s = s.replace(/<!--[^]*-->/g, '');
     s = s.replace(/<!\[CDATA\[[^]*\]\]>/g, '');
-    s = s.replace(/('|")[^\1]*?\1/g, match => (quotes.push(match), f.QUOTES));
+    s = s.replace(/('|")[^\1]*?\1/g, match => (quotes.push(match), QUOTES));
     // .replace(/^\s*\n\s*|\s*\n\s*$/g,'')
     s = s.replace(/\s+/g, ' ');
     // ...>text<... sequence
     s = s.replace(/(?:^|>)([^<]*)(?:$|<)/g, (match, text, idx, str) => {
-      let close, tag;
+      let closeTag, tag;
       if (idx) {
         let ss = str.slice(prev, idx);
         // <abc/> → <abc />
         ss = ss.replace(/(\S)\/$/, '$1 /');
         ss.split(' ').map((part, i) => {
           if (part[0] === '/') {
-            close = tag || part.slice(1) || 1;
+            closeTag = tag || part.slice(1) || 1;
           }
           else if (!i) {
             tag = evaluate(part);
             // <p>abc<p>def, <tr><td>x<tr>
-            while (f.close[current[1] + tag]) up();
+            while (close[current[1] + tag]) up();
             current = [current, tag, null];
-            if (f.empty[tag]) close = tag;
+            if (empty[tag]) closeTag = tag;
           }
           else if (part) {
             let props = current[2] || (current[2] = {});
             if (part.slice(0, 3) === '...') {
-              Object.assign(props, values[field++]);
+              const newProps = values[field++];
+              for (let key in newProps) {
+                setAttr(props, key, newProps[key]);
+              }
             }
             else {
               [name, value] = part.split('=');
-              props[evaluate(name)] = value ? evaluate(value) : true;
+              setAttr(props, evaluate(name), value ? evaluate(value) : true);
             }
           }
         })
       }
-      if (close) {
+      if (closeTag) {
         up();
-        // if last child is closable - close it too
-        while (last !== close && f.close[last]) up();
+        // if last child is closable - closeTag it too
+        while (last !== closeTag && close[last]) up();
       }
       prev = idx + match.length;
       if (text && text !== ' ') evaluate((last = 0, text), current, true);
@@ -847,7 +868,7 @@ caph.Plugin = class {
 
   Component({ children, ...props }) {
     console.error('Override the Component method of this object:', this);
-    return caph.parse`<div> Override the Component method </div> `;
+    return caph.parse`<${caph.plugin('core-error')}> Override the Component method</> `;
   }
 
 }
@@ -921,32 +942,34 @@ caph.PluginLoader = class extends caph.Plugin {
   }
 
   _loadErrorComponent({ children }) {
-    return caph.parse`
-      <code class="caph-docs-flashing caph-docs-error"
-        title=${caph._html_safe(this.error)}>
-        ${children}
-      </code>`;
+    return caph.parse`<${caph.plugin('core-error')} tooltip=${this.error}/>`;
   }
 }
 
-caph.plugins.mathParseError = new class extends caph.Plugin {
-  Component({ children }) {
+caph.plugins['core-error'] = new class extends caph.Plugin {
+
+  Component({ children, tooltip }) {
+    const help = preact.useCallback(() => {
+      const win = window.open('', '_blank');
+      win.document.write(
+        `<div class="tooltip-text" style="width:30em">
+      1. In tex, use \\lt and \\gt instead of &lt; and &gt;.
+      <br/>
+      2. In html, use \\$ instead of $.
+      <br/>
+      This prevents any parsing misunderstanding.
+    </div>`
+      );
+    }, []);
     return caph.parse`
-    <span class="tooltip">
-      <span>
-        Parsed error: <code class="flashing">${children}</code>
-      </span>
-      <!--div class="tooltip-text" style="width:30em">
-        1. In tex, use \\lt and \\gt instead of &lt; and &gt;.
-        <br/>
-        2. In html, use \\$ instead of $.
-        <br/>
-        This prevents any parsing misunderstanding.
-      </div-->
-    </span > 
+      <a href="javascript:;" onclick=${help}>(help?)</a> 
+      <code class="caph-docs-flashing caph-docs-error" title=${tooltip}>
+        ${children}
+      </code>
     `;
   }
 }
+
 caph.PageLoader = class extends caph.PluginLoader {
   constructor(relUrl) {
     super(relUrl);
@@ -961,33 +984,3 @@ caph.PageLoader = class extends caph.PluginLoader {
   }
 }
 
-caph.plugins['core-router'] = new class extends caph.Plugin {
-  // A router that supports single page applications without a server
-
-  async loader() {
-    // 1. Put the plugin script in the document head
-    await caph.loadPlugin(this.key);
-    // 2. Wait for the browser to load the script
-    this.plugin = await MyPromise.until(() => caph.plugins[this.key]);
-    // 3. Start but don't wait for the plugin loader
-    this.pluginLoader();
-  }
-
-
-  Component({ children }) {
-    return caph.parse`
-    <span class="tooltip">
-      <span>
-        Parsed error: <code class="flashing">${children}</code>
-      </span>
-      <!--div class="tooltip-text" style="width:30em">
-        1. In tex, use \\lt and \\gt instead of &lt; and &gt;.
-        <br/>
-        2. In html, use \\$ instead of $.
-        <br/>
-        This prevents any parsing misunderstanding.
-      </div-->
-    </span > 
-    `;
-  }
-}
