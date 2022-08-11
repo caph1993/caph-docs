@@ -1,5 +1,5 @@
 let fs = require('fs');
-let utils = require('./tools.js');
+let utils = require('./build-tools.js');
 
 let baseDir = 'caph-docs/';
 

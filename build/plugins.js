@@ -1,22 +1,22 @@
 let fs = require('fs');
-let utils = require('./tools.js');
+let utils = require('./build-tools.js');
 
 let baseDir = 'caph-docs/';
 
 let plugins = {
   'plugin-core-menu': 'plugins/core-menu/plugin-core-menu.js',
   'plugin-core-about': 'plugins/core-about/plugin-core-about.js',
-  'plugin-gtag': 'plugins/gtag/plugin-gtag.js',
   'plugin-katex': 'plugins/katex/plugin-katex.js',
-  'plugin-document': 'plugins/document/plugin-document.js',
-  'plugin-slides': 'plugins/slides/plugin-slides.js',
-  'plugin-codemirror': 'plugins/codemirror/plugin-codemirror.js',
-  'plugin-whiteboard': 'plugins/whiteboard/plugin-whiteboard.js',
-  'plugin-mathjax-svg': 'plugins/mathjax-svg/plugin-mathjax-svg.js',
-  'plugin-fabric': 'plugins/fabric/plugin-fabric.js',
-  'plugin-figure-editor': 'plugins/figure-editor/plugin-figure-editor.js',
-  'plugin-hyphenator': 'plugins/hyphenator/plugin-hyphenator.js',
-  'plugin-auto-scroll': 'plugins/auto-scroll/plugin-auto-scroll.js',
+  // 'plugin-gtag': 'plugins/gtag/plugin-gtag.js',
+  // 'plugin-document': 'plugins/document/plugin-document.js',
+  // 'plugin-slides': 'plugins/slides/plugin-slides.js',
+  // 'plugin-codemirror': 'plugins/codemirror/plugin-codemirror.js',
+  // 'plugin-whiteboard': 'plugins/whiteboard/plugin-whiteboard.js',
+  // 'plugin-mathjax-svg': 'plugins/mathjax-svg/plugin-mathjax-svg.js',
+  // 'plugin-fabric': 'plugins/fabric/plugin-fabric.js',
+  // 'plugin-figure-editor': 'plugins/figure-editor/plugin-figure-editor.js',
+  // 'plugin-hyphenator': 'plugins/hyphenator/plugin-hyphenator.js',
+  // 'plugin-auto-scroll': 'plugins/auto-scroll/plugin-auto-scroll.js',
 };
 
 
@@ -52,7 +52,7 @@ ${content}
 Reveal=caph.reveal=module.exports;
 delete window.module;
 `:
-      path.endsWith('tex-svg.js') ? console.log('YEAH') || `
+      path.endsWith('tex-svg.js') ? `
 ${content}
 caph.mathjax=MathJax;
 `:

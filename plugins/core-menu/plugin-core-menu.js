@@ -1,4 +1,4 @@
-caph.plugins['core-menu'] = new class extends caph.Plugin {
+caph.pluginDefs[caph.currentSrc] = new class extends caph.Plugin {
 
   async loader() {
     await caph.load('caph-docs/plugins/core-menu/core-menu.css');

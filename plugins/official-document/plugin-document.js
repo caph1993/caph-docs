@@ -1,6 +1,6 @@
 caph.plugins.document = new class extends caph.Plugin {
   async loader() {
-    caph.loadFont('lmroman');
+    caph.loadFont('official-lmroman');
     await caph.load('caph-docs/plugins/document/document.css');
     return;
   }

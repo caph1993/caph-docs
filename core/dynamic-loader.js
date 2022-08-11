@@ -1,9 +1,16 @@
 /* lzutf8, utils, preact, preact hook are injected above this comment*/
 
 const caph = new class {
-  dist = null;
+
   mathPlugin = 'katex';
   mathMacros = {};
+
+  officialPlugins = [
+    'core-menu',
+    'core-about',
+    'katex',
+  ];
+
   utils = {
     unindent: (text) => {
       let lines = text.split('\n');
@@ -13,8 +20,6 @@ const caph = new class {
       return lines.map(l => l.slice(n)).join('\n');
     }
   };
-  _attachments = [];
-  _loadStatus = {};
 
   constructor() {
     const requirements = window.caph_requirements || [];
@@ -35,11 +40,32 @@ const caph = new class {
         where: 'beforeend',
       });
     }
+    this.contexts = {};
+    this.contexts['core-menu'] = preact.createContext();
     this._loadMenu();
 
+    // this.user = { // Exported functions
+    //   core: this,
+    //   contexts: this.contexts,
+    //   parse: this.parse.bind(this),
+    //   plugin: this.plugin.bind(this),
+    //   page: this.page.bind(this),
+    //   Plugin?
+    // };
+  }
+  get currentSrc() {
+    return document.currentScript.src;
   }
 
-  contexts = {};
+  async injectStyle(styleStr) {
+    MyDocument.createElement('style', {
+      parent: this.div,
+      where: 'beforeend',
+      text: styleStr,
+    });
+    await sleep(10);
+  }
+
   _loadMenu() {
     // this.contexts['core-storage'] = new class extends this.HeadlessContext {
     //   storage = {}
@@ -103,7 +129,6 @@ const caph = new class {
         };
       }
     }
-    this.contexts['core-menu'] = preact.createContext();
 
     const MenuComponent = ({ }) => {
       const [trigger, setTrigger] = preact.useState(0);
@@ -175,6 +200,7 @@ const caph = new class {
     return params.get('') || '';
   }
 
+  _attachments = [];
   getAttachment(ref) {
     for (let e of this._attachments) if (e.ref == ref) return e.content;
     return null;
@@ -217,25 +243,38 @@ const caph = new class {
     }
   }
 
-  plugins = {};
-  async loadPlugin(tag) {
-    if (this.plugins[tag]) return; // already loaded
-    return await this.load(`${this.dist}/plugin-${tag}.js`);
-  }
   async loadFont(name) {
     return await this.load(`${this.dist}/font-${name}.css`);
   }
-  pages = {}
-  async loadPage(url) {
-    //assert(this._URL_is_absolute(url))
-    if (this.pages[url]) return; // already loaded
-    return await this.load(url);
+
+  pluginDefs = {};
+  _pluginComponents = {}
+  plugin(key) {
+    // key is either a tag or a url
+    let out = this._pluginComponents[key];
+    if (out) return out;
+    const plugin = this.pluginLoader(key);
+    out = plugin.Component.bind(plugin);
+    return this._pluginComponents[key] = out;
+  }
+
+  _pluginLoaders = {};
+  pluginLoader(key) {
+    if (key.endsWith('.js')) key = this._URL_resolve(key);
+    let out = this._pluginLoaders[key];
+    if (out) return out;
+    return this._pluginLoaders[key] = new this.PluginLoader(key);
+  }
+
+  _URL_resolve(url) {
+    return new URL(url, document.baseURI).href;
   }
   _URL_is_absolute(url) {
     //https://stackoverflow.com/q/10687099
     return new URL(document.baseURI).origin !== new URL(url, document.baseURI).origin;
   }
 
+  _loadStatus = {};
   async _load_elem(ref, tag, attrs, parent, where, content) {
     // Handle concurrent calls to load_elem(...) about the same ref
     if (!this._loadStatus[ref]) {
@@ -301,7 +340,7 @@ const caph = new class {
 
   _parse_init() {
     // copied from xhtm
-    const empty = {}
+    const empty = {};
     const FIELD = '\ue000';
     const QUOTES = '\ue001';
     const ESCAPED_DOLLAR = '\ue002';
@@ -345,28 +384,11 @@ const caph = new class {
     this._parseEnv = { empty, close, FIELD, QUOTES, ESCAPED_DOLLAR, regex_FIELD, regex_QUOTES, regex_ESCAPED_DOLLAR }
   }
 
-  pluginLoaders = {};
-  plugin(key) {
-    if (!this.pluginLoaders[key]) {
-      const pluginLoader = new this.PluginLoader(key);
-      this.pluginLoaders[key] = pluginLoader.Component.bind(pluginLoader);
-    }
-    return this.pluginLoaders[key];
-  }
-  pageLoaders = {};
-  page(relUrl) {
-    if (!this.pageLoaders[relUrl]) {
-      const pageLoader = new this.PageLoader(relUrl);
-      this.pageLoaders[relUrl] = pageLoader.Component.bind(pageLoader);
-    }
-    return this.pageLoaders[relUrl];
-  }
-
   createElement(type, props, ...children) {
-    if (type == 'caph-docs') {
+    if (type == 'caph') {
       const pluginKey = props && props['plugin'];
       if (pluginKey) type = this.plugin(pluginKey);
-      else console.warn('caph-docs tag without plugin attribute');
+      else console.warn('caph tag without plugin attribute');
     }
     children = children.map(
       x => this._is_string(x) ? this._html_safe_undo(x) : x);
@@ -441,12 +463,12 @@ const caph = new class {
         //   match = match.replace(regex_ESCAPED_DOLLAR, '\\\$');
         //   console.error('Parsing error:', match);
         //   const safe = this._html_safe(match);
-        //   return `<caph-docs plugin="core-error">${safe}</>`;
+        //   return `<caph plugin="core-error">${safe}</>`;
         // }
         p2 = p2.replace(/\</g, '\\lt ');
         p2 = p2.replace(/\>/g, '\\gt ');
         p2 = p2.replace(regex_ESCAPED_DOLLAR, '\\\$');
-        return `${p1}<caph-docs plugin=${this.mathPlugin}>${p2}</>`;
+        return `${p1}<caph plugin=${this.mathPlugin}>${p2}</>`;
       });
       s = s.replace(regex_ESCAPED_DOLLAR, '$'); // \$ in html becomes $
     }
@@ -515,9 +537,9 @@ caph.Plugin = class {
 
 caph.PluginLoader = class extends caph.Plugin {
 
-  constructor(name) {
+  constructor(key) {
     super();
-    this.name = name;
+    this.key = key;
     this.loader();
     caph.load('caph-docs/core/plugin-loader.css');
   }
@@ -527,13 +549,28 @@ caph.PluginLoader = class extends caph.Plugin {
   renderReady = false;
 
   async loader() {
-    const key = this.name;
     // 1. Put the plugin script in the document head
-    await caph.loadPlugin(key);
     // 2. Wait for the browser to load the script
-    this.plugin = await MyPromise.until(() => caph.plugins[key]);
+    this.plugin = await this.loadPlugin();
     // 3. Start but don't wait for the plugin loader
     this.pluginLoader();
+  }
+
+  async loadPlugin() {
+    const key = this.key;
+    if (caph.pluginDefs[key]) {
+      return caph.pluginDefs[key]; // already loaded
+    }
+    if (key.endsWith('.js')) {
+      await caph.load(key);
+      assert(caph.pluginDefs[key], 'Plugin not declared in file: ' + key);
+      return caph.pluginDefs[key];
+    }
+    if (caph.officialPlugins.includes(key)) {
+      const url = `${caph.dist}/plugin-${key}.js`;
+      return caph.pluginDefs[key] = caph.pluginLoader(url);
+    }
+    return await MyPromise.until(() => caph.pluginDefs[key]);
   }
 
   async pluginLoader() {
@@ -545,6 +582,7 @@ caph.PluginLoader = class extends caph.Plugin {
       console.error(err);
     }
   }
+
 
   Component({ children, ...props }) {
     // eventually overridden by FinalComponent
@@ -569,14 +607,14 @@ caph.PluginLoader = class extends caph.Plugin {
     try {
       return this.plugin.Component({ children, ...props });
     } catch (err) {
-      console.error(`Rendering error in plugin ${this.name}:`, err);
+      console.error(`Rendering error in plugin ${this.key}:`, err);
       return caph.parse`<code class="flashing">${children}</code>`;
     }
   }
 
   _loadingComponent({ children }) {
     return caph.parse`
-    <code class="caph-docs-flashing" title=${`${this.name} is loading...`}>
+    <code class="caph-flashing" title=${`${this.key} is loading...`}>
       ${children}
     </code>`;
   }
@@ -586,7 +624,7 @@ caph.PluginLoader = class extends caph.Plugin {
   }
 }
 
-caph.plugins['core-error'] = new class extends caph.Plugin {
+caph.pluginDefs['core-error'] = new class extends caph.Plugin {
 
   Component({ children, tooltip }) {
     const help = preact.useCallback(() => {
@@ -603,24 +641,11 @@ caph.plugins['core-error'] = new class extends caph.Plugin {
     }, []);
     return caph.parse`
       <a href="javascript:;" onclick=${help}>(help?)</a> 
-      <code class="caph-docs-flashing caph-docs-error" title=${tooltip}>
+      <code class="caph-flashing caph-error" title=${tooltip}>
         ${children}
       </code>
     `;
   }
 }
 
-caph.PageLoader = class extends caph.PluginLoader {
-  constructor(relUrl) {
-    super(relUrl);
-  }
-  async loader() {
-    console.log(this.name)
-    const url = new URL(this.name, document.baseURI).href;
-    console.log(url);
-    await caph.loadPage(url);
-    this.plugin = await MyPromise.until(() => caph.pages[url]);
-    this.pluginLoader();
-  }
-}
 
