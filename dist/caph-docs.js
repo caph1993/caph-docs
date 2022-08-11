@@ -557,7 +557,7 @@ const caph = new class {
       return out.slice(this.baseUrl.length);
     }
     const params = new URLSearchParams(location.search);
-    return params.get('') || '';
+    return `/${params.get('') || ''}`;
   }
 
   _attachments = [];
