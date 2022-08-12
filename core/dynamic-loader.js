@@ -42,6 +42,8 @@ const caph = new class {
     }
     this.contexts = {};
     this.contexts['core-menu'] = preact.createContext();
+    this.contexts['core-route'] = preact.createContext();
+    this.init_route();
     this._loadMenu();
 
     // this.user = { // Exported functions
@@ -178,9 +180,52 @@ const caph = new class {
   //   //this.setReady();
   // }
 
-  fileMode = (window.location.protocol == 'file:');
+  init_route() {
+    this.fileMode = (window.location.protocol == 'file:');
+
+    this.routeProvider = ({ children, baseUrl = '/' }) => {
+      const currentRoute = preact.useCallback(() => {
+        if (!this.fileMode) {
+          const out = location.pathname;
+          if (!out.startsWith(baseUrl))
+            console.warn(`${out} does not start with ${baseUrl}`);
+          return out.slice(baseUrl.length);
+        }
+        const params = new URLSearchParams(location.search);
+        return `/${params.get('') || ''}`;
+      }, []);
+
+      const [trigger, setTrigger] = preact.useState(0);
+
+      preact.useEffect(() => { // register back/forward button event listener
+        addEventListener('popstate', (event) => {
+          setTrigger(Math.random());
+        });
+      }, []);
+
+      const routeState = preact.useMemo(() => {
+        const route = currentRoute();
+        const RouteLink = ({ route, text }) => {
+          return caph.parse`
+            <a href=${this.href(route)} onClick=${() => {
+              window.event.preventDefault();
+              history.pushState(null, null, this.href(route));
+              setTrigger(Math.random());
+            }} title=${text}>
+              ${text}
+            </a >`;
+        }
+        return { route, RouteLink };
+      }, [trigger]);
+      return caph.parse`
+        <${caph.contexts['core-route'].Provider} value=${routeState}>
+          ${children}
+        </>`;
+    }
+  }
   href(route) {
-    if (!this.fileMode) return new URL(route, location.href).href;
+    if (!this.fileMode)
+      return this._URL_resolve(route);
     const path = location.pathname;
     const params = new URLSearchParams(location.search);
     const missing = params.get('') || '';
@@ -188,17 +233,7 @@ const caph = new class {
     params.delete('');
     params.append('', base.slice(path.length + 8));
     return `${path}?${params.toString()}`;
-  }
-  baseUrl = '/';
-  currentRoute() {
-    if (!this.fileMode) {
-      const out = location.pathname;
-      if (!out.startsWith(this.baseUrl)) console.warn(`${out} does not start with ${this.baseUrl}`);
-      return out.slice(this.baseUrl.length);
-    }
-    const params = new URLSearchParams(location.search);
-    return `/${params.get('') || ''}`;
-  }
+  };
 
   _attachments = [];
   getAttachment(ref) {
@@ -629,18 +664,21 @@ caph.pluginDefs['core-error'] = new class extends caph.Plugin {
   Component({ children, tooltip }) {
     const help = preact.useCallback(() => {
       const win = window.open('', '_blank');
-      win.document.write(
-        `<div class="tooltip-text" style="width:30em">
-      1. In tex, use \\lt and \\gt instead of &lt; and &gt;.
-      <br/>
-      2. In html, use \\$ instead of $.
-      <br/>
-      This prevents any parsing misunderstanding.
-    </div>`
-      );
+      win.document.write(`
+        <div>
+          1. In tex, use \\lt and \\gt instead of &lt; and &gt;.
+          <br/>
+          2. In html, use \\$ instead of $.
+          <br/>
+          This prevents any parsing misunderstanding.
+        </div>
+      `);
     }, []);
     return caph.parse`
-      <a href="javascript:;" onclick=${help}>(help?)</a> 
+      <a href="./error-help" onclick=${(e) => {
+        window.preventDefault(e);
+        help();
+      }}>(help?)</a> 
       <code class="caph-flashing caph-error" title=${tooltip}>
         ${children}
       </code>
@@ -648,4 +686,39 @@ caph.pluginDefs['core-error'] = new class extends caph.Plugin {
   }
 }
 
+
+// caph.contexts['core-route'] = preact.createContext();
+
+// caph.historyTrigger = ({ children }) => {
+//   const [trigger, setTrigger] = preact.useState();
+
+//   preact.useEffect(() => { // register event listener
+//     const { pushState, replaceState, go } = window.history;
+//     window.history.pushState = (...args) => {
+//       pushState(...args);
+//       setTrigger(Math.random());
+//     }
+//     window.history.replaceState = (...args) => {
+//       replaceState(...args);
+//       setTrigger(Math.random());
+//     }
+//     window.history.go = (...args) => {
+//       go(...args);
+//       setTrigger(Math.random());
+//     }
+//     window.history.back = (...args) => {
+//       back(...args);
+//       setTrigger(Math.random());
+//     }
+//     window.history.forward = (...args) => {
+//       forward(...args);
+//       setTrigger(Math.random());
+//     }
+//   }, []);
+
+//   return caph.parse`
+//     <${caph.contexts['core-history-trigger'].Provider} value=${trigger}>
+//       ${children}
+//     </>`;
+// };
 
