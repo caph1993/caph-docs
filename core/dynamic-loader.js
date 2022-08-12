@@ -189,7 +189,7 @@ const caph = new class {
           const out = location.pathname;
           if (!out.startsWith(baseUrl))
             console.warn(`${out} does not start with ${baseUrl}`);
-          return out.slice(baseUrl.length);
+          return `/${out.slice(baseUrl.length)}`;
         }
         const params = new URLSearchParams(location.search);
         return `/${params.get('') || ''}`;
