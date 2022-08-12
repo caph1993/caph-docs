@@ -1,18 +1,19 @@
 
-caph.plugins.figureEditor = new class extends caph.Plugin {
-  
-  render(){
-    const {option} = preact.useContext(caph.contexts.menu);
-    const _class = option!='Figure Editor'?'hidden':'vbox fullscreen-layer';
+
+caph.pluginDefs[caph.currentSrc] = new class extends caph.Plugin {
+
+  Component() {
+    const { option } = preact.useContext(caph.contexts.menu);
+    const _class = option != 'Figure Editor' ? 'hidden' : 'vbox fullscreen-layer';
     return html`
       <div id="fabric-editor-main" class=${_class}>
         <div id="fabric-editor-header" class="hbox space-between">
-          <button onclick=${()=>caph.plugins.figureEditor.run()}>
+          <button onclick=${() => caph.plugins.figureEditor.run()}>
             Run (ctrl+enter)
           </button>
           <div class="hbox align-center">
-            <select onchange=${(e)=>
-                caph.plugins.figureEditor.setTemplate(e.target.value)}>
+            <select onchange=${(e) =>
+        caph.plugins.figureEditor.setTemplate(e.target.value)}>
               <option value="none">Load Template</option>
               <option value="figure">Figure</option>
               <option value="diagram">Diagram</option>
@@ -28,7 +29,7 @@ caph.plugins.figureEditor = new class extends caph.Plugin {
             <div class="hbox align-center">
               <span>Scale figure:</span>
               <input type='range' value='100' min='10' max='100'
-                  onchange=${(e)=>caph.plugins.figureEditor.rescale(e)}/>
+                  onchange=${(e) => caph.plugins.figureEditor.rescale(e)}/>
             </div>
             <div id="fabric-editor-footer-canvas" class="flex vbox"/>
             <div id="fabric-editor-footer-code" class="flex"/>
@@ -37,7 +38,7 @@ caph.plugins.figureEditor = new class extends caph.Plugin {
       </div>
     `;
   }
-  async loader(){
+  async loader() {
     await caph.loadPluginDeep('fabric');
     await caph.loadPluginDeep('codemirror');
 
@@ -46,23 +47,25 @@ caph.plugins.figureEditor = new class extends caph.Plugin {
 
     await caph.load('caph-docs/plugins/figure-editor/figure-editor.js');
     await caph.load('caph-docs/plugins/figure-editor/figure-editor.css');
-    (async ()=>{
-      let load = async (id)=>MyPromise.until(()=>
+    (async () => {
+      let load = async (id) => MyPromise.until(() =>
         document.querySelector(`#${id}`));
       let main = await load('fabric-editor-main');
       await this.init();
     })();
+    this.menuSettings();
     return;
   }
-  menuSettings(){
-    const {addOption, setOption} = preact.useContext(caph.contexts.menu);
-    addOption('Figure Editor', {hold:true});
+  menuSettings() {
+
+    const { addOption, setOption } = preact.useContext(caph.contexts.menu);
+    addOption('Figure Editor', { hold: true });
   }
-  
+
 
   loaded = {};
-  async init(){
-    let load = async (id)=>await MyPromise.until(()=>
+  async init() {
+    let load = async (id) => await MyPromise.until(() =>
       document.querySelector(`#${id}`));
     let [body, body_cm, footer, footer_canvas, footer_cm] = await Promise.all([
       'fabric-editor-body',
@@ -72,8 +75,8 @@ caph.plugins.figureEditor = new class extends caph.Plugin {
       'fabric-editor-footer-code'
     ].map(load));
 
-    Split([body, footer], {direction: 'horizontal'});
-    let cm_options={
+    Split([body, footer], { direction: 'horizontal' });
+    let cm_options = {
       theme: 'monokai',
       indentUnit: 2,
       tabSize: 2,
@@ -84,44 +87,44 @@ caph.plugins.figureEditor = new class extends caph.Plugin {
     }
     this.cm = CodeMirror(body_cm, {
       value: this.getTemplate('none'),
-      mode:  'javascript',
-      extraKeys:{
+      mode: 'javascript',
+      extraKeys: {
         'Ctrl-Enter': (cm) => this.run(),
       },
       ...cm_options,
     });
     this.cm_footer = CodeMirror(footer_cm, {
       value: 'Select an element to see its properties...',
-      mode:  'json',
+      mode: 'json',
       ...cm_options,
     });
-    this.canvas_div=footer_canvas;
+    this.canvas_div = footer_canvas;
   }
-  refresh(){
+  refresh() {
     this.cm.refresh();
     this.cm_footer.refresh();
     this.run();
   }
-  rescale(e){
-    let value = e.srcElement.value/100;
+  rescale(e) {
+    let value = e.srcElement.value / 100;
     this.canvas_div.style.transform = `scale(${value})`;
     this.canvas_div.style.transformOrigin = 'top left';
   }
 
-  setTemplate(option){
+  setTemplate(option) {
     let code = this.getTemplate(option);
     this.cm.setValue(code);
     this.refresh();
   }
-  getTemplate(option){
-    let tmp=this.templates[option];
+  getTemplate(option) {
+    let tmp = this.templates[option];
     let noindent = tmp.split('\n').map(
-      s=>s.slice(4,s.length)
+      s => s.slice(4, s.length)
     ).join('\n').trim();
-    return noindent+'\n';
+    return noindent + '\n';
   }
 
-  async run(){
+  async run() {
     this.canvas_div.innerHTML = '';
     let canvas = MyDocument.createElement('canvas', {
       parent: this.canvas_div,
@@ -129,24 +132,24 @@ caph.plugins.figureEditor = new class extends caph.Plugin {
     let code = this.cm.getValue();
     code = code.replace(/\\/g, '\\\\');
     let fabric_canvas = new fabric.Canvas(canvas);
-    fabric_canvas.on('object:modified', (ev)=>this.on_canvas_event(ev));
+    fabric_canvas.on('object:modified', (ev) => this.on_canvas_event(ev));
     //fabric_canvas.on('selection:created', (ev)=>this.on_canvas_event(ev));
-    fabric_canvas.on('selection:updated', (ev)=>this.on_canvas_event(ev));
+    fabric_canvas.on('selection:updated', (ev) => this.on_canvas_event(ev));
     this.cm_footer.setValue('');
     let diagramArgs = caph.plugins.fabricDiagram.exposed_args;
-    try{ await eval(code)(fabric_canvas, diagramArgs); }
-    catch(err){ this.cm_footer.setValue(''+err); }
-    canvas.nextSibling.oncontextmenu=(ev)=>{
+    try { await eval(code)(fabric_canvas, diagramArgs); }
+    catch (err) { this.cm_footer.setValue('' + err); }
+    canvas.nextSibling.oncontextmenu = (ev) => {
       ev.preventDefault();
-      if(confirm('Download picture?')) this.download(canvas);
+      if (confirm('Download picture?')) this.download(canvas);
     };
   }
-  on_canvas_event(ev){
+  on_canvas_event(ev) {
     let obj = ev.target;
     let s = JSON.stringify(obj, null, '  ');
     this.cm_footer.setValue(s);
   }
-  download(canvas){
+  download(canvas) {
     const link = document.createElement('a');
     link.download = 'image.png';
     link.href = this.serialize(canvas);
@@ -154,10 +157,10 @@ caph.plugins.figureEditor = new class extends caph.Plugin {
     link.click();
     document.body.removeChild(link);
   }
-  serialize(canvas){
+  serialize(canvas) {
     return canvas.toDataURL({
-       width: canvas.width, height: canvas.height,
-       left: 0, top: 0, format: 'png',
+      width: canvas.width, height: canvas.height,
+      left: 0, top: 0, format: 'png',
     });
   }
 
