@@ -576,7 +576,7 @@ const caph = new class {
    * @param {str} eventName 
    * @param {()=>void} callback 
    */
-  listenToEvent(eventName, callback){
+  listenToEvent(eventName, callback) {
     preact.useEffect(() => {
       window.addEventListener(eventName, callback);
       return () => {
@@ -604,7 +604,7 @@ const caph = new class {
     auto_attrs = true
   } = {}) {
     if (parent == null) parent = this.div;
-    const ext = ref.split('.').pop();
+    const ext = ref.split('#')[0].split('?')[0].split('.').pop();
     let tag = ext == 'js' ? 'script' : ext == 'css' ? 'link' : null;
     if (tag == null) throw new Error('Only .js and .css files can be _sources. Got: ' + ext + ' ' + ref);
     let defaults = {};
@@ -623,7 +623,7 @@ const caph = new class {
     try {
       await this._load_elem(ref, tag, attrs, parent, where, content);
     } catch (err) {
-      console.error(err);
+      console.error(err, ref);
       throw err;
     }
   }
@@ -644,8 +644,9 @@ const caph = new class {
   }
 
   _pluginLoaders = {};
+  _randomSessionSuffix = ('' + Math.random()).slice(2);
   pluginLoader(key) {
-    if (key.endsWith('.js')) key = this._URL_resolve(key);
+    if (key.match(/[^#\?]*.js(#.*|\?.*|)$/)) key = this._URL_resolve(key);
     let out = this._pluginLoaders[key];
     if (out) return out;
     return this._pluginLoaders[key] = new this.PluginLoader(key);
@@ -852,17 +853,17 @@ const caph = new class {
         s = s.replace(/\</g, '\\lt ');
         s = s.replace(/\>/g, '\\gt ');
         s = s.replace(regex_ESCAPED_DOLLAR, '\\\$');
-        return displayMode?
-          `<caph plugin=${this.mathPlugin} displayMode>${s}</>`:
+        return displayMode ?
+          `<caph plugin=${this.mathPlugin} displayMode>${s}</>` :
           `<caph plugin=${this.mathPlugin}>${s}</>`;
       }
       s = s.replace(
         /([^\\]|^)\$\$(.*?[^\\])\$\$/sg,
-        (match, p1, p2)=> `${p1}${parseMath(p2, true, match)}`,
+        (match, p1, p2) => `${p1}${parseMath(p2, true, match)}`,
       );
       s = s.replace(
         /([^\\]|^)\$(.*?[^\\])\$/sg,
-        (match, p1, p2)=> `${p1}${parseMath(p2, false, match)}`,
+        (match, p1, p2) => `${p1}${parseMath(p2, false, match)}`,
       );
       s = s.replace(regex_ESCAPED_DOLLAR, '$'); // \$ in html becomes $
     }
@@ -955,15 +956,20 @@ caph.PluginLoader = class extends caph.Plugin {
     if (caph.pluginDefs[key]) {
       return caph.pluginDefs[key]; // already loaded
     }
-    if (key.endsWith('.js')) {
-      await caph.load(key);
-      assert(caph.pluginDefs[key], 'Plugin not declared in file: ' + key);
-      return caph.pluginDefs[key];
-    }
     if (caph.officialPlugins.includes(key)) {
       const url = `${caph.dist}/plugin-${key}.js`;
       return caph.pluginDefs[key] = caph.pluginLoader(url);
     }
+    else if (key.match(/[^#\?]+.js(#.*|\?.*|)$/)) {
+      let isOfficial = caph.officialPlugins.map(k => `${caph.dist}/plugin-${k}.js`).includes(key);
+      const url = isOfficial ? key : `${key}?${caph._randomSessionSuffix}`;
+      await caph.load(url);
+      caph.pluginDefs[key] = caph.pluginDefs[key] || caph.pluginDefs[url];
+      assert(caph.pluginDefs[key], 'Plugin not declared in file: ' + key);
+      if (key != url) delete caph.pluginDefs[url];
+      return caph.pluginDefs[key];
+    }
+    // User plugin
     return await MyPromise.until(() => caph.pluginDefs[key]);
   }
 
