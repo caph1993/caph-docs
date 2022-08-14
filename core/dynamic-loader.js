@@ -482,19 +482,28 @@ const caph = new class {
     let s = strings.join(FIELD);
     if (parse_math) {
       s = s.replace(/\\\$/g, ESCAPED_DOLLAR);
-      s = s.replace(/([^\\]|^)\$(.*?[^\\])\$/sg, (match, p1, p2) => {
-        // const i = match.search(/\<|\>/);
-        // if (i != -1) {
-        //   match = match.replace(regex_ESCAPED_DOLLAR, '\\\$');
-        //   console.error('Parsing error:', match);
-        //   const safe = this._html_safe(match);
-        //   return `<caph plugin="core-error">${safe}</>`;
-        // }
-        p2 = p2.replace(/\</g, '\\lt ');
-        p2 = p2.replace(/\>/g, '\\gt ');
-        p2 = p2.replace(regex_ESCAPED_DOLLAR, '\\\$');
-        return `${p1}<caph plugin=${this.mathPlugin}>${p2}</>`;
-      });
+      const parseMath = (s, displayMode, match) => {
+        if (match.search(/\/\>/) != -1) {
+          match = match.replace(regex_ESCAPED_DOLLAR, '\\\$');
+          console.error('Math parsing error:', match);
+          const safe = this._html_safe(match);
+          return `<caph plugin="core-error">${safe}</>`;
+        }
+        s = s.replace(/\</g, '\\lt ');
+        s = s.replace(/\>/g, '\\gt ');
+        s = s.replace(regex_ESCAPED_DOLLAR, '\\\$');
+        return displayMode?
+          `<caph plugin=${this.mathPlugin} displayMode>${s}</>`:
+          `<caph plugin=${this.mathPlugin}>${s}</>`;
+      }
+      s = s.replace(
+        /([^\\]|^)\$\$(.*?[^\\])\$\$/sg,
+        (match, p1, p2)=> `${p1}${parseMath(p2, true, match)}`,
+      );
+      s = s.replace(
+        /([^\\]|^)\$(.*?[^\\])\$/sg,
+        (match, p1, p2)=> `${p1}${parseMath(p2, false, match)}`,
+      );
       s = s.replace(regex_ESCAPED_DOLLAR, '$'); // \$ in html becomes $
     }
     s = s.replace(/<!--[^]*-->/g, '');
