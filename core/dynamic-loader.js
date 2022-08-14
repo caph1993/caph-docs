@@ -1,4 +1,34 @@
+// //@ts-check
+
 /* lzutf8, utils, preact, preact hook are injected above this comment*/
+
+
+// /**
+//  * @interface VirtualDOM_Parent<T>
+//  * @type {object}
+//  * @property {?T[]} children
+//  */
+// /*Recursive type solution: https://stackoverflow.com/a/47842314/3671939*/
+// /**
+//  * @interface VirtualDOM_Ancestor @extends VirtualDOM_Parent<VirtualDOM>
+//  */
+
+// /**
+//  * @typedef {string|number|boolean|null|VirtualDOM_Ancestor} VirtualDOM_Element
+//  */
+// /**
+//  * @typedef {string|number|boolean|null|any} VirtualDOM_Element
+//  */
+
+// /**
+//  * @typedef {Object} Preact
+//  * @property {()=>any} createElement
+//  * @property {()=>any} createContext
+//  * @property {any} useCallback
+// */
+// //@ts-ignore
+// var /**@type {Preact}*/preact = window.preact;
+
 
 const caph = new class {
 
@@ -22,8 +52,11 @@ const caph = new class {
   };
 
   constructor() {
+    //@ts-ignore
     const requirements = window.caph_requirements || [];
+    //@ts-ignore
     window.caph_requirements = requirements;
+    //@ts-ignore
     delete window.caph_requirements;
     for (let a of requirements) this.attach(a);
     this.dist = '../dist';
@@ -42,8 +75,6 @@ const caph = new class {
     }
     this.contexts = {};
     this.contexts['core-menu'] = preact.createContext();
-    this.contexts['core-route'] = preact.createContext();
-    this.init_route();
     this._loadMenu();
 
     // this.user = { // Exported functions
@@ -56,6 +87,7 @@ const caph = new class {
     // };
   }
   get currentSrc() {
+    //@ts-ignore
     return document.currentScript.src;
   }
 
@@ -180,60 +212,18 @@ const caph = new class {
   //   //this.setReady();
   // }
 
-  init_route() {
-    this.fileMode = (window.location.protocol == 'file:');
-
-    this.routeProvider = ({ children, baseUrl = '/' }) => {
-      const currentRoute = preact.useCallback(() => {
-        if (!this.fileMode) {
-          const out = location.pathname;
-          if (!out.startsWith(baseUrl))
-            console.warn(`${out} does not start with ${baseUrl}`);
-          return `/${out.slice(baseUrl.length)}`;
-        }
-        const params = new URLSearchParams(location.search);
-        return `/${params.get('') || ''}`;
-      }, []);
-
-      const [trigger, setTrigger] = preact.useState(0);
-
-      preact.useEffect(() => { // register back/forward button event listener
-        addEventListener('popstate', (event) => {
-          setTrigger(Math.random());
-        });
-      }, []);
-
-      const routeState = preact.useMemo(() => {
-        const route = currentRoute();
-        const RouteLink = ({ route, text }) => {
-          return caph.parse`
-            <a href=${this.href(route)} onClick=${() => {
-              window.event.preventDefault();
-              history.pushState(null, null, this.href(route));
-              setTrigger(Math.random());
-            }} title=${text}>
-              ${text}
-            </a >`;
-        }
-        return { route, RouteLink };
-      }, [trigger]);
-      return caph.parse`
-        <${caph.contexts['core-route'].Provider} value=${routeState}>
-          ${children}
-        </>`;
-    }
+  /**
+   * @param {str} eventName 
+   * @param {()=>void} callback 
+   */
+  listenToEvent(eventName, callback){
+    preact.useEffect(() => {
+      window.addEventListener(eventName, callback);
+      return () => {
+        window.removeEventListener(eventName, callback);
+      }
+    }, [callback]);
   }
-  href(route) {
-    if (!this.fileMode)
-      return this._URL_resolve(route);
-    const path = location.pathname;
-    const params = new URLSearchParams(location.search);
-    const missing = params.get('') || '';
-    let base = new URL(route, `file://${path}/${missing}`).href;
-    params.delete('');
-    params.append('', base.slice(path.length + 8));
-    return `${path}?${params.toString()}`;
-  };
 
   _attachments = [];
   getAttachment(ref) {
@@ -273,7 +263,7 @@ const caph = new class {
     try {
       await this._load_elem(ref, tag, attrs, parent, where, content);
     } catch (err) {
-      console.log(err);
+      console.error(err);
       throw err;
     }
   }
@@ -492,7 +482,7 @@ const caph = new class {
     let s = strings.join(FIELD);
     if (parse_math) {
       s = s.replace(/\\\$/g, ESCAPED_DOLLAR);
-      s = s.replace(/([^\\]|^)\$(.*?[^\\])\$/g, (match, p1, p2) => {
+      s = s.replace(/([^\\]|^)\$(.*?[^\\])\$/sg, (match, p1, p2) => {
         // const i = match.search(/\<|\>/);
         // if (i != -1) {
         //   match = match.replace(regex_ESCAPED_DOLLAR, '\\\$');
@@ -680,45 +670,8 @@ caph.pluginDefs['core-error'] = new class extends caph.Plugin {
         help();
       }}>(help?)</a> 
       <code class="caph-flashing caph-error" title=${tooltip}>
-        ${children}
+        ${children || tooltip || 'Error'}
       </code>
     `;
   }
 }
-
-
-// caph.contexts['core-route'] = preact.createContext();
-
-// caph.historyTrigger = ({ children }) => {
-//   const [trigger, setTrigger] = preact.useState();
-
-//   preact.useEffect(() => { // register event listener
-//     const { pushState, replaceState, go } = window.history;
-//     window.history.pushState = (...args) => {
-//       pushState(...args);
-//       setTrigger(Math.random());
-//     }
-//     window.history.replaceState = (...args) => {
-//       replaceState(...args);
-//       setTrigger(Math.random());
-//     }
-//     window.history.go = (...args) => {
-//       go(...args);
-//       setTrigger(Math.random());
-//     }
-//     window.history.back = (...args) => {
-//       back(...args);
-//       setTrigger(Math.random());
-//     }
-//     window.history.forward = (...args) => {
-//       forward(...args);
-//       setTrigger(Math.random());
-//     }
-//   }, []);
-
-//   return caph.parse`
-//     <${caph.contexts['core-history-trigger'].Provider} value=${trigger}>
-//       ${children}
-//     </>`;
-// };
-
