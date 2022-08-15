@@ -39,6 +39,13 @@ const caph = new class {
     'core-menu',
     'core-about',
     'katex',
+    'document',
+    'whiteboard',
+    'hyphenator',
+    // 'slides',
+    // 'fabric',
+    // 'figure-editor',
+    // 'mathjax-svg',
   ];
 
   utils = {
@@ -101,37 +108,12 @@ const caph = new class {
   }
 
   _loadMenu() {
-    // this.contexts['core-storage'] = new class extends this.HeadlessContext {
-    //   storage = {}
-    //   constructor() {
-    //     super();
-    //     const st = { ...window.localStorage };
-    //     for (let k in st) {
-    //       try { this.storage[k] = JSON.parse(st[k]); }
-    //       catch (err) { }
-    //     }
-    //   }
-    //   value() {
-    //     return {
-    //       storage: this.storage,
-    //       getItem: this.getItem.bind(this),
-    //       setItem: this.setItem.bind(this),
-    //     };
-    //   }
-    //   getItem(key) { return this.storage[key]; }
-    //   setItem(key, value) {
-    //     this.storage[key] = value;
-    //     window.localStorage.setItem(key, JSON.stringify(value));
-    //     this.update();
-    //   }
-    // }
-
-    const menuObject = new class {
+    const caph = this;
+    caph.menu = new class {
       constructor() {
         this.addOption('Default', { hold: true });
         this.latest = this.option = 'Default';
       }
-
       options = [];
       onEnter = {};
       onExit = {};
@@ -143,44 +125,19 @@ const caph = new class {
         if (this.options[option]) return;
         this.options.push(option);
         this.options[option] = 1;
-        if (this.option) this.update();
+        caph.dispatchGlobal('caph-menu-options', Math.random());
       }
       setOption(option) {
+        caph.dispatchGlobal('caph-menu-option', Math.random());
         if (this.hold[option]) {
           this.onExit[this.latest] && this.onExit[this.latest]();
           this.latest = this.option;
           this.option = option;
-          this.update();
         }
         this.onEnter[option] && this.onEnter[option]();
       }
-      value() {
-        return {
-          option: this.option,
-          options: this.options,
-          addOption: this.addOption.bind(this),
-          setOption: this.setOption.bind(this),
-        };
-      }
-    }
-
-    const MenuComponent = ({ }) => {
-      const [trigger, setTrigger] = preact.useState(0);
-      menuObject.update = () => setTrigger(Math.random());
-
-      const menu = preact.useMemo(() => {
-        return menuObject.value();
-      }, [trigger]);
-
-      return this.parse`
-        <${this.contexts['core-menu'].Provider} value=${menu}>
-          <${caph.plugin('core-menu')} />
-          <${caph.plugin('core-about')} />
-        </>
-      `;
-    }
+    };
     async function inject(vDom) {
-      await MyPromise.until(() => document.body);
       // const node = MyDocument.createElement('div', {
       //   parent: document.body,
       //   where: 'afterbegin',
@@ -189,8 +146,15 @@ const caph = new class {
       const node = document.body;
       preact.render(vDom, node);
     }
-    inject(this.parse`<${MenuComponent}/>`);
+    MyPromise.until(() => document.body && this.PluginLoader).then(()=>{
+      inject(this.parse`
+        <${this.plugin('core-menu')}/>
+        <${this.plugin('core-about')}/>
+      `);
+    });
   }
+
+
   // const metaContent = document.querySelector('meta[content]');
   // if (!metaContent) MyDocument.createElement('div', {
   //   parent: document.head,
@@ -218,11 +182,33 @@ const caph = new class {
    */
   listenToEvent(eventName, callback) {
     preact.useEffect(() => {
-      window.addEventListener(eventName, callback);
-      return () => {
-        window.removeEventListener(eventName, callback);
+      const actualCallback = (e) =>{
+        try{callback(e.detail);}
+        catch(err){}
       }
-    }, [callback]);
+      window.addEventListener(eventName, actualCallback);
+      return () => {
+        window.removeEventListener(eventName, actualCallback);
+      }
+    }, [eventName, callback]);
+  }
+
+  _globals = {};
+  dispatchGlobal(eventName, value) {
+    this._globals[eventName] = value;
+    let event = new CustomEvent(eventName, {detail:value});
+    window.dispatchEvent(event);
+    return;
+  }
+  async untilGlobal(eventName) {
+    await MyPromise.until(() => this._globals[eventName]);
+    await MyPromise.sleep(500);
+  }
+  listenToGlobal(eventName) {
+    const initial = preact.useMemo(()=>this._globals[eventName], [eventName]);
+    const [value, setValue] = preact.useState(initial);
+    this.listenToEvent(eventName, setValue);
+    return value;
   }
 
   _attachments = [];
@@ -370,9 +356,11 @@ const caph = new class {
     const FIELD = '\ue000';
     const QUOTES = '\ue001';
     const ESCAPED_DOLLAR = '\ue002';
-    const regex_FIELD = new RegExp(FIELD, 'g');
-    const regex_QUOTES = new RegExp(QUOTES, 'g');
-    const regex_ESCAPED_DOLLAR = new RegExp(ESCAPED_DOLLAR, 'g');
+    const SPACE = '\ue003';
+    const each_FIELD = new RegExp(FIELD, 'g');
+    const each_QUOTES = new RegExp(QUOTES, 'g');
+    const each_ESCAPED_DOLLAR = new RegExp(ESCAPED_DOLLAR, 'g');
+    const each_SPACE = new RegExp(SPACE, 'g');
 
     'area base br col command embed hr img input keygen link meta param source track wbr ! !doctype ? ?xml'.split(' ').map(v => empty[v] = empty[v.toUpperCase()] = true)
 
@@ -407,7 +395,7 @@ const caph = new class {
           true;
       })
     }
-    this._parseEnv = { empty, close, FIELD, QUOTES, ESCAPED_DOLLAR, regex_FIELD, regex_QUOTES, regex_ESCAPED_DOLLAR }
+    this._parseEnv = { empty, close, FIELD, QUOTES, ESCAPED_DOLLAR, each_FIELD, each_QUOTES, each_ESCAPED_DOLLAR, SPACE, each_SPACE };
   }
 
   createElement(type, props, ...children) {
@@ -438,26 +426,80 @@ const caph = new class {
   _html_is_valid_attr_key(key) {
     return /^[a-zA-Z_:][a-zA-Z0-9_:.-]*$/.test(key);
   }
+
+  Deque = class{
+    constructor(arr) {
+      this.data = [...(arr||[])];
+      this.lr = [0, arr.length];
+    }
+    get capacity() {
+      return this.data.length;
+    }
+    get length() {
+      const [i, j] = this.lr;
+      return j >= i? j - i: this.capacity - i + j;
+    }
+    toArray(){
+      const [i, j] = this.lr;
+      if(j>=i) return this.data.slice(i,j);
+      else return this.data.slice(i).concat(this.data.slice(0,j));
+    }
+    resize(newLength){
+      if(newLength===undefined){
+        if(this.length+1 >= this.capacity) this.resize(3*this.length);
+        if(this.length-1 <= this.capacity<<2) this.resize(this.length<<1);
+        return;
+      }
+      const arr = this.toArray()
+      this.data = [...arr, ...new Array(newLength-arr.length).fill(null)];
+      this.lr = [0, arr.length];
+    }
+    _mod_add(lrIndex, retK, afterK){
+      const add = (i, k)=>((i%this.capacity) + k + this.capacity) % this.capacity;
+      const out = add(this.lr[lrIndex], retK);
+      this.lr[lrIndex] = add(this.lr[lrIndex], afterK);
+      return out;
+    }
+    pushRight(x) {
+      this.resize();
+      this.data[this._mod_add(1, 0, +1)] = x;
+    }
+    pushLeft(x) {
+      this.resize();
+      this.data[this._mod_add(0, -1, -1)] = x;
+    }
+    popRight() {
+      this.resize();
+      return this.data[this._mod_add(1, -1, -1)];
+    }
+    popLeft() {
+      this.resize();
+      return this.data[this._mod_add(0, 0, +1)];
+    }
+  }
   _parse(parse_math, strings, ...values) {
     // based on xhtm, which is based on htm. Differences:
     // 1. Replaces html entities
     // 2. Parses math markup.
     // 3. Solves some errors instead of blocking.
     if (this._parseEnv === undefined) this._parse_init();
-    const { empty, close, FIELD, QUOTES, ESCAPED_DOLLAR, regex_FIELD, regex_QUOTES, regex_ESCAPED_DOLLAR } = this._parseEnv;
-    let prev = 0, current = [], field = 0, args, name, value, quotes = [], quote = 0, last;
+    const { empty, close, SPACE, each_SPACE, FIELD, QUOTES, ESCAPED_DOLLAR, each_FIELD, each_QUOTES, each_ESCAPED_DOLLAR } = this._parseEnv;
+
+    let prev = 0, current = [], args, name, value, quotes = [], quote = 0, last;
     current.root = true;
+
+    values = new this.Deque(values);
 
     const evaluate = (str, parts = [], raw) => {
       let i = 0;
       str = !raw && str === QUOTES ?
         quotes[quote++].slice(1, -1) :
-        str.replace(regex_QUOTES, m => quotes[quote++]);
+        str.replace(each_QUOTES, m => quotes[quote++]);
       if (!str) return str;
-      str.replace(regex_FIELD, (match, idx) => {
+      str.replace(each_FIELD, (match, idx) => {
         if (idx) parts.push(str.slice(i, idx));
         i = idx + 1;
-        return parts.push(values[field++]);
+        return parts.push(values.popLeft());
       })
       if (i < str.length) parts.push(str.slice(i));
       return parts.length > 1 ? parts : parts[0];
@@ -467,10 +509,13 @@ const caph = new class {
       [current, last, ...args] = current;
       const elem = this.createElement(last, ...args);
       current.push(elem);
+      depth-=1;
     }
     const setAttr = (props, key, value) => {
+      if(key=='style' && Array.isArray(value)) value = value.join(' ');
       if (this._html_is_valid_attr_key(key))
         return props[key] = value;
+      console.log(props);
       // Fix the error to avoid blocking the whole render process
       const tag = current[1];
       console.error(`Parsing error near <${tag} ... ${key}.`)
@@ -481,47 +526,58 @@ const caph = new class {
       }
     }
     let s = strings.join(FIELD);
-    if (parse_math) {
-      s = s.replace(/\\\$/g, ESCAPED_DOLLAR);
-      const parseMath = (s, displayMode, match) => {
-        if (match.search(/\/\>/) != -1) {
-          match = match.replace(regex_ESCAPED_DOLLAR, '\\\$');
-          console.error('Math parsing error:', match);
-          const safe = this._html_safe(match);
-          return `<caph plugin="core-error">${safe}</>`;
-        }
-        s = s.replace(/\</g, '\\lt ');
-        s = s.replace(/\>/g, '\\gt ');
-        s = s.replace(regex_ESCAPED_DOLLAR, '\\\$');
-        return displayMode ?
-          `<caph plugin=${this.mathPlugin} displayMode>${s}</>` :
-          `<caph plugin=${this.mathPlugin}>${s}</>`;
-      }
-      s = s.replace(
-        /([^\\]|^)\$\$(.*?[^\\])\$\$/sg,
-        (match, p1, p2) => `${p1}${parseMath(p2, true, match)}`,
-      );
-      s = s.replace(
-        /([^\\]|^)\$(.*?[^\\])\$/sg,
-        (match, p1, p2) => `${p1}${parseMath(p2, false, match)}`,
-      );
-      s = s.replace(regex_ESCAPED_DOLLAR, '$'); // \$ in html becomes $
-    }
     s = s.replace(/<!--[^]*-->/g, '');
     s = s.replace(/<!\[CDATA\[[^]*\]\]>/g, '');
-    s = s.replace(/('|")[^\1]*?\1/g, match => (quotes.push(match), QUOTES));
-    // .replace(/^\s*\n\s*|\s*\n\s*$/g,'')
     s = s.replace(/\s+/g, ' ');
+    if (parse_math) {
+      s = s.replace(/\\\$/g, ESCAPED_DOLLAR);
+      // s = s.replace(/([^\\]|^)\$\$(.*?[^\\])\$\$(.|$)/sg,
+      //   (match, before, tex, after) =>
+      //     `${before}${parseMath(tex, true, match)}${after}`,
+      // );
+      // s = s.replace(
+      //   /([^\\]|^)\$(.*?[^\\])\$(.|$)/sg,
+      //   (match, before, tex, after) =>
+      //     `${before}${parseMath(tex, false, match)}${after}`,
+      // );
+      //
+      s = s.replace(/(\$\$|\$)([^\1]*?)\1( ?)/sg, (match, mark, tex, space) => {
+        // if (match.search(/\/\>/) != -1) {
+        //   match = match.replace(each_ESCAPED_DOLLAR, '\\\$');
+        //   console.error('Math parsing error:', match);
+        //   const safe = this._html_safe(match);
+        //   return `<caph plugin="core-error">${safe}</>`;
+        // }
+        tex = tex.replace(/\</g, '\\lt ');
+        tex = tex.replace(/\>/g, '\\gt ');
+        tex = tex.replace(each_ESCAPED_DOLLAR, '\\\$');
+        const mode = mark=='$$'?' displayMode':'';
+        const end = space.length?`<span children=" "/>`:'';
+        return `<caph plugin="${this.mathPlugin}" ${mode}>${tex}</>${end}`;
+      });
+      s = s.replace(each_ESCAPED_DOLLAR, '$'); // \$ in html becomes $
+    }
+    // There is a deep error here: they assume arg="..." will never occur in the html unless it
+    // is being part of a <tag arg="...">. 
+    s = s.replace(/= *('|")([^\1]*?)\1/g, (match,quote,content) => {
+      quotes.push(`${quote}${content}${quote}`);
+      return `=${QUOTES}`;
+    });
     // ...>text<... sequence
+    let depth=-1;
     s = s.replace(/(?:^|>)([^<]*)(?:$|<)/g, (match, text, idx, str) => {
+      depth+=1;
       let closeTag, tag;
       if (idx) {
         let ss = str.slice(prev, idx);
         // <abc/> → <abc />
+        // console.log(`${'|'.repeat(depth)}${ss}. ${text}`);
         ss = ss.replace(/(\S)\/$/, '$1 /');
         ss.split(' ').map((part, i) => {
+          // console.log(' '.repeat(depth), i, part);
           if (part[0] === '/') {
             closeTag = tag || part.slice(1) || 1;
+            depth-=1;
           }
           else if (!i) {
             tag = evaluate(part);
@@ -533,7 +589,7 @@ const caph = new class {
           else if (part) {
             let props = current[2] || (current[2] = {});
             if (part.slice(0, 3) === '...') {
-              const newProps = values[field++];
+              const newProps = values.popLeft();
               for (let key in newProps) {
                 setAttr(props, key, newProps[key]);
               }
@@ -551,7 +607,7 @@ const caph = new class {
         while (last !== closeTag && close[last]) up();
       }
       prev = idx + match.length;
-      if (text && text !== ' ') evaluate((last = 0, text), current, true);
+      if (text && (text !== ' ' || tag=='span')) evaluate((last = 0, text), current, true);
     });
     if (!current.root) up();
     return current.length > 1 ? current : current[0];
@@ -648,14 +704,14 @@ caph.PluginLoader = class extends caph.Plugin {
       return this.plugin.Component({ children, ...props });
     } catch (err) {
       console.error(`Rendering error in plugin ${this.key}:`, err);
-      return caph.parse`<code class="flashing">${children}</code>`;
+      return caph.parse`<code class="flashing">${children||'...'}</code>`;
     }
   }
 
   _loadingComponent({ children }) {
     return caph.parse`
     <code class="caph-flashing" title=${`${this.key} is loading...`}>
-      ${children}
+      ${children||'...'}
     </code>`;
   }
 

@@ -15,33 +15,3 @@
   border-radius: 1em;
   font-family: monospace, arial;
 }
-.caph-hidden{
-  display: none;
-}
-
-.caph-box-shadow{
-  box-shadow: 0px 0px 0.3rem 0.05rem var(--box-shadow);
-}
-.caph-box-shadow:hover{
-  box-shadow: 0px 0px 0.3rem 0.2rem var(--box-shadow);
-}
-.caph-fullscreen-layer{
-  width: 100%;
-  height: 100%;
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 100;
-}
-
-/* .hbox{ display: flex; }
-.vbox{ display: flex; flex-direction: column; }
-.boxcenter{ justify-content: center; }
-.space-around{ justify-content: space-around; }
-.space-between{ justify-content: space-between; }
-.flex{ flex: 1; }
-.hidden{ display:none; }
-.plugin-hidden{ display:none; }
-.border{
-  border: solid 2px var(--text-strong);
-} */

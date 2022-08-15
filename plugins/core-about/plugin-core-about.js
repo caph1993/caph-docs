@@ -1,17 +1,14 @@
 caph.pluginDefs[caph.currentSrc] = new class extends caph.Plugin {
 
   async loader() {
+    caph.menu.addOption('About', { hold: true });
     await caph.load('caph-docs/plugins/core-about/core-about.css');
   }
 
   Component() {
-    preact.useEffect(async () => {
-      const menu = await MyPromise.until(() => preact.useContext(caph.contexts['core-menu']));
-      menu.addOption('About', { hold: true });
-    }, []);
-
-    const { option } = preact.useContext(caph.contexts['core-menu']);
-    const _class = option == 'About' ? 'caph-fullscreen-layer caph-about-outer' : 'caph-hidden';
+    const [_, setTrigger] = preact.useState(null);
+    caph.listenToEvent('caph-menu-option', setTrigger);
+    const _class = caph.menu.option == 'About' ? 'caph-fullscreen-layer caph-about-outer' : 'caph-hidden';
     return caph.parse`
       <div class=${_class}>
         <div class="caph-box-shadow caph-about-inner">

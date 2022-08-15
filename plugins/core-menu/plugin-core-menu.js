@@ -5,12 +5,14 @@ caph.pluginDefs[caph.currentSrc] = new class extends caph.Plugin {
   }
 
   Component({ }) {
-    const menu = preact.useContext(caph.contexts['core-menu']);
-    const _class = menu.option == 'Default' ? '' : 'shown';
+    const [_, setTrigger] = preact.useState(null);
+    caph.listenToGlobal('caph-menu-option', setTrigger);
+    caph.listenToGlobal('caph-menu-options', setTrigger);
+    const _class = caph.menu.option == 'Default' ? '' : 'shown';
     return caph.parse`
-      <select id="caph-menu" class=${_class} value=${menu.option}
-        onchange=${(e) => menu.setOption(e.target.value)}>
-        ${menu.options.map(s => caph.parse`
+      <select id="caph-menu" class=${_class} value=${caph.menu.option}
+        onchange=${(e) => caph.menu.setOption(e.target.value)}>
+        ${caph.menu.options.map(s => caph.parse`
           <option value=${s}>${s}</option>
         `)}
       </select>`;

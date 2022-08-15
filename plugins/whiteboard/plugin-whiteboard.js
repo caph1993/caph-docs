@@ -17,14 +17,18 @@ next-version:
 
 caph.pluginDefs[caph.currentSrc] = new class extends caph.Plugin {
 
+
+  async loader() {
+    await caph.load('caph-docs/plugins/whiteboard/whiteboard.css');
+    await caph.load('caph-docs/libraries/fabric/fabric.js');
+    return;
+  }
+
   canvas = null;
   hidden = true;
 
-  Component({ children }) {
-    if (children && children.length) throw 'Unexpected children';
-    preact.useEffect(() => this.menuSettings(), []);
+  Component({ }) {
     const [event, setEvent] = preact.useState(null);
-    const [ready, setReady] = preact.useState(false);
     const [canvas, setCanvas] = preact.useState(false);
     const [background, setBackground] = preact.useState(false);
     const [tool, setTool_] = preact.useState({
@@ -34,6 +38,7 @@ caph.pluginDefs[caph.currentSrc] = new class extends caph.Plugin {
 
     const setTool = (tool, canvas = null) => {
       canvas = canvas || this.canvas;
+      console.log(tool.color);
       canvas.freeDrawingBrush.color = tool.color;
       canvas.freeDrawingBrush.shadow.color = tool.color;
       canvas.freeDrawingBrush.width = tool.width;
@@ -42,68 +47,65 @@ caph.pluginDefs[caph.currentSrc] = new class extends caph.Plugin {
       setTool_({ ...tool });
     }
 
-    preact.useEffect(async () => {
-      const domCanvas = await MyPromise.until(() =>
-        document.querySelector('#whiteboard-canvas'));
-      const canvas = new fabric.Canvas(domCanvas, { isDrawingMode: true });
-      canvas.freeDrawingBrush = new fabric['PencilBrush'](canvas);
-      canvas.freeDrawingBrush.shadow = new fabric.Shadow({
-        blur: tool.shadow, offsetX: 0, offsetY: 0,
-        affectStroke: true, color: tool.color,
-      });
-      canvas.setHeight(3 * window.innerHeight);
-      canvas.setWidth(3 * window.innerWidth);
-      fabric.Object.prototype.transparentCorners = false; //??
-      document.addEventListener('keydown', (e) => {
-        if (e.keyCode == 27) this.onKey('escape', tool, setTool);
-        if (e.keyCode == 46) this.onKey('delete', tool, setTool);
-      });
-      canvas.upperCanvasEl.addEventListener('click', (e) => setEvent(e));
-      this.history_init(canvas);
-      setTool(tool, canvas);
-      setCanvas(this.canvas = canvas);
-    }, []);
+    preact.useEffect(()=>this.initComponent(tool, setTool, setCanvas, setEvent), []);
 
     preact.useEffect(() => {
       this.onClickCanvas(event, tool);
     }, [event]);
 
-    const { option } = preact.useContext(caph.contexts.menu);
-    this.hidden = option != 'Whiteboard';
-    const _class = this.hidden ? 'hidden' : 'fullscreen-layer';
-    return html`
+    const [_, setTrigger] = preact.useState(null);
+    caph.listenToEvent('caph-menu-option', setTrigger);
+
+    this.hidden = caph.menu.option != 'Whiteboard';
+    const _class = this.hidden ? 'caph-hidden' : 'caph-fullscreen-layer';
+    return caph.parse`
     <div id="whiteboard-main" class=${_class}>
       <canvas id="whiteboard-canvas" class="whiteboard-canvas" />
-      <div class="whiteboard-background" hidden=${!background} />
+      <div class="whiteboard-background" caph-hidden=${!background} />
       <${canvas && this.mainMenu} canvas=${canvas}
       setTool=${(e) => setTool(e)} tool=${tool}
       setBackground=${setBackground} background=${background}/>
     </div>`;
   }
 
-  async loader({ theme }) {
-    await caph.load('caph-docs/libraries/fabric/fabric.js');
-    await caph.load('caph-docs/plugins/whiteboard/whiteboard.css');
-    return;
+  async initComponent(tool, setTool, setCanvas, setEvent){
+    const domCanvas = await MyPromise.until(() =>
+      document.querySelector('#whiteboard-canvas'));
+    this.menuSettings();
+    const canvas = new fabric.Canvas(domCanvas, { isDrawingMode: true });
+    canvas.freeDrawingBrush = new fabric['PencilBrush'](canvas);
+    canvas.freeDrawingBrush.shadow = new fabric.Shadow({
+      blur: tool.shadow, offsetX: 0, offsetY: 0,
+      affectStroke: true, color: tool.color,
+    });
+    canvas.setHeight(3 * window.innerHeight);
+    canvas.setWidth(3 * window.innerWidth);
+    fabric.Object.prototype.transparentCorners = false; //??
+    document.addEventListener('keydown', (e) => {
+      if (e.code == "Escape") this.onKey('escape', tool, setTool);
+      if (e.code == "Delete") this.onKey('delete', tool, setTool);
+    });
+    canvas.upperCanvasEl.addEventListener('click', (e) => setEvent(e));
+    this.history_init(canvas);
+    setTool(tool, canvas);
+    setCanvas(this.canvas = canvas);
   }
 
-  async menuSettings({ }) {
+  async menuSettings() {
     let main = await MyPromise.until(() =>
       document.querySelector('#whiteboard-main')
     );
-    const { addOption } = preact.useContext(caph.contexts.menu);
-    addOption('Whiteboard', { hold: true });
+    caph.menu.addOption('Whiteboard', { hold: true });
     window.addEventListener('keydown', (e) => {
-      if (event.isComposing || event.keyCode === 229) return;
-      if (e.keyCode == 87) this.toggle(); // W key
-      if (!this.hidden && e.keyCode == 66) this.toggleBackground(); // B key
+      if (e.isComposing || e.code =='Semicolon') return; ///??
+      if (e.code == 'KeyW') this.toggle();
+      if (!this.hidden && e.code == 'KeyB') this.toggleBackground();
     });
     //caph.menu.onSelect('Whiteboard'); //for testing
     return;
   }
   toggle() {
-    const { setOption } = preact.useContext(caph.contexts.menu);
-    return setOption(this.hidden ? 'Whiteboard' : 'Default');
+    return caph.menu.setOption(this.hidden ? 'Whiteboard' : 'Default');
   }
   toggleBackground() {
     console.warn('Not yet implemented');
@@ -121,6 +123,7 @@ caph.pluginDefs[caph.currentSrc] = new class extends caph.Plugin {
 
   onClickCanvas(event, tool) {
     const canvas = this.canvas;
+    console.log(tool.brush);
     switch (tool.brush) {
       case 'pointer':
         this.exitText();
@@ -136,7 +139,7 @@ caph.pluginDefs[caph.currentSrc] = new class extends caph.Plugin {
         text.enterEditing();
         break;
       default:
-      //console.log(tool);
+      console.log(tool);
     };
   }
 
@@ -150,51 +153,34 @@ caph.pluginDefs[caph.currentSrc] = new class extends caph.Plugin {
       '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#000000', '#ffffff',
     ];
     const widths = [3, 6, 10, 20,];
-    const addAlpha = (hex_color, opacity) => {
+    const addAlpha = (hex_color, opacity=1) => {
       const parse = (a, b) => parseInt(hex_color.slice(a, b), 16);
       const rgb = [[-6, -4], [-4, -2], [-2, hex_color.length]].map(([a, b]) => parse(a, b));
       const rgba = 'rgba(' + rgb.join(',') + ',' + opacity + ')';
       return rgba;
     };
-    return html`
-    <style>
-      .whiteboard-controls>div,
-      .whiteboard-controls>div button{
-        height:100%;
-      }
-      .whiteboard-controls>div input{
-        height: 1.5rem;
-        vertical-align: top;
-      }
-    </style>
-    <div class="whiteboard-controls hbox space-around">
+    return caph.parse`
+    <div class="whiteboard-controls caph-hbox caph-space-around">
       <div>
-        <input type="number" value=${tool.width} onchange=${(e) =>
-        setTool({ ...tool, width: parseFloat(e.target.value) })}
-          onblur=${(e) =>
-        setTool({ ...tool, width: parseFloat(e.target.value) })}
-          style="width:3em"/>
-        ${widths.map(w => ({ w: w, ww: 0.1 + Math.log(1 + w / 6) / 2 })).map(e => html`
-          <button onclick=${() => setTool({ ...tool, width: e.w, })}
-          style="border-radius:2rem; height:2rem; width:2rem;
-            background-color: white;">
-            <div style="
-              background-color: #000;
-              width: ${e.ww}rem;
-              height: ${e.ww}rem;
-              border-radius: ${e.ww}rem;
-              "/>
+        <input type="number" value=${tool.width} onchange=${
+          (e) => setTool({ ...tool, width: parseFloat(e.target.value) })
+        } onblur=${
+          (e) => setTool({ ...tool, width: parseFloat(e.target.value) })
+        } style="width:3em"/>
+
+        ${widths.map(w => ({ w: w, ww: 0.1 + Math.log(1 + w / 6) / 2 })).map(e => caph.parse`
+          <button onclick=${() => setTool({ ...tool, width: e.w, })} style="border-radius:2rem; height:2rem; width:2rem; background-color: white;">
+            <div style="background-color: #000000;width: ${e.ww}rem; height: ${e.ww}rem;border-radius: ${e.ww}rem;"/>
           </button>
         `)}
       </div>
       <div>
-        ${colors.map(e => html`
+        ${colors.map(e => caph.parse`
           <button onclick=${() =>
             setTool({
               ...tool, color: addAlpha(e, tool.alpha), rgbColor: e,
             })}
-          style="background-color:${e}; border-radius:1rem;
-            height:1.5rem; width:1.5rem;"/>
+          style="background-color:${e}; border-radius:1rem;height:1.5rem; width:1.5rem;"/>
         `)}
         <input type="color" value=${tool.rgbColor} onchange="${(e) =>
         setTool({
@@ -204,16 +190,14 @@ caph.pluginDefs[caph.currentSrc] = new class extends caph.Plugin {
       </div>
       <div>
         <button onclick=${() => setBackground(!background)}
-        style="background-color: ${background ? '88' : '00'}; margin:2px;
-        height: calc(100% - 4px)">
+        style="background-color: ${background ? '88' : '00'}; margin:2px;height: calc(100% - 4px)">
           B
         </button>
       </div>
       <div>
-        ${brushes.map(e => html`
+        ${brushes.map(e => caph.parse`
           <button onclick=${() => setTool({ ...tool, brush: e.name })}
-          style="background-color: #888888${e.name == tool.brush ? '88' : '00'}; margin:2px;
-          height: calc(100% - 4px)">
+          style="background-color: #888888${e.name == tool.brush ? '88' : '00'}; margin:2px; height: calc(100% - 4px)">
             ${e.icon}
           </button>
         `)}

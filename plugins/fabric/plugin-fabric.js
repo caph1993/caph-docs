@@ -2,6 +2,14 @@
 
 caph.pluginDefs[caph.currentSrc] = new class extends caph.Plugin {
 
+  async loader() {
+    await caph.load('caph-docs/libraries/fabric/fabric.js');
+    await caph.load('caph-docs/plugins/fabric/diagram.js');
+    await caph.loadPluginDeep('mathjaxSvg');
+    await MyPromise.until(() => caph.mathjax);
+    return;
+  }
+
   Component({ children, id = null, class: _class }) {
     let script = (x => (Array.isArray(x) ? x.join('') : x))(children);
     //script = script.replace(/\\/g, '\\\\'); // Escape backslash again
@@ -17,18 +25,11 @@ caph.pluginDefs[caph.currentSrc] = new class extends caph.Plugin {
         fabricCanvas = await this.evaluate(canvas, script);
       });
     }
-    return html`
+    return caph.parse`
       <div class="auto-dark">
         <canvas id=${id} tabIndex="1" fireRightClick class=${_class}/>
       </div>
     `;
-  }
-  async loader() {
-    await caph.load('caph-docs/libraries/fabric/fabric.js');
-    await caph.load('caph-docs/plugins/fabric/diagram.js');
-    await caph.loadPluginDeep('mathjaxSvg');
-    await MyPromise.until(() => caph.mathjax);
-    return;
   }
 
   async evaluate(canvas, script) {
