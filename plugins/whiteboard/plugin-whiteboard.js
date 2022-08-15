@@ -26,7 +26,6 @@ caph.pluginDefs[caph.currentSrc] = new class extends caph.Plugin {
 
   canvas = null;
   hidden = true;
-
   Component({ }) {
     const [event, setEvent] = preact.useState(null);
     const [canvas, setCanvas] = preact.useState(false);
@@ -36,18 +35,17 @@ caph.pluginDefs[caph.currentSrc] = new class extends caph.Plugin {
       rgbColor: '#005E7A', alpha: 0.7,
     });
 
-    const setTool = (tool, canvas = null) => {
+    const setTool = preact.useCallback((tool, canvas = null) => {
       canvas = canvas || this.canvas;
-      console.log(tool.color);
       canvas.freeDrawingBrush.color = tool.color;
       canvas.freeDrawingBrush.shadow.color = tool.color;
       canvas.freeDrawingBrush.width = tool.width;
       canvas.freeDrawingBrush.shadow.blur = tool.shadow;
       canvas.isDrawingMode = 'pointer text'.split(' ').indexOf(tool.brush) == -1;
       setTool_({ ...tool });
-    }
+    }, []);
 
-    preact.useEffect(()=>this.initComponent(tool, setTool, setCanvas, setEvent), []);
+    preact.useEffect(()=>this.initComponent({tool, setTool, setCanvas, setEvent}), []);
 
     preact.useEffect(() => {
       this.onClickCanvas(event, tool);
@@ -68,10 +66,9 @@ caph.pluginDefs[caph.currentSrc] = new class extends caph.Plugin {
     </div>`;
   }
 
-  async initComponent(tool, setTool, setCanvas, setEvent){
+  async initComponent({tool, setTool, setCanvas, setEvent}){
     const domCanvas = await MyPromise.until(() =>
       document.querySelector('#whiteboard-canvas'));
-    this.menuSettings();
     const canvas = new fabric.Canvas(domCanvas, { isDrawingMode: true });
     canvas.freeDrawingBrush = new fabric['PencilBrush'](canvas);
     canvas.freeDrawingBrush.shadow = new fabric.Shadow({
@@ -89,6 +86,7 @@ caph.pluginDefs[caph.currentSrc] = new class extends caph.Plugin {
     this.history_init(canvas);
     setTool(tool, canvas);
     setCanvas(this.canvas = canvas);
+    this.menuSettings();
   }
 
   async menuSettings() {
@@ -139,7 +137,7 @@ caph.pluginDefs[caph.currentSrc] = new class extends caph.Plugin {
         text.enterEditing();
         break;
       default:
-      console.log(tool);
+      //console.log(tool);
     };
   }
 
