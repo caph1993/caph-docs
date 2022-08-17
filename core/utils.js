@@ -1,4 +1,8 @@
 
+
+var __caph_definitions__ = window.__caph_definitions__ || {};
+
+
 function assert(condition, ...messages) {
   if (condition) return;
   throw new Error(...messages);
@@ -327,4 +331,56 @@ function get_property_handler(object, property) {
 function update_property_handler(object, property, create_handler) {
   let prev = get_property_handler(object, property);
   Object.defineProperty(object, property, create_handler(prev));
+}
+
+
+__caph_definitions__.Dequeue = class {
+  constructor(arr) {
+    this.data = [...(arr || [])];
+    this.lr = [0, arr.length];
+  }
+  get capacity() {
+    return this.data.length;
+  }
+  get length() {
+    const [i, j] = this.lr;
+    return j >= i ? j - i : this.capacity - i + j;
+  }
+  toArray() {
+    const [i, j] = this.lr;
+    if (j >= i) return this.data.slice(i, j);
+    else return this.data.slice(i).concat(this.data.slice(0, j));
+  }
+  resize(newLength) {
+    if (newLength === undefined) {
+      if (this.length + 1 >= this.capacity) this.resize(3 * this.length);
+      if (this.length - 1 <= this.capacity << 2) this.resize(this.length << 1);
+      return;
+    }
+    const arr = this.toArray()
+    this.data = [...arr, ...new Array(newLength - arr.length).fill(null)];
+    this.lr = [0, arr.length];
+  }
+  _mod_add(lrIndex, retK, afterK) {
+    const add = (i, k) => ((i % this.capacity) + k + this.capacity) % this.capacity;
+    const out = add(this.lr[lrIndex], retK);
+    this.lr[lrIndex] = add(this.lr[lrIndex], afterK);
+    return out;
+  }
+  pushRight(x) {
+    this.resize();
+    this.data[this._mod_add(1, 0, +1)] = x;
+  }
+  pushLeft(x) {
+    this.resize();
+    this.data[this._mod_add(0, -1, -1)] = x;
+  }
+  popRight() {
+    this.resize();
+    return this.data[this._mod_add(1, -1, -1)];
+  }
+  popLeft() {
+    this.resize();
+    return this.data[this._mod_add(0, 0, +1)];
+  }
 }
