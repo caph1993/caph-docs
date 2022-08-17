@@ -1,36 +1,149 @@
-// //@ts-check
+//@ts-check
 
 /* lzutf8, utils, preact, preact hook are injected above this comment*/
 
+/**
+ * @typedef {Object} T_PreactVDomElement
+*/
+/**
+ * @typedef {Object} T_PreactContext
+*/
+/**
+ * @typedef {Object} T_PreactFragment
+*/
+/**
+ * @template T
+ * @typedef {Object} Preact<T>
+ * @property {(initial:T|(()=>T))=>[T, ((T)=>void)]} useState
+ * @property {(effect:(()=>void)|(()=>(()=>void)), deps?)=>void} useEffect
+ * @property {(effect:(()=>T), deps?)=> T} useMemo
+ * @property {(T_PreactVDomElement, HTMLElement)=>void} render
+ * @property {(tag:string, props?, ...children)=>T_PreactVDomElement} createElement
+ * @property {()=>T_PreactContext} createContext
+ * @property {T_PreactFragment} Fragment
+*/
+/// <reference path="utils.js" />
 
-// /**
-//  * @interface VirtualDOM_Parent<T>
-//  * @type {object}
-//  * @property {?T[]} children
-//  */
-// /*Recursive type solution: https://stackoverflow.com/a/47842314/3671939*/
-// /**
-//  * @interface VirtualDOM_Ancestor @extends VirtualDOM_Parent<VirtualDOM>
-//  */
+//@ts-ignore
+var /**@type {Preact}*/preact = window.preact;
 
-// /**
-//  * @typedef {string|number|boolean|null|VirtualDOM_Ancestor} VirtualDOM_Element
-//  */
-// /**
-//  * @typedef {string|number|boolean|null|any} VirtualDOM_Element
-//  */
+//@ts-ignore
+var /**@type {Window}*/ window = window || {};
 
-// /**
-//  * @typedef {Object} Preact
-//  * @property {()=>any} createElement
-//  * @property {()=>any} createContext
-//  * @property {any} useCallback
-// */
-// //@ts-ignore
-// var /**@type {Preact}*/preact = window.preact;
+const caphPlugin = class {
+
+  async loader() { }
+
+  Component({ children, ...props }) {
+    console.error('Override the Component method of this object:', this);
+    return caph.parse`<${caph.plugin('core-error')}> Override the Component method</> `;
+  }
+
+}
+
+const caphPluginLoader = class extends caphPlugin {
+
+  constructor(key) {
+    super();
+    this.key = key;
+    this.loader();
+    caph.load('caph-docs/core/plugin-loader.css');
+  }
+
+  //@ts-ignore
+  /** @type {caph.Plugin} */ plugin = null;
+  error = null;
+  renderReady = false;
+
+  async loader() {
+    // 1. Put the plugin script in the document head
+    // 2. Wait for the browser to load the script
+    this.plugin = await this.loadPlugin();
+    // 3. Start but don't wait for the plugin loader
+    this.pluginLoader();
+  }
+
+  async loadPlugin() {
+    const key = this.key;
+    if (caph.pluginDefs[key]) {
+      return caph.pluginDefs[key]; // already loaded
+    }
+    if (caph.officialPlugins.includes(key)) {
+      const url = `${caph.dist}/plugin-${key}.js`;
+      return caph.pluginDefs[key] = caph.pluginLoader(url);
+    }
+    else if (key.match(/[^#\?]+.js(#.*|\?.*|)$/)) {
+      let isOfficial = caph.officialPlugins.map(k => `${caph.dist}/plugin-${k}.js`).includes(key);
+      const url = isOfficial ? key : `${key}?${caph._randomSessionSuffix}`;
+      await caph.load(url);
+      caph.pluginDefs[key] = caph.pluginDefs[key] || caph.pluginDefs[url];
+      assert(caph.pluginDefs[key], 'Plugin not declared in file: ' + key);
+      if (key != url) delete caph.pluginDefs[url];
+      return caph.pluginDefs[key];
+    }
+    // User plugin
+    return await MyPromise.until(() => caph.pluginDefs[key]);
+  }
+
+  async pluginLoader() {
+    try {
+      await this.plugin.loader();
+      this.renderReady = true;
+    } catch (err) {
+      this.error = err || true;
+      console.error(err);
+    }
+  }
+
+
+  Component({ children, ...props }) {
+    // eventually overridden by FinalComponent
+    return this.TemporalComponent({ children, ...props });
+  }
+
+  TemporalComponent({ children, ...props }) {
+    const [_, setTrigger] = preact.useState(0);
+
+    preact.useEffect(async () => {
+      await MyPromise.until(() => this.renderReady || this.error);
+      setTrigger(Math.random() * 1e12); // refresh this component
+    }, []);
+
+    if (this.renderReady) return this.FinalComponent({ children, ...props });
+    else if (this.error) return this._loadErrorComponent({ children });
+    else return this._loadingComponent({ children });
+  }
+
+  FinalComponent({ children, ...props }) {
+    this.Component = this.FinalComponent; // override the Component method
+    try {
+      return this.plugin.Component({ children, ...props });
+    } catch (err) {
+      console.error(`Rendering error in plugin ${this.key}:`, err);
+      return caph.parse`<code class="flashing">${children || '...'}</code>`;
+    }
+  }
+
+  _loadingComponent({ children }) {
+    return caph.parse`
+    <code class="caph-flashing" title=${`${this.key} is loading...`}>
+      ${children || '...'}
+    </code>`;
+  }
+
+  _loadErrorComponent({ children }) {
+    return caph.parse`<${caph.plugin('core-error')} tooltip=${this.error}/>`;
+  }
+}
+
+
+
 
 
 const caph = new class {
+
+  Plugin = caphPlugin;
+  PluginLoader = caphPluginLoader;
 
   mathPlugin = 'katex';
   mathMacros = {};
@@ -118,6 +231,15 @@ const caph = new class {
       onEnter = {};
       onExit = {};
       hold = {};
+
+      /**
+       * @param {string} option
+       * @param {{
+       *  onEnter?:()=>void,
+       *  onExit?:()=>void,
+       *  hold?:boolean,
+       * }} [options]
+      */
       addOption(option, { onEnter, onExit, hold } = {}) {
         this.onEnter[option] = onEnter;
         this.onExit[option] = onExit;
@@ -177,12 +299,13 @@ const caph = new class {
   // }
 
   /**
-   * @param {str} eventName 
-   * @param {()=>void} callback 
+   * @param {string} eventName 
+   * @param {(data:any)=>void} callback 
    */
   listenToEvent(eventName, callback) {
     preact.useEffect(() => {
-      const actualCallback = (e) =>{
+      const actualCallback = (/** @type {Event|CustomEvent}*/ e) => {
+        //@ts-ignore: event.detail is not defined for non-custom events
         try{callback(e.detail);}
         catch(err){}
       }
@@ -225,6 +348,16 @@ const caph = new class {
     }
   }
 
+
+  /**
+   * @param {string} ref 
+   * @param {{
+   * parent?: HTMLElement|null,
+   * where?: 'beforebegin' | 'afterbegin' | 'beforeend' | 'afterend',
+   * attrs?: {[key:string]:string},
+   * auto_attrs?: boolean,
+   * }}
+   */
   async load(ref, {
     attrs = {}, parent = null, where = 'beforeend',
     auto_attrs = true
@@ -233,7 +366,7 @@ const caph = new class {
     const ext = ref.split('#')[0].split('?')[0].split('.').pop();
     let tag = ext == 'js' ? 'script' : ext == 'css' ? 'link' : null;
     if (tag == null) throw new Error('Only .js and .css files can be _sources. Got: ' + ext + ' ' + ref);
-    let defaults = {};
+    let /** @type {{[key:string]:string}}*/ defaults = {};
     if (auto_attrs && tag == 'link') defaults = { rel: 'stylesheet', type: 'text/css' };
     Object.keys(attrs).forEach(k => defaults[k] = attrs[k]);
     let content = this.getAttachment(ref);
@@ -308,11 +441,13 @@ const caph = new class {
     return new Promise((_ok, _err) => {
       let e = document.createElement(tag);
       let done = false;
-      e.onload = () => { if (!done) { done = true; _ok(); } };
+      e.onload = () => { if (!done) { done = true; _ok(null); } };
       e.onerror = (x) => { if (!done) { done = true; _err(x); } }; // HTTP errors only
       Object.keys(attrs).map(key => e.setAttribute(key, attrs[key]));
       if (content) {
+        //@ts-ignore
         let r = window._loaded_resources || {};
+        //@ts-ignore
         window._loaded_resources = r;
         r[ref] = false;
         content += `\nwindow._loaded_resources['${ref}']=true;\n`;
@@ -320,11 +455,11 @@ const caph = new class {
         if (tag == 'script') {
           (async () => {
             while (!r[ref]) await sleep(100);
-            done = true; _ok();
+            done = true; _ok(null);
           })();
         } else if (tag == 'style') {
           let ms = 10;
-          setTimeout(() => { done = true, _ok() }, ms);
+          setTimeout(() => { done = true, _ok(null) }, ms);
         }
       }
       parent.insertAdjacentElement(where, e);
@@ -483,12 +618,15 @@ const caph = new class {
     // 2. Parses math markup.
     // 3. Solves some errors instead of blocking.
     if (this._parseEnv === undefined) this._parse_init();
+
+    //@ts-ignore //https://github.com/microsoft/TypeScript/issues/23405
     const { empty, close, SPACE, each_SPACE, FIELD, QUOTES, ESCAPED_DOLLAR, each_FIELD, each_QUOTES, each_ESCAPED_DOLLAR } = this._parseEnv;
 
-    let prev = 0, current = [], args, name, value, quotes = [], quote = 0, last;
-    current.root = true;
+    const fields = new this.Deque(values);
+    let prev = 0, args, name, value, quotes = [], quote = 0, last;
+    let /** @type {any}*/current = [];
 
-    values = new this.Deque(values);
+    current.root = true;
 
     const evaluate = (str, parts = [], raw) => {
       let i = 0;
@@ -499,7 +637,7 @@ const caph = new class {
       str.replace(each_FIELD, (match, idx) => {
         if (idx) parts.push(str.slice(i, idx));
         i = idx + 1;
-        return parts.push(values.popLeft());
+        return parts.push(fields.popLeft());
       })
       if (i < str.length) parts.push(str.slice(i));
       return parts.length > 1 ? parts : parts[0];
@@ -589,7 +727,7 @@ const caph = new class {
           else if (part) {
             let props = current[2] || (current[2] = {});
             if (part.slice(0, 3) === '...') {
-              const newProps = values.popLeft();
+              const newProps = fields.popLeft();
               for (let key in newProps) {
                 setAttr(props, key, newProps[key]);
               }
@@ -614,117 +752,12 @@ const caph = new class {
   }
 }
 
-
-caph.Plugin = class {
-
-  async loader() { }
-
-  Component({ children, ...props }) {
-    console.error('Override the Component method of this object:', this);
-    return caph.parse`<${caph.plugin('core-error')}> Override the Component method</> `;
-  }
-
-}
-
-caph.PluginLoader = class extends caph.Plugin {
-
-  constructor(key) {
-    super();
-    this.key = key;
-    this.loader();
-    caph.load('caph-docs/core/plugin-loader.css');
-  }
-
-  plugin = null;
-  error = null;
-  renderReady = false;
-
-  async loader() {
-    // 1. Put the plugin script in the document head
-    // 2. Wait for the browser to load the script
-    this.plugin = await this.loadPlugin();
-    // 3. Start but don't wait for the plugin loader
-    this.pluginLoader();
-  }
-
-  async loadPlugin() {
-    const key = this.key;
-    if (caph.pluginDefs[key]) {
-      return caph.pluginDefs[key]; // already loaded
-    }
-    if (caph.officialPlugins.includes(key)) {
-      const url = `${caph.dist}/plugin-${key}.js`;
-      return caph.pluginDefs[key] = caph.pluginLoader(url);
-    }
-    else if (key.match(/[^#\?]+.js(#.*|\?.*|)$/)) {
-      let isOfficial = caph.officialPlugins.map(k => `${caph.dist}/plugin-${k}.js`).includes(key);
-      const url = isOfficial ? key : `${key}?${caph._randomSessionSuffix}`;
-      await caph.load(url);
-      caph.pluginDefs[key] = caph.pluginDefs[key] || caph.pluginDefs[url];
-      assert(caph.pluginDefs[key], 'Plugin not declared in file: ' + key);
-      if (key != url) delete caph.pluginDefs[url];
-      return caph.pluginDefs[key];
-    }
-    // User plugin
-    return await MyPromise.until(() => caph.pluginDefs[key]);
-  }
-
-  async pluginLoader() {
-    try {
-      await this.plugin.loader();
-      this.renderReady = true;
-    } catch (err) {
-      this.error = err || true;
-      console.error(err);
-    }
-  }
-
-
-  Component({ children, ...props }) {
-    // eventually overridden by FinalComponent
-    return this.TemporalComponent({ children, ...props });
-  }
-
-  TemporalComponent({ children, ...props }) {
-    const [_, setTrigger] = preact.useState(0);
-
-    preact.useEffect(async () => {
-      await MyPromise.until(() => this.renderReady || this.error);
-      setTrigger(Math.random() * 1e12); // refresh this component
-    }, []);
-
-    if (this.renderReady) return this.FinalComponent({ children, ...props });
-    else if (this.error) return this._loadErrorComponent({ children });
-    else return this._loadingComponent({ children });
-  }
-
-  FinalComponent({ children, ...props }) {
-    this.Component = this.FinalComponent; // override the Component method
-    try {
-      return this.plugin.Component({ children, ...props });
-    } catch (err) {
-      console.error(`Rendering error in plugin ${this.key}:`, err);
-      return caph.parse`<code class="flashing">${children||'...'}</code>`;
-    }
-  }
-
-  _loadingComponent({ children }) {
-    return caph.parse`
-    <code class="caph-flashing" title=${`${this.key} is loading...`}>
-      ${children||'...'}
-    </code>`;
-  }
-
-  _loadErrorComponent({ children }) {
-    return caph.parse`<${caph.plugin('core-error')} tooltip=${this.error}/>`;
-  }
-}
-
 caph.pluginDefs['core-error'] = new class extends caph.Plugin {
 
   Component({ children, tooltip }) {
     const help = preact.useCallback(() => {
       const win = window.open('', '_blank');
+      if (!win) throw new Error('Popup blocked');
       win.document.write(`
         <div>
           1. In tex, use \\lt and \\gt instead of &lt; and &gt;.
@@ -737,7 +770,7 @@ caph.pluginDefs['core-error'] = new class extends caph.Plugin {
     }, []);
     return caph.parse`
       <a href="./error-help" onclick=${(e) => {
-        window.preventDefault(e);
+      e.preventDefault();
         help();
       }}>(help?)</a> 
       <code class="caph-flashing caph-error" title=${tooltip}>

@@ -127,6 +127,21 @@ class MyPromise {
 
 
 class MyDocument {
+
+  /**
+   * @param {string} tag 
+   * @param {{
+   *  style?: {[key: string]: string},
+   *  id?: string,
+   * classList?: string[],
+   * text?: string,
+   * html?: string,
+   * eventListeners?: {[key: string]: (e: Event) => void},
+   * parent?: HTMLElement,
+   * where?: 'beforebegin' | 'afterbegin' | 'beforeend' | 'afterend',
+   * }} 
+   * @returns {HTMLElement}
+   */
   static createElement(tag, {
     style = {}, id = null, classList = [], text = null, html = null,
     eventListeners = {}, parent = null, where = null, ...attrs } = {}) {
