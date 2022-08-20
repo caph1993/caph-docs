@@ -1,0 +1,10 @@
+version: "0.2"
+words:
+  - informationally
+  - injectively
+  - submatrix
+  - subproblems
+  - preceeding
+ignoreWords:
+  - elems
+  - xhtm

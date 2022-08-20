@@ -3,6 +3,11 @@
 var __caph_definitions__ = window.__caph_definitions__ || {};
 
 
+
+function is_string(obj) {
+  return Object.prototype.toString.call(obj) === "[object String]";
+}
+
 function assert(condition, ...messages) {
   if (condition) return;
   throw new Error(...messages);

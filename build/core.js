@@ -5,13 +5,14 @@ let baseDir = 'caph-docs/';
 
 let sources = {
   'static': [
-    'libraries/lzutf8-0.5.5/lzutf8.min.js',
     'core/utils.js',
+    'core/parser.js',
+    'libraries/lzutf8-0.5.5/lzutf8.min.js',
     'libraries/preact-10.4.6/preact.min.js',
     'libraries/preact-10.4.6/hooks.js',
     //'libraries/preact-router-3.2.1/preact-router.js',
   ],
-  'loader': 'core/dynamic-loader.js',
+  'loader': 'core/main.js',
   'dynamic': [
     'core/plugin-loader.css',
   ],
