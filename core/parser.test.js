@@ -8,7 +8,7 @@ eval(fs.readFileSync('./utils.js', 'utf8'));
 eval(fs.readFileSync('./parser.js', 'utf8'));
 
 function main(){
-  var parser = new __caph_definitions__.Parser(null);
+  var {parseAst0, parseAst1, parseAst2, parse0, parse1, parse2} = __caph_definitions__.NewParser.debugParserFactory(null);
 
   function assertEq(vDom1, vDom2){
     const out = diff(vDom1, vDom2);
@@ -54,81 +54,80 @@ function main(){
   //   ['hello', ['div', null, []]],
   // );
 
-  function assertTest(testCase, callable, expected){
-    console.log('TESTING', testCase);
-    const actual = callable(testCase);
-    assertEq(actual, expected);
-    console.log('PASSED\n');
+  function assertTest(node, expected){
+    assertEq(node, expected);
+    console.log('PASSED');
+    console.log('------------------------')
   }
 
   assertTest(
-    `<div/>`,
-    (s)=>parser._main(s),
+    parseAst1`<div/>`,
     ['div', null, []],
   );
   assertTest(
-    `<div></div>`,
-    (s)=>parser._main(s),
+    parseAst1`<div></div>`,
     ['div', null, []],
   );
   assertTest(
-    `<div>  <div> hello </div>  </div>`,
-    (s)=>parser._main(s),
+    parseAst1`<div>  <div> hello </div>  </div>`,
     ['div', null, [['div', null, ['hello']]]],
   );
   assertTest(
-    `<div><div> </div></div>`,
-    (s)=>parser._main(s),
+    parseAst1`<div><div> </div></div>`,
     ['div', null, [['div', null, []]]],
   );
   assertTest(
-    `<div><div></div><div></div><div></div></div>`,
-    (s)=>parser._main(s),
+    parseAst1`<div><div></div><div></div><div></div></div>`,
     ['div', null, [['div', null, []], ['div', null, []], ['div', null, []]]],
   );
   assertTest(
-    `<div>hello<div>world</div>!</div>`,
-    (s)=>parser._main(s),
+    parseAst1`<div><A></><B></><C></C></div>`,
+    ['div', null, [['A', null, []], ['B', null, []], ['C', null, []]]],
+  );
+  assertTest(
+    parseAst1`<div>hello<div>world</div>!</div>`,
     ['div', null, ['hello', ['div', null, ['world']], '!']],
   );
   assertTest(
-    `<div><div/><div/><div/></div>`,
-    (s)=>parser._main(s),
+    parseAst1`<div><div/><div/><div/></div>`,
     ['div', null, [['div', null, []], ['div', null, []], ['div', null, []]]],
   );
   assertTest(
-    `<span> </span>`,
-    (s)=>parser._main(s),
+    parseAst1`<span> </span>`,
     ['span', null, [' ']],
   );
   assertTest(
-    `<></>`,
-    (s)=>parser._main(s),
+    parseAst1`<></>`,
     [null, null, []],
   );
   assertTest(
-    `Fragment without parents. <span bold>I insist!</span>`,
-    (s)=>parser._main(s),
+    parseAst1`Fragment without parents. <span bold>I insist!</span>`,
     [null, null, ['Fragment without parents. ', ['span', {bold: true}, ['I insist!']]]],
   );
   assertTest(
-    `<><>A</><>B</><>C</></>`,
-    (s)=>parser._main(s),
+    parseAst1`<><>A</><>B</><>C</></>`,
     [null, null, ['A', 'B', 'C']],
   );
   assertTest(
-    `<><> A </><>B </><> C</></>`,
-    (s)=>parser._main(s),
+    parseAst1`<><> A </><>B </><> C</></>`,
     [null, null, ['A', 'B', 'C']],
   );
-  assertTest(`
+  assertTest(parseAst1`
     <!DOCTYPE html>
-    <html lang="en">
-      <head>
+    <html lang="en" >
+      <head  >
         <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-        <title>Page title</title>
-        <link rel="icon" type="image/x-icon" href="./icons/icon.png">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" >
+        <title>Page title</title  >
+        <link     
+        rel="icon"
+        
+              type="image/x-icon"
+        href="./icons/icon.png"
+      
+      >
+
+      <!-- Comment -->
       </head>
       <body>
         <div id="root">
@@ -138,37 +137,64 @@ function main(){
       </body>
     </html>
     `,
-    (s)=>parser._main(s),
-    ['html', {lang:'en'},
-    [['head', null, [['meta', {charset:'utf-8'}, []], ['meta', {name:'viewport', content:'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'}, []], ['title', null, ['Page title']], ['link', {rel:'icon', type:'image/x-icon', href:'./icons/icon.png'}, []]]],
-    ['body', null, [['div', {id:'root'}, [
-      ['img', {class:'loading-gif', src:'./icons/loading.gif'}, []],
-      'Loading page...',
-    ]]]],
-  ]],
-  );
-  assertTest(`
+    ['html', {lang:'en'},[
+      [
+        'head', null, [['meta', {charset:'utf-8'}, []], ['meta', {name:'viewport', content:'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'}, []], ['title', null, ['Page title']], ['link', {rel:'icon', type:'image/x-icon', href:'./icons/icon.png'}, []]]],
+      [
+        'body', null, [['div', {id:'root'}, [
+          ['img', {class:'loading-gif', src:'./icons/loading.gif'}, []],
+        'Loading page...',
+      ],
+    ]]],
+  ]]);
+  assertTest(parseAst1`
     <math>
       <ms><![CDATA[x<y]]></ms>
       <mo>+</mo>
       <mn>3</mn>
       <mo>=</mo>
       <ms><![CDATA[x<y3]]></ms>
-    </math>
-  `,
-    (s)=>parser._main(s),
-    [
-      'math',
-      null,
+    </math>`,
+    ['math', null,
       [
-        [ 'ms', null, [['![CDATA[', {CDATA:'x<y'}, []]] ],
+        [ 'ms', null, [] ],
         [ 'mo', null, ['+'] ],
         [ 'mn', null, ['3'] ],
         [ 'mo', null, ['='] ],
-        [ 'ms', null, [['![CDATA[', {CDATA:'x<y3'}, []]] ]
+        [ 'ms', null, [] ],
       ]
-    ]
-    ,
+    ],
+  );
+  assertTest(parseAst1`<div ><!-- awful comment "<>><<" </> <CDATA --></>`,
+    ['div', null,[]],
+  );
+  
+  let SomeComponent;
+
+  SomeComponent = ()=>{};
+  assertTest(
+    parseAst1`<${SomeComponent} />`,
+    [SomeComponent, null, []],
+  )
+  assertTest(
+    parseAst1`<div><${SomeComponent} /></div>`,
+    ['div', null, [[SomeComponent, null, []]]],
+  )
+
+  SomeComponent = ({children, ...props})=>parse0`<span ...${props}>Hello world${children}</span>`;
+  assertTest(
+    parseAst1`<div><${SomeComponent} propX="0" propY=${1}><div/></></div>`,
+    ['div', null, [[SomeComponent, {propX:"0", propY:1}, [['div', null, []]]]]],
+  );
+  assertTest(
+    parse1`<div><${SomeComponent} propX="0" propY=${1}><div/></></div>`,
+    ['div', null, [['span', {propX:"0", propY:1}, ['Hello world', ['div', null, []]]]]],
+  );
+
+  SomeComponent = ({children, ...props})=>parse0`<span...${props} propZ="hello">Hello world${children}</span>`;
+  assertTest(
+    parse1`<div><${SomeComponent} propX="0" propY=${1}><div/></></div>`,
+    ['div', null, [['span', {propX:"0", propY:1, propZ:'hello'}, ['Hello world', ['div', null, []]]]]],
   );
 
   // assertEq(

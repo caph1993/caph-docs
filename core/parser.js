@@ -2,12 +2,17 @@
 /// <reference path="types.js" />
 /// <reference path="utils.js" />
 
+/** @typedef {({children, ...props})=>any} ComponentType*/
+/** @typedef {Object} AttributesType*/
+/** @typedef {string|ComponentType|null} TagType*/
+/** @typedef {(type:any, props:any, ...children)=>any} CreateElementType*/
 /**
- * @typedef {string|[string, Object|null, AstNodeArray]|[null, null, AstNodeArray]} AstNode
+ * @typedef {string|
+ * [string|ComponentType, AttributesType|null, AstNodeArray]|
+ * [null, null, AstNodeArray]
+ * } AstNode
 */
-/**
- * @typedef {AstNode[]} AstNodeArray
-*/
+/** @typedef {AstNode[]} AstNodeArray*/
 
 __caph_definitions__.ConsoleProxy = class{
   log(...args){ console.log(...args);}
@@ -17,134 +22,290 @@ __caph_definitions__.ConsoleProxy = class{
 
 
 
-__caph_definitions__.Parser = class {
+__caph_definitions__.NewParser = class {
+
+  // constructor(newAstNode=null) {
+  //   this.newAstNode = newAstNode? newAstNode:((tag, props, ...children) => [tag, props, children]);
+  // }
 
   console = new __caph_definitions__.ConsoleProxy();
 
-  /** @returns {AstNode} */
-  _main(/** @type {string}*/ str){
-    let pos = 0;
-    const FIELD = '\ue000';
+  ESC = '\ue000';
+  SPEC = `https://html.spec.whatwg.org/multipage/syntax.html`;
+  DEBUG = false;
 
-    const absorbedTags = {
-      '!doctype': true, '![CDATA[': true,
+  /**
+   * @param {null|{createElement:CreateElementType, FragmentComponent:ComponentType}} post
+  */
+  static parserFactory(post=null){
+    const cls = this;
+
+    const parse = ({raw:strings}, ...values)=>evalAst(new cls(strings, values).root);
+    const parseAst = ({raw:strings}, ...values)=> new cls(strings, values).root;
+
+    const {createElement, FragmentComponent} = post||{
+      createElement: (type, props, ...children)=> (!type||is_string(type))?
+        [type, props, children] : type({children, ...props}),
+      FragmentComponent: ({children})=>[null, null, children],
     };
-    const childlessTags = {
-      br:true, '!doctype': true, '![CDATA[': true,
-      hr:true, img:true, input:true, link:true, meta:true, wbr:true,
-    };
 
-    const spacePreservingTags = {
-      'pre': true, 'span':true,
-    };
-
-    function _currentPos() {
-      return `${pos}...${str.slice(pos, pos+40).replace('\n', '(\\n)')}...${pos+40}`;
+    const evalAst = (/** @type {AstNode}*/ root)=>{
+      if(is_string(root)) return root;
+      let [tag, props, children] = root;
+      children = children.map(child=>evalAst(child));
+      if(tag==null){
+        assert(props==null);
+        return FragmentComponent({children});
+      }
+      return createElement(tag, props, ...children);
     }
 
-    /**
-     * @param {string|null} tag
-     * @param {Object|null} props
-     * @param {AstNode[]} children
-     * @returns {AstNode}*/
-    function parseParent(tag, props=null, children=[]){
-      /*
-        Parses after `<div ` has been consumed 
-        or after `<div attr1 attr2="value" ` has been consumed
-        Thus, it just checks for more attributes or `>` or `/>`
-      */
-      //console.log('parseParent', tag, props, children, _currentPos());
-      if(tag===undefined) throw '';
-      if(tag=='![CDATA['){ // CDATA does not admit attributes nor children
-        const [_, CDATA] = run(new RegExp(`(.*?)\\]\\]\\>`, 'ys'));
-        return [tag, {CDATA}, []];
-      }
-      let orCloseHead = `|\\/\\>|\\>`;
-      let orAttr = `|([^\\s=\\>]+?)(=\\".*?\\"|=\\'.*?\\'|=${FIELD}|(?=\\>))`;
-      let reg = new RegExp(`\\s*($${orCloseHead}${orAttr})`, 'ys');
-      let [_, endOrAttr, ..._attr] = run(reg);
-      const endReached = !endOrAttr.length;
-      if(endReached){
-        this.console.warn(`Expected closing end ...> or .../> for tag ${tag}`);
-        return [tag, props, children];
-      }
-      let fullyClosed = endOrAttr == '/>';
-      const headClosed = fullyClosed || endOrAttr == '>';
-      if(headClosed && childlessTags[tag?.toLowerCase()]) fullyClosed = true;
-      if(fullyClosed) return [tag, props, children];
-      if(headClosed){
-        children = parseSiblings(tag, children);
-        return [tag, props, children];
-      }
-      const [key, _value] = _attr;
-      let value;
-      if(_value==FIELD){value="SOME FIELD..."}
-      else{value=_value.slice(2,-1)} // consume `="` and `"`
-      if(!props) props = {};
-      props[key] = value;
-      return parseParent(tag, props, children);
-    }
-    
-    function run(regExp){
-      regExp.lastIndex = pos;
-      const match = regExp.exec(str);
-      if(!match) throw `No match for ${regExp} with string: ...${str.slice(pos)}`
-      if(match.index<pos) throw `Regexp must use 'ys' flags. Match for at ${match.index} is before previous match at ${pos}`;
-      const out = [...match];
-      pos += out[0].length;
-      return out;
-    }
-
-    /**
-     * @param {string|null} parentTag
-     * @param {AstNode[]} siblings
-     * @returns {AstNode[]}*/
-    function parseSiblings(parentTag, siblings){
-      //console.log('sibling', parentTag, siblings, _currentPos());
-      assert(parentTag!==undefined);
-      // Parse text preceeding the first sibling
-      let [text] = run(new RegExp(`[^\\<]*`, 'ys'));
-      if(text.length){
-        // this.console.log(`REPLACE :|${text}|`);
-        if(spacePreservingTags[parentTag?.toLocaleLowerCase()]){
-          // Trim multiple spaces to single space. No other modification.
-          text = text.replace(/^\s+(.*?)$/, ' $1');
-          text = text.replace(/^(.*?)\s+$/, '$1 ');
-        } else{
-          // Replace multiple spaces with single space everywhere. Trim.
-          text = text.replace(/\s+/g, ' ');
-          text = text.trim();
-        }
-        // this.console.log(`REPLACED:|${text}|`);
-      }
-      //this.console.log('TEXT', text);
-      if(text.length) siblings.push(text);
-      // Parse the first sibling if it exists
-      let orOpenSibling = `|\\<!\\[CDATA\\[|\\<(?=\\>)|\\<([^\\s\\>=\\/]+)`;
-      let orCloseParent = `|\\<\\/\\>`+(parentTag?`|\\<\\/${parentTag}\\s*\\>`:'');
-      let reg = new RegExp(`$${orOpenSibling}${orCloseParent}`, 'ys');
-      let [match, _tag] = run(reg);
-      const endReached = !match.length;
-      if(endReached && parentTag){
-        this.console.warn(`Expected closing tag </${parentTag}> or </> after ${text}`);
-      }
-      const parentClosed = match.includes('/');
-      //console.log('PARENT CLOSED', parentClosed, `|${match}|`);
-      if(endReached || parentClosed) return siblings;
-      if(match=='<![CDATA[') _tag = '![CDATA[';
-      const tag = (_tag&&_tag.length&&_tag) || null; //null means fragment
-      //console.log('CAPTURED', match, tag);
-      const newSibling = parseParent(tag, null, []);
-      const absorb = !!absorbedTags[tag?.toLowerCase()];
-      if(absorb){} // Discard newSibling
-      else if(tag) siblings.push(newSibling);
-      else siblings.push(... newSibling[2]); // shortcut fragment nieces as siblings
-      return parseSiblings(parentTag, siblings);
-    }
-    const elems = parseSiblings(null, []);
-    return elems.length==1 ? elems[0] : [null, null, elems];
+    return {parse, parseAst, evalAst};
   }
 
+  /**
+   * @param {null|{createElement:CreateElementType, FragmentComponent:ComponentType}} post
+  */
+  static debugParserFactory(post=null){
+    const cls = this;
+    const {evalAst} = this.parserFactory(post);
+    const parse0 = ({raw:strings}, ...values)=>evalAst(new cls(strings, values, 0).root);
+    const parse1 = ({raw:strings}, ...values)=>evalAst(new cls(strings, values, 1).root);
+    const parse2 = ({raw:strings}, ...values)=>evalAst(new cls(strings, values, 2).root);
+    const parseAst0 = ({raw:strings}, ...values)=> new cls(strings, values, 0).root;
+    const parseAst1 = ({raw:strings}, ...values)=> new cls(strings, values, 1).root;
+    const parseAst2 = ({raw:strings}, ...values)=> new cls(strings, values, 2).root;
+    return {parse0, parse1, parse2, parseAst0, parseAst1, parseAst2, evalAst};
+  }
+
+  constructor(/** @type {string[]}*/ strings, values, debug=0){
+    let str = strings.join(this.ESC);
+    let escaped = {};
+    str = str.replace(new RegExp(String.raw`${this.ESC}|\\"|\\'|\\\`|\\$\\$|\\$(?=[^\\$])`), (match, index)=>{
+      //console.log(`Escaping ${match} at ${index}`);
+      escaped[index] = match;
+      return this.ESC;
+    });
+    this.pos = 0;
+    this.str = str;
+    this.values = values;
+    this.valueIndex = 0;
+    this.escaped = escaped;
+    this.errorStop = false;
+    debug && console.log('PARSING', this.str);
+    this.DEBUG = debug==2;
+    
+    const elems = this.parseSiblings(null, []);
+    const /** @type {AstNode} */ root = elems.length==1 ? elems[0] : [null, null, elems];
+    if(this.pos!=this.str.length) this.console.warn(`Not all the string was consumed: ${this.pos}/${this.str.length}`);
+    this.root = root;
+  }
+
+  childlessTags = {
+    br:true, '!doctype': true,
+    hr:true, img:true, input:true, link:true, meta:true, wbr:true,
+  };
+
+  spacePreservingTags = {
+    'pre': true, 'span':true,
+  };
+
+  run(/** @type {RegExp}*/regExp){
+    // Execute the regular expression on str at pos, and move forward
+    const {pos, str} = this;
+    regExp.lastIndex = pos;
+    const match = regExp.exec(str);
+    if(!match) throw `No match for ${regExp} with string: ...${str.slice(pos)}`
+    if(match.index<pos) throw `Regexp must use 'ys' flag. Match for at ${match.index} is before previous match at ${pos}`;
+    const out = [...match];
+    this.pos += out[0].length;
+    return out;
+  }
+
+  try_run(/** @type {RegExp}*/regExp){
+    try{ return this.run(regExp); }
+    catch(e){ return null; }
+  }
+
+  _currentPos() { // Just for printing debug info
+    const {pos, str} = this;
+    return `${pos}...${str.slice(pos, pos+50).replace('\n', '(\\n)')}...${pos+50}`;
+  }
+
+  /**
+   * @param {TagType} parentTag
+   * @param {AstNode[]} siblings
+   * @returns {AstNode[]}*/
+  parseSiblings(parentTag, siblings){
+    /*
+      Parses the children of a parent tag or fragment. 
+      Called (i) from the root level,
+      or (ii) after a parent "head" (`<div ...>`) has been consumed,
+      or (iii) after a sibling has been consumed entirely.
+     */
+    this.DEBUG && console.log('parseSibling', parentTag, siblings, this._currentPos());
+    assert(parentTag!==undefined);
+    // Parse text preceeding the first sibling
+    let [text] = this.run(new RegExp(`.*?(?=$|<|${this.ESC})`, 'ys'));
+    if(text.length)text = this.trimText(parentTag, text);
+    if(text.length) siblings.push(text);
+    if(this.try_run(new RegExp(`${this.ESC}`, 'ys'))){
+      let value = this.values[this.valueIndex++];
+      if(Array.isArray(value)) siblings.push(...value);
+      else siblings.push(this.replaceText(text, this.pos-1));
+      return this.parseSiblings(parentTag, siblings);
+    }
+
+    let endReached = this.pos==this.str.length;
+    if(endReached){
+      if(parentTag) this.console.warn(`Expected closing tag </${parentTag}> or </> after ${text}`);
+      return siblings;
+    }
+    // Comment, DOCTYPE, or CDATA
+    if(this.str.startsWith('<!', this.pos)){
+      let result = this.try_run(new RegExp([
+        `<!--.*?-->`,
+        `<!\\[CDATA\\[.*?\\]\\]>`,
+        `<!DOCTYPE\\s*.*?>`,
+      ].join('|'), 'iys'));
+      if(!result){
+        this.console.error(`Unexpected <! at ${this._currentPos()}\nIgnoring what follows.`);
+        this.errorStop = true;
+        return siblings;
+      }
+      let [text] = result;
+      if(text.endsWith('/>')) this.console.warn(`Non compliant tag found.\n${this.SPEC}`);
+      this.replaceText(text, this.pos-text.length); // Consume the fields inside, if any
+      return this.parseSiblings(parentTag, siblings);
+    }
+    // Parent close
+    let /** @type {TagType} */ tag;
+    if(this.try_run(/<\/\s*>/ys)) return siblings;
+    if(this.try_run(/<\//ys)){
+      let result = this.try_run(new RegExp(`(.*?)\\s*>`, 'ys'));
+      if(!result){
+        this.console.error(`Expected close tag for parent ${parentTag||'fragment'} at ${this._currentPos()}\nIgnoring what follows.`);
+        this.errorStop = true;
+        return siblings;
+      }
+      let _tag = result[1];
+      if (_tag==this.ESC) tag = this.values[this.valueIndex++];
+      else tag = _tag;
+      if(tag!==parentTag){
+        this.console.error(`Unmatched close tag ${tag}!=${parentTag} at ${this._currentPos()}\nIgnoring what follows.`);
+        this.errorStop = true;
+      }
+      return siblings;
+    }
+    // Parse the first sibling
+    let reg = new RegExp(`<([^\\s>\\/\\.]*)`, 'ys');
+    let _tag = this.run(reg)[1];
+    if (_tag==this.ESC) tag = this.values[this.valueIndex++];
+    else if(!_tag.length) tag = null; //null means fragment
+    else if(_tag.match(/[^a-z0-9._-]/i)){
+      this.console.error(`Error with tag ${_tag} before ${this._currentPos()}\nIgnoring what follows.`);
+      this.errorStop = true;
+      return siblings;
+    }
+    else tag = _tag;
+    const newSibling = this.parseParent(tag, null, []);
+    if(tag) siblings.push(newSibling);
+    else siblings.push(... newSibling[2]); // shortcut fragment nieces as siblings
+    if(this.errorStop) return siblings;
+    return this.parseSiblings(parentTag, siblings);
+  }
+
+  /**
+   * @param {TagType} tag
+   * @param {Object|null} props
+   * @param {AstNode[]} children
+   * @returns {AstNode}*/
+  parseParent(tag, props=null, children=[]){
+    /*
+      Parses after `<div ` has been consumed 
+      or after `<div attr1 attr2="value" ` has been consumed
+      Thus, it just checks for more attributes or `>` or `/>`
+    */
+    this.DEBUG && console.log('parseParent', tag, props, children, this._currentPos());
+    if(tag===undefined) throw '';
+    this.run(/\s*/ys); // Consume whitespace
+    if(this.pos==this.str.length){
+      this.console.warn(`Expected closing end ...> or .../> for tag ${tag}`);
+      this.errorStop = true;
+      return [tag, props, children];
+    }
+    let headClosed = !!this.try_run(/>/ys);
+    let fullyClosed = (headClosed && !!this.childlessTags[(''+tag)?.toLowerCase()]) ||
+      !!this.try_run(/\/>/ys);
+    if(fullyClosed) return [tag, props, children];
+    if(headClosed){
+      children = this.parseSiblings(tag, children);
+      return [tag, props, children];
+    }
+    if(!props) props = {};
+    if(this.try_run(new RegExp(`\\.\\.\\.${this.ESC}`, 'ys'))){
+      props = {...props, ...this.values[this.valueIndex++]};
+    }
+    else{
+      let [key] = this.run(/.*?(?=\s|>|=)/ys);
+      let _value = this.try_run(/=/ys) && this.run(new RegExp(`\\".*?\\"|\\'.*?\\'|${this.ESC}`, 'ys'))[0];
+      let value;
+      if(!_value) value = true;
+      else if(_value==this.ESC) value=this.values[this.valueIndex++];
+      else value = this.replaceText(_value.slice(1,-1), this.pos-_value.length+1); // slice for quotes
+      props[key] = value;
+    }
+    return this.parseParent(tag, props, children);
+  }
+
+  /**
+   * @param {TagType} parentTag
+   * @param {string} text
+   * @returns {string}*/
+  trimText(parentTag, text){
+    const spaceMatters = parentTag && this.spacePreservingTags[(''+parentTag).toLocaleLowerCase()];
+    // this.console.log(`REPLACE :|${text}|`);
+    if(spaceMatters){
+      // Trim multiple spaces to single space. No other modification.
+      text = text.replace(/^\s+(.*?)$/, ' $1');
+      text = text.replace(/^(.*?)\s+$/, '$1 ');
+    } else{
+      // Replace multiple spaces with single space everywhere. Trim.
+      text = text.replace(/\s+/g, ' ');
+      text = text.trim();
+    }
+    // this.console.log(`REPLACED:|${text}|`);
+    return text;
+  }
+
+  /**
+   * @param {string} text
+   * @param {number} posOfText
+   * @returns {string}*/
+  replaceText(text, posOfText){
+    return text.replace(new RegExp(this.ESC, 'g'), (_, index)=>{
+      const original = this.escaped[posOfText+index];
+      if(original!=this.ESC) return original;      
+      let out = `${this.values[this.valueIndex++]}`;
+      if(out=="[object Object]") out = JSON.stringify(out);
+      return out;
+    });
+  }
+
+
+}
+/**
+ * TO DO:
+ * 1. Implement "close with sibling"
+ * 2. Make a new class that inherits from this one and adds math support. It must be extensible.
+ * 3. Make a new class that inherits from math and adds code support. It must be extensible.
+ * 4. Make a new class that inherits from math and adds paragraphs support. It must be extensible.
+ */
+
+
+//------------------------------------------------------------------------------
+
+__caph_definitions__.Parser = class {
   // /**
   //  * @template T
   //  * @param {string} str
