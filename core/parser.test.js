@@ -8,7 +8,7 @@ eval(fs.readFileSync('./utils.js', 'utf8'));
 eval(fs.readFileSync('./parser.js', 'utf8'));
 
 function main(){
-  var {parseAst0, parseAst1, parseAst2, parse0, parse1, parse2} = __caph_definitions__.NewParser.debugParserFactory(null);
+  var {parseAst0, parseAst1, parseAst2, parse, parse1, parse2} = __caph_definitions__.NewParser.debugParserFactory(null);
 
   function assertEq(vDom1, vDom2){
     const out = diff(vDom1, vDom2);
@@ -181,7 +181,7 @@ function main(){
     ['div', null, [[SomeComponent, null, []]]],
   )
 
-  SomeComponent = ({children, ...props})=>parse0`<span ...${props}>Hello world${children}</span>`;
+  SomeComponent = ({children, ...props})=>parse`<span ...${props}>Hello world${children}</span>`;
   assertTest(
     parseAst1`<div><${SomeComponent} propX="0" propY=${1}><div/></></div>`,
     ['div', null, [[SomeComponent, {propX:"0", propY:1}, [['div', null, []]]]]],
@@ -191,16 +191,20 @@ function main(){
     ['div', null, [['span', {propX:"0", propY:1}, ['Hello world', ['div', null, []]]]]],
   );
 
-  SomeComponent = ({children, ...props})=>parse0`<span...${props} propZ="hello">Hello world${children}</span>`;
+  SomeComponent = ({children, ...props})=>parse`<span...${props} propZ="hello">Hello world${children}</span>`;
   assertTest(
     parse1`<div><${SomeComponent} propX="0" propY=${1}><div/></></div>`,
     ['div', null, [['span', {propX:"0", propY:1, propZ:'hello'}, ['Hello world', ['div', null, []]]]]],
   );
+  assertTest(
+    parse1`$e^2$`,
+    ['caph', {plugin:'caph-math'}, ['e^2']],
+  );
+  assertTest(
+    parse1`$$e^2$$`,
+    ['caph', {plugin:'caph-math', displayMode:true}, ['e^2']],
+  );
 
-  // assertEq(
-  //   parser.parse`$e^2$`,
-  //   ['caph', {plugin:'caph-math'}, ['e^2']],
-  // );
   // assertEq(
   //   parser.parse`<div title="10$"><div title="10$"></div></div>`,
   //   ['caph', {plugin:'caph-math'}, ['e^2']],

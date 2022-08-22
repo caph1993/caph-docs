@@ -6,6 +6,8 @@
 /** @typedef {Object} AttributesType*/
 /** @typedef {string|ComponentType|null} TagType*/
 /** @typedef {(type:any, props:any, ...children)=>any} CreateElementType*/
+/** @typedef {(text:string) => AstNode} RuleParser*/
+/** @typedef {{regStart:string, regEnd:string, parser:RuleParser}} CustomRule*/
 /**
  * @typedef {string|
  * [string|ComponentType, AttributesType|null, AstNodeArray]|
@@ -22,13 +24,13 @@ __caph_definitions__.ConsoleProxy = class{
 
 
 
-__caph_definitions__.NewParser = class {
+__caph_definitions__.BaseParser = class {
 
   // constructor(newAstNode=null) {
   //   this.newAstNode = newAstNode? newAstNode:((tag, props, ...children) => [tag, props, children]);
   // }
 
-  console = new __caph_definitions__.ConsoleProxy();
+  //console = new __caph_definitions__.ConsoleProxy();
 
   ESC = '\ue000';
   SPEC = `https://html.spec.whatwg.org/multipage/syntax.html`;
@@ -68,15 +70,16 @@ __caph_definitions__.NewParser = class {
   */
   static debugParserFactory(post=null){
     const cls = this;
-    const {evalAst} = this.parserFactory(post);
-    const parse0 = ({raw:strings}, ...values)=>evalAst(new cls(strings, values, 0).root);
+    const {evalAst, parse, parseAst} = this.parserFactory(post);
     const parse1 = ({raw:strings}, ...values)=>evalAst(new cls(strings, values, 1).root);
     const parse2 = ({raw:strings}, ...values)=>evalAst(new cls(strings, values, 2).root);
-    const parseAst0 = ({raw:strings}, ...values)=> new cls(strings, values, 0).root;
     const parseAst1 = ({raw:strings}, ...values)=> new cls(strings, values, 1).root;
     const parseAst2 = ({raw:strings}, ...values)=> new cls(strings, values, 2).root;
-    return {parse0, parse1, parse2, parseAst0, parseAst1, parseAst2, evalAst};
+    return {parse, parse1, parse2, parseAst, parseAst1, parseAst2, evalAst};
   }
+
+  /** @type {CustomRule[]} */
+  static customRules = [];
 
   constructor(/** @type {string[]}*/ strings, values, debug=0){
     let str = strings.join(this.ESC);
@@ -94,10 +97,15 @@ __caph_definitions__.NewParser = class {
     this.errorStop = false;
     debug && console.log('PARSING', this.str);
     this.DEBUG = debug==2;
-    
+    //@ts-ignore
+    this.customRules = this.constructor.customRules;
+    this.REG_EXP_TEXT = new RegExp(`.*?(?=${[
+      '$', '<', this.ESC,
+      ...this.customRules.map(({regStart})=>regStart),
+    ].join('|')})`, 'ys');
     const elems = this.parseSiblings(null, []);
     const /** @type {AstNode} */ root = elems.length==1 ? elems[0] : [null, null, elems];
-    if(this.pos!=this.str.length) this.console.warn(`Not all the string was consumed: ${this.pos}/${this.str.length}`);
+    if(this.pos!=this.str.length) console.warn(`Not all the string was consumed: ${this.pos}/${this.str.length}`);
     this.root = root;
   }
 
@@ -129,7 +137,8 @@ __caph_definitions__.NewParser = class {
 
   _currentPos() { // Just for printing debug info
     const {pos, str} = this;
-    return `${pos}...${str.slice(pos, pos+50).replace('\n', '(\\n)')}...${pos+50}`;
+    const short = str.slice(pos, pos+50).replace('\n', '(\\n)');
+    return `${pos}...${short}...${pos+50}`;
   }
 
   /**
@@ -146,8 +155,8 @@ __caph_definitions__.NewParser = class {
     this.DEBUG && console.log('parseSibling', parentTag, siblings, this._currentPos());
     assert(parentTag!==undefined);
     // Parse text preceeding the first sibling
-    let [text] = this.run(new RegExp(`.*?(?=$|<|${this.ESC})`, 'ys'));
-    if(text.length)text = this.trimText(parentTag, text);
+    let [text] = this.run(this.REG_EXP_TEXT);
+    if(text.length) text = this.trimText(parentTag, text);
     if(text.length) siblings.push(text);
     if(this.try_run(new RegExp(`${this.ESC}`, 'ys'))){
       let value = this.values[this.valueIndex++];
@@ -155,12 +164,21 @@ __caph_definitions__.NewParser = class {
       else siblings.push(this.replaceText(text, this.pos-1));
       return this.parseSiblings(parentTag, siblings);
     }
-
     let endReached = this.pos==this.str.length;
     if(endReached){
-      if(parentTag) this.console.warn(`Expected closing tag </${parentTag}> or </> after ${text}`);
+      if(parentTag) console.warn(`Expected closing tag </${parentTag}> or </> after ${text}`);
       return siblings;
     }
+    if(this.customRules.length){
+      for(let {regStart, regEnd, parser} of this.customRules){
+        let m = this.try_run(new RegExp(`${regStart}(.*?)${regEnd}`, 'ys'));
+        if(m){
+          siblings.push(parser(m[1]));
+          return this.parseSiblings(parentTag, siblings);
+        }
+      }
+    }
+
     // Comment, DOCTYPE, or CDATA
     if(this.str.startsWith('<!', this.pos)){
       let result = this.try_run(new RegExp([
@@ -169,12 +187,12 @@ __caph_definitions__.NewParser = class {
         `<!DOCTYPE\\s*.*?>`,
       ].join('|'), 'iys'));
       if(!result){
-        this.console.error(`Unexpected <! at ${this._currentPos()}\nIgnoring what follows.`);
+        console.error(`Unexpected <! at ${this._currentPos()}\nIgnoring what follows.`);
         this.errorStop = true;
         return siblings;
       }
       let [text] = result;
-      if(text.endsWith('/>')) this.console.warn(`Non compliant tag found.\n${this.SPEC}`);
+      if(text.endsWith('/>')) console.warn(`Non compliant tag found.\n${this.SPEC}`);
       this.replaceText(text, this.pos-text.length); // Consume the fields inside, if any
       return this.parseSiblings(parentTag, siblings);
     }
@@ -184,7 +202,7 @@ __caph_definitions__.NewParser = class {
     if(this.try_run(/<\//ys)){
       let result = this.try_run(new RegExp(`(.*?)\\s*>`, 'ys'));
       if(!result){
-        this.console.error(`Expected close tag for parent ${parentTag||'fragment'} at ${this._currentPos()}\nIgnoring what follows.`);
+        console.error(`Expected close tag for parent ${parentTag||'fragment'} at ${this._currentPos()}\nIgnoring what follows.`);
         this.errorStop = true;
         return siblings;
       }
@@ -192,7 +210,7 @@ __caph_definitions__.NewParser = class {
       if (_tag==this.ESC) tag = this.values[this.valueIndex++];
       else tag = _tag;
       if(tag!==parentTag){
-        this.console.error(`Unmatched close tag ${tag}!=${parentTag} at ${this._currentPos()}\nIgnoring what follows.`);
+        console.error(`Unmatched close tag ${tag}!=${parentTag} at ${this._currentPos()}\nIgnoring what follows.`);
         this.errorStop = true;
       }
       return siblings;
@@ -203,7 +221,7 @@ __caph_definitions__.NewParser = class {
     if (_tag==this.ESC) tag = this.values[this.valueIndex++];
     else if(!_tag.length) tag = null; //null means fragment
     else if(_tag.match(/[^a-z0-9._-]/i)){
-      this.console.error(`Error with tag ${_tag} before ${this._currentPos()}\nIgnoring what follows.`);
+      console.error(`Error with tag ${_tag} before ${this._currentPos()}\nIgnoring what follows.`);
       this.errorStop = true;
       return siblings;
     }
@@ -230,7 +248,7 @@ __caph_definitions__.NewParser = class {
     if(tag===undefined) throw '';
     this.run(/\s*/ys); // Consume whitespace
     if(this.pos==this.str.length){
-      this.console.warn(`Expected closing end ...> or .../> for tag ${tag}`);
+      console.warn(`Expected closing end ...> or .../> for tag ${tag}`);
       this.errorStop = true;
       return [tag, props, children];
     }
@@ -264,7 +282,7 @@ __caph_definitions__.NewParser = class {
    * @returns {string}*/
   trimText(parentTag, text){
     const spaceMatters = parentTag && this.spacePreservingTags[(''+parentTag).toLocaleLowerCase()];
-    // this.console.log(`REPLACE :|${text}|`);
+    // console.log(`REPLACE :|${text}|`);
     if(spaceMatters){
       // Trim multiple spaces to single space. No other modification.
       text = text.replace(/^\s+(.*?)$/, ' $1');
@@ -274,7 +292,7 @@ __caph_definitions__.NewParser = class {
       text = text.replace(/\s+/g, ' ');
       text = text.trim();
     }
-    // this.console.log(`REPLACED:|${text}|`);
+    // console.log(`REPLACED:|${text}|`);
     return text;
   }
 
@@ -291,9 +309,8 @@ __caph_definitions__.NewParser = class {
       return out;
     });
   }
-
-
 }
+
 /**
  * TO DO:
  * 1. Implement "close with sibling"
@@ -302,6 +319,23 @@ __caph_definitions__.NewParser = class {
  * 4. Make a new class that inherits from math and adds paragraphs support. It must be extensible.
  */
 
+ __caph_definitions__.NewParser = class extends __caph_definitions__.BaseParser {
+  
+  static customRules = [
+    ...__caph_definitions__.BaseParser.customRules,
+    {
+      regStart: `(?<!\\\\)\\$\\$`,
+      regEnd: `(?<!\\\\)\\$\\$`,
+      parser: /**@type {RuleParser}*/ ((text)=>['caph', {plugin: 'caph-math', displayMode:true}, [text]]),
+    },
+    {
+      regStart: `(?<!\\\\)\\$`,
+      regEnd: `(?<!\\\\)\\$`,
+      parser: /**@type {RuleParser}*/ ((text)=>['caph', {plugin: 'caph-math'}, [text]]),
+    },
+  ];
+
+}
 
 //------------------------------------------------------------------------------
 
