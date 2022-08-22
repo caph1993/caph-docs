@@ -3,7 +3,7 @@
 var __caph_definitions__ = window.__caph_definitions__ || {};
 
 
-
+/** @type {((obj:string)=>true)|(obj:any)=>false} */
 function is_string(obj) {
   return Object.prototype.toString.call(obj) === "[object String]";
 }

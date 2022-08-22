@@ -97,12 +97,18 @@ __caph_definitions__.BaseParser = class {
     this.errorStop = false;
     debug && console.log('PARSING', this.str);
     this.DEBUG = debug==2;
-    //@ts-ignore
-    this.customRules = this.constructor.customRules;
+
+    const cls = this.constructor;
+    /** @type {CustomRule[]} */ //@ts-ignore
+    this.customRules = cls.customRules;
+    /** @type {(tag:TagType)=>(null|string[])} */ //@ts-ignore
+    this.optionalClose = cls.optionalClose.bind(cls);
+
     this.REG_EXP_TEXT = new RegExp(`.*?(?=${[
       '$', '<', this.ESC,
       ...this.customRules.map(({regStart})=>regStart),
     ].join('|')})`, 'ys');
+
     const elems = this.parseSiblings(null, []);
     const /** @type {AstNode} */ root = elems.length==1 ? elems[0] : [null, null, elems];
     if(this.pos!=this.str.length) console.warn(`Not all the string was consumed: ${this.pos}/${this.str.length}`);
@@ -110,13 +116,39 @@ __caph_definitions__.BaseParser = class {
   }
 
   childlessTags = {
-    br:true, '!doctype': true,
-    hr:true, img:true, input:true, link:true, meta:true, wbr:true,
+    br:true, '!doctype': true, area: true, base: true, col: true, command: true, embed: true, hr: true,img: true, input: true,keygen: true, link: true, meta: true, param: true, source: true, track: true, wbr: true
   };
 
   spacePreservingTags = {
-    'pre': true, 'span':true,
+    'pre': true, 'span':true, 'code':true,
   };
+
+  
+  // https://html.spec.whatwg.org/multipage/syntax.html#optional-tags
+  /** @type {{[key:string]:string[]}}*/
+  static _optionalClose = {
+    'li': ['li'],
+    'dt': ['dt', 'dd'],
+    'dd': ['dd', 'dt'],
+    'p': ['p', 'address', 'article', 'aside', 'blockquote', 'details', 'div', 'dl', 'fieldset', 'figcaption', 'figure', 'footer', 'form', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'header', 'hgroup', 'hr', 'main', 'menu', 'nav', 'ol', 'pre', 'section', 'table'],
+    'rt': ['rt', 'rp'],
+    'rp': ['rp', 'rt'],
+    'optgroup': ['optgroup'],
+    'option': ['option', 'optgroup'],
+    //'caption': [], // Disabled rule
+    //'colgroup': [], // Disabled rule
+    'thead': ['tbody','tfoot'],
+    'tbody': ['tbody', 'tfoot'],
+    'tfoot': [],
+    'tr': ['tr'],
+    'td': ['td', 'th'],
+    'th': ['th', 'td'],
+  };
+  
+  static optionalClose(/** @type {TagType}*/ tag){
+    if(!tag || !is_string(tag)) return null;
+    return this._optionalClose[/** @type {string} tag */(tag)];
+  }
 
   run(/** @type {RegExp}*/regExp){
     // Execute the regular expression on str at pos, and move forward
@@ -133,6 +165,12 @@ __caph_definitions__.BaseParser = class {
   try_run(/** @type {RegExp}*/regExp){
     try{ return this.run(regExp); }
     catch(e){ return null; }
+  }
+  try_run_undo(/** @type {RegExp}*/regExp){
+    const pos = this.pos;
+    try{ return this.run(regExp); }
+    catch(e){ return null; }
+    finally{ this.pos = pos; }
   }
 
   _currentPos() { // Just for printing debug info
@@ -166,7 +204,10 @@ __caph_definitions__.BaseParser = class {
     }
     let endReached = this.pos==this.str.length;
     if(endReached){
-      if(parentTag) console.warn(`Expected closing tag </${parentTag}> or </> after ${text}`);
+      if(parentTag && !this.optionalClose(parentTag)){
+        console.warn(`Expected closing tag </${parentTag}> or </> after ${text}. Ignoring what follows`);
+        this.errorStop = true;
+      }
       return siblings;
     }
     if(this.customRules.length){
@@ -215,6 +256,12 @@ __caph_definitions__.BaseParser = class {
       }
       return siblings;
     }
+    const optionalClose = this.optionalClose(parentTag);
+    if(optionalClose) for(let tag of optionalClose){
+      if(this.try_run_undo(new RegExp(`<${tag}(>|\\s)`, 'ys'),)){
+        return siblings;
+      }
+    }
     // Parse the first sibling
     let reg = new RegExp(`<([^\\s>\\/\\.]*)`, 'ys');
     let _tag = this.run(reg)[1];
@@ -244,7 +291,7 @@ __caph_definitions__.BaseParser = class {
       or after `<div attr1 attr2="value" ` has been consumed
       Thus, it just checks for more attributes or `>` or `/>`
     */
-    this.DEBUG && console.log('parseParent', tag, props, children, this._currentPos());
+    this.DEBUG && console.log('parseParent ', tag, props, children, this._currentPos());
     if(tag===undefined) throw '';
     this.run(/\s*/ys); // Consume whitespace
     if(this.pos==this.str.length){
@@ -377,26 +424,25 @@ __caph_definitions__.Parser = class {
     const each_SPACE = new RegExp(SPACE, 'g');
 
     'area base br col command embed hr img input keygen link meta param source track wbr ! !doctype ? ?xml'.split(' ').map(v => empty[v] = empty[v.toUpperCase()] = true)
-
     // https://html.spec.whatwg.org/multipage/syntax.html#optional-tags
     // closed by the corresponding tag or end of parent content
     const close = {
-      'li': '',
-      'dt': 'dd',
-      'dd': 'dt',
-      'p': 'address article aside blockquote details div dl fieldset figcaption figure footer form h1 h2 h3 h4 h5 h6 header hgroup hr main menu nav ol pre section table',
-      'rt': 'rp',
-      'rp': 'rt',
-      'optgroup': '',
-      'option': 'optgroup',
-      'caption': 'tbody thead tfoot tr colgroup',
-      'colgroup': 'thead tbody tfoot tr caption',
-      'thead': 'tbody tfoot caption',
-      'tbody': 'tfoot caption',
-      'tfoot': 'caption',
-      'tr': 'tbody tfoot',
-      'td': 'th tr',
-      'th': 'td tr tbody',
+      'li': ['li'],
+      'dt': ['dt', 'dd'],
+      'dd': ['dd', 'dt'],
+      'p': ['p', 'address', 'article', 'aside', 'blockquote', 'details', 'div', 'dl', 'fieldset', 'figcaption', 'figure', 'footer', 'form', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'header', 'hgroup', 'hr', 'main', 'menu', 'nav', 'ol', 'pre', 'section', 'table'],
+      'rt': ['rt', 'rp'],
+      'rp': ['rp', 'rt'],
+      'optgroup': ['optgroup'],
+      'option': ['option', 'optgroup'],
+      //'caption': [], // Disabled rule
+      //'colgroup': [], // Disabled rule
+      'thead': ['tbody','tfoot'],
+      'tbody': ['tbody', 'tfoot'],
+      'tfoot': [],
+      'tr': ['tr'],
+      'td': ['td', 'th'],
+      'th': ['th', 'td'],
     };
     for (let tag in close) {
       [...close[tag].split(' '), tag].map(closer => {

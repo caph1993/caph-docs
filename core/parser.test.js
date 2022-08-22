@@ -204,6 +204,10 @@ function main(){
     parse1`$$e^2$$`,
     ['caph', {plugin:'caph-math', displayMode:true}, ['e^2']],
   );
+  assertTest(
+    parse1`<ul><li>testing<div/><li>auto<li>close</>`,
+    ['ul', null, [['li', null, ['testing', ['div', null, []]]],['li', null, ['auto']],['li', null, ['close']]]],
+  );
 
   // assertEq(
   //   parser.parse`<div title="10$"><div title="10$"></div></div>`,
