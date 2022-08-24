@@ -198,7 +198,7 @@ __caph_definitions__.BaseParser = class {
     assert(parentTag!==undefined);
     // Parse text preceeding the first sibling
     let [text] = this.run(this.REG_EXP_TEXT);
-    if(text.length) text = this.trimText(parentTag, text);
+    if(text.length) text = this.trimText(text, parentTag, !siblings.length);
     if(text.length) siblings.push(text);
     if(this.try_run(new RegExp(`${this.ESC}`, 'ys'))){
       let value = this.values[this.valueIndex++];
@@ -330,16 +330,19 @@ __caph_definitions__.BaseParser = class {
   }
 
   /**
-   * @param {TagType} parentTag
    * @param {string} text
+   * @param {TagType} parentTag
+   * @param {boolean} firstChild
    * @returns {string}*/
-  trimText(parentTag, text){
+  trimText(text, parentTag, firstChild){
     const spaceMatters = parentTag && this.spacePreservingTags[(''+parentTag).toLocaleLowerCase()];
     // console.log(`REPLACE :|${text}|`);
     if(spaceMatters){
       // Trim multiple spaces to single space. No other modification.
-      text = text.replace(/^\s+(.*?)$/, ' $1');
-      text = text.replace(/^(.*?)\s+$/, '$1 ');
+      // const space = '\u00a0';
+      text = text.replace(/^\s+(.*?)$/s, '\u00a0$1');
+      text = text.replace(/^(.*?)\s+$/s, '$1 ');
+      if(firstChild && text.startsWith('\u00a0')) text = text.slice(1);
     } else{
       // Replace multiple spaces with single space everywhere.
       text = text.replace(/\s+/g, ' ');
@@ -356,7 +359,7 @@ __caph_definitions__.BaseParser = class {
   replaceText(text, posOfText){
     return text.replace(new RegExp(this.ESC, 'g'), (_, index)=>{
       const original = this.escaped[posOfText+index];
-      if (original != this.ESC) return original;
+      if (original != this.ESC) return original===' '?'\u00a0':original;
       return this.asString(this.values[this.valueIndex++]);
     });
   }

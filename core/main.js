@@ -162,7 +162,7 @@ const caph = new class {
     this.parse = parse;
     this.parseAst = parseAst;
     this.parseNoMarkup = parseNoMarkup;
-
+    this.unicodeSpace = "\u00a0"
 
     //@ts-ignore
     const requirements = window.caph_requirements || [];
