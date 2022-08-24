@@ -51,10 +51,13 @@ __caph_definitions__.BaseParser = class {
       FragmentComponent: ({children})=>[null, null, children],
     };
 
-    const evalAst = (/** @type {AstNode}*/ root)=>{
+    const evalAst = (/** @type {AstNode}*/ root) => {
       if(is_string(root)) return root;
+      // HOTFIX: when there is a children list inside the preact parser,
+      // it will not be an AstNode!
+      if (!Array.isArray(root)) return root;
       let [tag, props, children] = root;
-      children = children.map(child=>evalAst(child));
+      children = children.map(child => evalAst(child));
       if(tag==null){
         assert(props==null);
         return FragmentComponent({children});
@@ -120,10 +123,11 @@ __caph_definitions__.BaseParser = class {
   };
 
   spacePreservingTags = {
-    'pre': true, 'span':true, 'code':true,
+    'pre': true, 'span': true, 'code': true, 'p': true, 'b': true, 'i': true,
+    'a': true, 'li': true,
   };
 
-  
+
   // https://html.spec.whatwg.org/multipage/syntax.html#optional-tags
   /** @type {{[key:string]:string[]}}*/
   static _optionalClose = {
@@ -144,7 +148,7 @@ __caph_definitions__.BaseParser = class {
     'td': ['td', 'th'],
     'th': ['th', 'td'],
   };
-  
+
   static optionalClose(/** @type {TagType}*/ tag){
     if(!tag || !is_string(tag)) return null;
     return this._optionalClose[/** @type {string} tag */(tag)];
@@ -185,7 +189,7 @@ __caph_definitions__.BaseParser = class {
    * @returns {AstNode[]}*/
   parseSiblings(parentTag, siblings){
     /*
-      Parses the children of a parent tag or fragment. 
+      Parses the children of a parent tag or fragment.
       Called (i) from the root level,
       or (ii) after a parent "head" (`<div ...>`) has been consumed,
       or (iii) after a sibling has been consumed entirely.
@@ -198,8 +202,9 @@ __caph_definitions__.BaseParser = class {
     if(text.length) siblings.push(text);
     if(this.try_run(new RegExp(`${this.ESC}`, 'ys'))){
       let value = this.values[this.valueIndex++];
-      if(Array.isArray(value)) siblings.push(...value);
-      else siblings.push(this.replaceText(text, this.pos-1));
+      //assert(this.str[this.pos - 1] == this.ESC)
+      if (Array.isArray(value)) siblings.push(...value); // PROBLEM
+      else siblings.push(this.asString(value));
       return this.parseSiblings(parentTag, siblings);
     }
     let endReached = this.pos==this.str.length;
@@ -273,6 +278,7 @@ __caph_definitions__.BaseParser = class {
       return siblings;
     }
     else tag = _tag;
+    if (tag === undefined) tag = null, console.error(`Undefined component at ${this._currentPos()}`);
     const newSibling = this.parseParent(tag, null, []);
     if(tag) siblings.push(newSibling);
     else siblings.push(... newSibling[2]); // shortcut fragment nieces as siblings
@@ -287,7 +293,7 @@ __caph_definitions__.BaseParser = class {
    * @returns {AstNode}*/
   parseParent(tag, props=null, children=[]){
     /*
-      Parses after `<div ` has been consumed 
+      Parses after `<div ` has been consumed
       or after `<div attr1 attr2="value" ` has been consumed
       Thus, it just checks for more attributes or `>` or `/>`
     */
@@ -350,12 +356,28 @@ __caph_definitions__.BaseParser = class {
   replaceText(text, posOfText){
     return text.replace(new RegExp(this.ESC, 'g'), (_, index)=>{
       const original = this.escaped[posOfText+index];
-      if(original!=this.ESC) return original;      
-      let out = `${this.values[this.valueIndex++]}`;
-      if(out=="[object Object]") out = JSON.stringify(out);
-      return out;
+      if (original != this.ESC) return original;
+      return this.asString(this.values[this.valueIndex++]);
     });
   }
+
+  asString(obj) {
+    let out = `${obj}`;
+
+    if (out == "[object Object]") {
+      // let seen = [];
+      // out = JSON.stringify(obj, function (key, val) {
+      //   if (val != null && typeof val == "object") {
+      //     if (seen.indexOf(val) >= 0) return;
+      //     seen.push(val);
+      //   }
+      //   return val; // https://stackoverflow.com/q/9382167
+      // });
+      out = obj; //PROBLEM
+    }
+    return out;
+  }
+
 }
 
 /**
@@ -367,7 +389,7 @@ __caph_definitions__.BaseParser = class {
  */
 
  __caph_definitions__.NewParser = class extends __caph_definitions__.BaseParser {
-  
+
   static customRules = [
     ...__caph_definitions__.BaseParser.customRules,
     {
@@ -390,14 +412,14 @@ __caph_definitions__.Parser = class {
   // /**
   //  * @template T
   //  * @param {string} str
-  //  * @param {(type: string, props: (Object|null), ...children: T[])=>string} post 
+  //  * @param {(type: string, props: (Object|null), ...children: T[])=>string} post
   //  * @returns {T|string}
   //  * */
   // main(str, post){
   //   const root = this._main(str);
   //   function rec(/** @type {AstNode}*/root){
   //     if(is_string(root)) return root;
-      
+
   //   }
   //   return post(ast);
   // }
@@ -539,7 +561,7 @@ __caph_definitions__.Parser = class {
       s = s.replace(each_ESCAPED_DOLLAR, '$'); // \$ in html becomes $
     }
     // There is a deep error here: they assume arg="..." will never occur in the html unless it
-    // is being part of a <tag arg="...">. 
+    // is being part of a <tag arg="...">.
     s = s.replace(/= *('|")([^\1]*?)\1/g, (match, quote, content) => {
       quotes.push(`${quote}${content}${quote}`);
       return `=${QUOTES}`;

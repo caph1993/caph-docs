@@ -208,6 +208,14 @@ function main(){
     parse1`<ul><li>testing<div/><li>auto<li>close</>`,
     ['ul', null, [['li', null, ['testing', ['div', null, []]]],['li', null, ['auto']],['li', null, ['close']]]],
   );
+  assertTest(
+    parse2`${'Hello string'}`,
+    'Hello string',
+  );
+  assertTest(
+    parse1`<ul>${['A', 'B', 'C'].map(s => parse1`<li>${s}</li>`)}</>`,
+    ['ul', null, [['li', null, ['A']], ['li', null, ['B']], ['li', null, ['C']]]],
+  );
 
   // assertEq(
   //   parser.parse`<div title="10$"><div title="10$"></div></div>`,

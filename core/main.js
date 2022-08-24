@@ -145,7 +145,25 @@ const caph = new class {
     }
   };
 
+
+  // template literal parsers
+
+
   constructor() {
+    const { parseAst, parse } = __caph_definitions__.NewParser.parserFactory({
+      createElement: this.createElement.bind(this),
+      FragmentComponent: preact.Fragment,
+    });
+    const { parse: parseNoMarkup } = __caph_definitions__.BaseParser.parserFactory({
+      createElement: this.createElement.bind(this),
+      FragmentComponent: preact.Fragment,
+    });
+
+    this.parse = parse;
+    this.parseAst = parseAst;
+    this.parseNoMarkup = parseNoMarkup;
+
+
     //@ts-ignore
     const requirements = window.caph_requirements || [];
     //@ts-ignore
@@ -441,14 +459,6 @@ const caph = new class {
     });
   };
 
-  // template literal parsers
-
-
-  _parser = new __caph_definitions__.Parser(this.createElement.bind(this));
-  parse = this._parser.parse.bind(this._parser);
-  parseNoMarkup = this._parser.parseNoMarkup.bind(this._parser);
-  parseEsc = this._parser.parseEsc.bind(this._parser);
-  parseNoMarkupEsc = this._parser.parseNoMarkupEsc.bind(this._parser);
 
   createElement(type, props, ...children) {
     if (type == 'caph') {
@@ -458,14 +468,10 @@ const caph = new class {
       else console.warn('caph tag without plugin attribute');
     }
     children = children.map(
-      x => this._is_string(x) ? this._html_safe_undo(x) : x);
+      x => is_string(x) ? this._html_safe_undo(x) : x);
     return preact.createElement(type, props, ...children);
   }
 
-
-  _is_string(obj) {
-    return Object.prototype.toString.call(obj) === "[object String]";
-  }
   _html_safe(str) {
     // e.g. converts < into &lt;
     return new Option(str).innerHTML;

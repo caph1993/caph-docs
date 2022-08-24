@@ -1,22 +1,14 @@
-//libraries/lzutf8-0.5.5/lzutf8.min.js
-exports={};
-/*!
- LZ-UTF8 v0.5.5
-
- Copyright (c) 2018, Rotem Dan
- Released under the MIT license.
-
- Build date: 2018-07-30 
-
- Please report any issue at https://github.com/rotemdan/lzutf8.js/issues
-*/
-var LZUTF8;if(function(n){n.runningInNodeJS=function(){return"object"==typeof process&&"object"==typeof process.versions&&"string"==typeof process.versions.node},n.runningInMainNodeJSModule=function(){return n.runningInNodeJS()&&require.main===module},n.commonJSAvailable=function(){return"object"==typeof module&&"object"==typeof module.exports},n.runningInWebWorker=function(){return"undefined"==typeof window&&"object"==typeof self&&"function"==typeof self.addEventListener&&"function"==typeof self.close},n.runningInNodeChildProcess=function(){return n.runningInNodeJS()&&"function"==typeof process.send},n.runningInNullOrigin=function(){return"object"==typeof window&&"object"==typeof window.location&&("http:"!==document.location.protocol&&"https:"!==document.location.protocol)},n.webWorkersAvailable=function(){return"function"==typeof Worker&&!n.runningInNullOrigin()&&(!n.runningInNodeJS()&&!(navigator&&navigator.userAgent&&0<=navigator.userAgent.indexOf("Android 4.3")))},n.log=function(e,t){void 0===t&&(t=!1),"object"==typeof console&&(console.log(e),t&&"object"==typeof document&&(document.body.innerHTML+=e+"<br/>"))},n.createErrorMessage=function(e,t){if(void 0===t&&(t="Unhandled exception"),null==e)return t;if(t+=": ","object"==typeof e.content){if(n.runningInNodeJS())return t+e.content.stack;var r=JSON.stringify(e.content);return"{}"!==r?t+r:t+e.content}return"string"==typeof e.content?t+e.content:t+e},n.printExceptionAndStackTraceToConsole=function(e,t){void 0===t&&(t="Unhandled exception"),n.log(n.createErrorMessage(e,t))},n.getGlobalObject=function(){return"object"==typeof global?global:"object"==typeof window?window:"object"==typeof self?self:{}},n.toString=Object.prototype.toString,n.commonJSAvailable()&&(module.exports=n)}(LZUTF8||(LZUTF8={})),"function"==typeof Uint8Array&&0!==new Uint8Array(1).subarray(1).byteLength){var subarray=function(e,t){var r=function(e,t,r){return e<t?t:r<e?r:e};e|=0,t|=0,arguments.length<1&&(e=0),arguments.length<2&&(t=this.length),e<0&&(e=this.length+e),t<0&&(t=this.length+t),e=r(e,0,this.length);var n=(t=r(t,0,this.length))-e;return n<0&&(n=0),new this.constructor(this.buffer,this.byteOffset+e*this.BYTES_PER_ELEMENT,n)},types=["Int8Array","Uint8Array","Uint8ClampedArray","Int16Array","Uint16Array","Int32Array","Uint32Array","Float32Array","Float64Array"],globalObject=void 0;if("object"==typeof window?globalObject=window:"object"==typeof self&&(globalObject=self),void 0!==globalObject)for(var i=0;i<types.length;i++)globalObject[types[i]]&&(globalObject[types[i]].prototype.subarray=subarray)}!function(f){var e=function(){function e(){}return e.compressAsync=function(e,n,o){var i=new f.Timer,u=new f.Compressor;if(!o)throw new TypeError("compressAsync: No callback argument given");if("string"==typeof e)e=f.encodeUTF8(e);else if(null==e||!(e instanceof Uint8Array))return void o(void 0,new TypeError("compressAsync: Invalid input argument, only 'string' and 'Uint8Array' are supported"));var s=f.ArrayTools.splitByteArray(e,n.blockSize),a=[],c=function(e){if(e<s.length){var t=void 0;try{t=u.compressBlock(s[e])}catch(e){return void o(void 0,e)}a.push(t),i.getElapsedTime()<=20?c(e+1):(f.enqueueImmediate(function(){return c(e+1)}),i.restart())}else{var r=f.ArrayTools.concatUint8Arrays(a);f.enqueueImmediate(function(){var e;try{e=f.CompressionCommon.encodeCompressedBytes(r,n.outputEncoding)}catch(e){return void o(void 0,e)}f.enqueueImmediate(function(){return o(e)})})}};f.enqueueImmediate(function(){return c(0)})},e.createCompressionStream=function(){var o=new f.Compressor,i=new(window.stream.Transform)({decodeStrings:!0,highWaterMark:65536});return i._transform=function(e,t,r){var n;try{n=f.BufferTools.uint8ArrayToBuffer(o.compressBlock(f.BufferTools.bufferToUint8Array(e)))}catch(e){return void i.emit("error",e)}i.push(n),r()},i},e}();f.AsyncCompressor=e}(LZUTF8||(LZUTF8={})),function(f){var e=function(){function e(){}return e.decompressAsync=function(e,n,o){if(!o)throw new TypeError("decompressAsync: No callback argument given");var i=new f.Timer;try{e=f.CompressionCommon.decodeCompressedBytes(e,n.inputEncoding)}catch(e){return void o(void 0,e)}var u=new f.Decompressor,s=f.ArrayTools.splitByteArray(e,n.blockSize),a=[],c=function(e){if(e<s.length){var t=void 0;try{t=u.decompressBlock(s[e])}catch(e){return void o(void 0,e)}a.push(t),i.getElapsedTime()<=20?c(e+1):(f.enqueueImmediate(function(){return c(e+1)}),i.restart())}else{var r=f.ArrayTools.concatUint8Arrays(a);f.enqueueImmediate(function(){var e;try{e=f.CompressionCommon.encodeDecompressedBytes(r,n.outputEncoding)}catch(e){return void o(void 0,e)}f.enqueueImmediate(function(){return o(e)})})}};f.enqueueImmediate(function(){return c(0)})},e.createDecompressionStream=function(){var o=new f.Decompressor,i=new(window.stream.Transform)({decodeStrings:!0,highWaterMark:65536});return i._transform=function(e,t,r){var n;try{n=f.BufferTools.uint8ArrayToBuffer(o.decompressBlock(f.BufferTools.bufferToUint8Array(e)))}catch(e){return void i.emit("error",e)}i.push(n),r()},i},e}();f.AsyncDecompressor=e}(LZUTF8||(LZUTF8={})),function(i){var e,u;(u=e=i.WebWorker||(i.WebWorker={})).compressAsync=function(e,t,r){if("ByteArray"!=t.inputEncoding||e instanceof Uint8Array){var n={token:Math.random().toString(),type:"compress",data:e,inputEncoding:t.inputEncoding,outputEncoding:t.outputEncoding},o=function(e){var t=e.data;t&&t.token==n.token&&(u.globalWorker.removeEventListener("message",o),"error"==t.type?r(void 0,new Error(t.error)):r(t.data))};u.globalWorker.addEventListener("message",o),u.globalWorker.postMessage(n,[])}else r(void 0,new TypeError("compressAsync: input is not a Uint8Array"))},u.decompressAsync=function(e,t,r){var n={token:Math.random().toString(),type:"decompress",data:e,inputEncoding:t.inputEncoding,outputEncoding:t.outputEncoding},o=function(e){var t=e.data;t&&t.token==n.token&&(u.globalWorker.removeEventListener("message",o),"error"==t.type?r(void 0,new Error(t.error)):r(t.data))};u.globalWorker.addEventListener("message",o),u.globalWorker.postMessage(n,[])},u.installWebWorkerIfNeeded=function(){"object"==typeof self&&void 0===self.document&&null!=self.addEventListener&&(self.addEventListener("message",function(e){var t=e.data;if("compress"==t.type){var r=void 0;try{r=i.compress(t.data,{outputEncoding:t.outputEncoding})}catch(e){return void self.postMessage({token:t.token,type:"error",error:i.createErrorMessage(e)},[])}(n={token:t.token,type:"compressionResult",data:r,encoding:t.outputEncoding}).data instanceof Uint8Array&&-1===navigator.appVersion.indexOf("MSIE 10")?self.postMessage(n,[n.data.buffer]):self.postMessage(n,[])}else if("decompress"==t.type){var n,o=void 0;try{o=i.decompress(t.data,{inputEncoding:t.inputEncoding,outputEncoding:t.outputEncoding})}catch(e){return void self.postMessage({token:t.token,type:"error",error:i.createErrorMessage(e)},[])}(n={token:t.token,type:"decompressionResult",data:o,encoding:t.outputEncoding}).data instanceof Uint8Array&&-1===navigator.appVersion.indexOf("MSIE 10")?self.postMessage(n,[n.data.buffer]):self.postMessage(n,[])}}),self.addEventListener("error",function(e){i.log(i.createErrorMessage(e.error,"Unexpected LZUTF8 WebWorker exception"))}))},u.createGlobalWorkerIfNeeded=function(){if(u.globalWorker)return!0;if(!i.webWorkersAvailable())return!1;if(!u.scriptURI&&"object"==typeof document){var e=document.getElementById("lzutf8");null!=e&&(u.scriptURI=e.getAttribute("src")||void 0)}return!!u.scriptURI&&(u.globalWorker=new Worker(u.scriptURI),!0)},u.terminate=function(){u.globalWorker&&(u.globalWorker.terminate(),u.globalWorker=void 0)},e.installWebWorkerIfNeeded()}(LZUTF8||(LZUTF8={})),function(e){var t=function(){function e(e,t,r){this.container=e,this.startPosition=t,this.length=r}return e.prototype.get=function(e){return this.container[this.startPosition+e]},e.prototype.getInReversedOrder=function(e){return this.container[this.startPosition+this.length-1-e]},e.prototype.set=function(e,t){this.container[this.startPosition+e]=t},e}();e.ArraySegment=t}(LZUTF8||(LZUTF8={})),function(e){var t;(t=e.ArrayTools||(e.ArrayTools={})).copyElements=function(e,t,r,n,o){for(;o--;)r[n++]=e[t++]},t.zeroElements=function(e,t,r){for(;r--;)e[t++]=0},t.countNonzeroValuesInArray=function(e){for(var t=0,r=0;r<e.length;r++)e[r]&&t++;return t},t.truncateStartingElements=function(e,t){if(e.length<=t)throw new RangeError("truncateStartingElements: Requested length should be smaller than array length");for(var r=e.length-t,n=0;n<t;n++)e[n]=e[r+n];e.length=t},t.doubleByteArrayCapacity=function(e){var t=new Uint8Array(2*e.length);return t.set(e),t},t.concatUint8Arrays=function(e){for(var t=0,r=0,n=e;r<n.length;r++)t+=(a=n[r]).length;for(var o=new Uint8Array(t),i=0,u=0,s=e;u<s.length;u++){var a=s[u];o.set(a,i),i+=a.length}return o},t.splitByteArray=function(e,t){for(var r=[],n=0;n<e.length;){var o=Math.min(t,e.length-n);r.push(e.subarray(n,n+o)),n+=o}return r}}(LZUTF8||(LZUTF8={})),function(e){var t;(t=e.BufferTools||(e.BufferTools={})).convertToUint8ArrayIfNeeded=function(e){return"function"==typeof Buffer&&Buffer.isBuffer(e)?t.bufferToUint8Array(e):e},t.uint8ArrayToBuffer=function(e){if(Buffer.prototype instanceof Uint8Array){var t=new Uint8Array(e.buffer,e.byteOffset,e.byteLength);return Object.setPrototypeOf(t,Buffer.prototype),t}for(var r=e.length,n=new Buffer(r),o=0;o<r;o++)n[o]=e[o];return n},t.bufferToUint8Array=function(e){if(Buffer.prototype instanceof Uint8Array)return new Uint8Array(e.buffer,e.byteOffset,e.byteLength);for(var t=e.length,r=new Uint8Array(t),n=0;n<t;n++)r[n]=e[n];return r}}(LZUTF8||(LZUTF8={})),function(o){var e;(e=o.CompressionCommon||(o.CompressionCommon={})).getCroppedBuffer=function(e,t,r,n){void 0===n&&(n=0);var o=new Uint8Array(r+n);return o.set(e.subarray(t,t+r)),o},e.getCroppedAndAppendedByteArray=function(e,t,r,n){return o.ArrayTools.concatUint8Arrays([e.subarray(t,t+r),n])},e.detectCompressionSourceEncoding=function(e){if(null==e)throw new TypeError("detectCompressionSourceEncoding: input is null or undefined");if("string"==typeof e)return"String";if(e instanceof Uint8Array||"function"==typeof Buffer&&Buffer.isBuffer(e))return"ByteArray";throw new TypeError("detectCompressionSourceEncoding: input must be of type 'string', 'Uint8Array' or 'Buffer'")},e.encodeCompressedBytes=function(e,t){switch(t){case"ByteArray":return e;case"Buffer":return o.BufferTools.uint8ArrayToBuffer(e);case"Base64":return o.encodeBase64(e);case"BinaryString":return o.encodeBinaryString(e);case"StorageBinaryString":return o.encodeStorageBinaryString(e);default:throw new TypeError("encodeCompressedBytes: invalid output encoding requested")}},e.decodeCompressedBytes=function(e,t){if(null==t)throw new TypeError("decodeCompressedData: Input is null or undefined");switch(t){case"ByteArray":case"Buffer":var r=o.BufferTools.convertToUint8ArrayIfNeeded(e);if(!(r instanceof Uint8Array))throw new TypeError("decodeCompressedData: 'ByteArray' or 'Buffer' input type was specified but input is not a Uint8Array or Buffer");return r;case"Base64":if("string"!=typeof e)throw new TypeError("decodeCompressedData: 'Base64' input type was specified but input is not a string");return o.decodeBase64(e);case"BinaryString":if("string"!=typeof e)throw new TypeError("decodeCompressedData: 'BinaryString' input type was specified but input is not a string");return o.decodeBinaryString(e);case"StorageBinaryString":if("string"!=typeof e)throw new TypeError("decodeCompressedData: 'StorageBinaryString' input type was specified but input is not a string");return o.decodeStorageBinaryString(e);default:throw new TypeError("decodeCompressedData: invalid input encoding requested: '"+t+"'")}},e.encodeDecompressedBytes=function(e,t){switch(t){case"String":return o.decodeUTF8(e);case"ByteArray":return e;case"Buffer":if("function"!=typeof Buffer)throw new TypeError("encodeDecompressedBytes: a 'Buffer' type was specified but is not supported at the current envirnment");return o.BufferTools.uint8ArrayToBuffer(e);default:throw new TypeError("encodeDecompressedBytes: invalid output encoding requested")}}}(LZUTF8||(LZUTF8={})),function(o){var t,e,i,u;e=t=o.EventLoop||(o.EventLoop={}),u=[],e.enqueueImmediate=function(e){u.push(e),1===u.length&&i()},e.initializeScheduler=function(){var t=function(){for(var e=0,t=u;e<t.length;e++){var r=t[e];try{r.call(void 0)}catch(e){o.printExceptionAndStackTraceToConsole(e,"enqueueImmediate exception")}}u.length=0};if(o.runningInNodeJS()&&(i=function(){return setImmediate(function(){return t()})}),"object"==typeof window&&"function"==typeof window.addEventListener&&"function"==typeof window.postMessage){var e,r="enqueueImmediate-"+Math.random().toString();window.addEventListener("message",function(e){e.data===r&&t()}),e=o.runningInNullOrigin()?"*":window.location.href,i=function(){return window.postMessage(r,e)}}else if("function"==typeof MessageChannel&&"function"==typeof MessagePort){var n=new MessageChannel;n.port1.onmessage=function(){return t()},i=function(){return n.port2.postMessage(0)}}else i=function(){return setTimeout(function(){return t()},0)}},e.initializeScheduler(),o.enqueueImmediate=function(e){return t.enqueueImmediate(e)}}(LZUTF8||(LZUTF8={})),function(e){var r;(r=e.ObjectTools||(e.ObjectTools={})).override=function(e,t){return r.extend(e,t)},r.extend=function(e,t){if(null==e)throw new TypeError("obj is null or undefined");if("object"!=typeof e)throw new TypeError("obj is not an object");if(null==t&&(t={}),"object"!=typeof t)throw new TypeError("newProperties is not an object");if(null!=t)for(var r in t)e[r]=t[r];return e}}(LZUTF8||(LZUTF8={})),function(o){o.getRandomIntegerInRange=function(e,t){return e+Math.floor(Math.random()*(t-e))},o.getRandomUTF16StringOfLength=function(e){for(var t="",r=0;r<e;r++){for(var n=void 0;55296<=(n=o.getRandomIntegerInRange(0,1114112))&&n<=57343;);t+=o.Encoding.CodePoint.decodeToString(n)}return t}}(LZUTF8||(LZUTF8={})),function(e){var t=function(){function e(e){void 0===e&&(e=1024),this.outputBufferCapacity=e,this.outputPosition=0,this.outputString="",this.outputBuffer=new Uint16Array(this.outputBufferCapacity)}return e.prototype.appendCharCode=function(e){this.outputBuffer[this.outputPosition++]=e,this.outputPosition===this.outputBufferCapacity&&this.flushBufferToOutputString()},e.prototype.appendCharCodes=function(e){for(var t=0,r=e.length;t<r;t++)this.appendCharCode(e[t])},e.prototype.appendString=function(e){for(var t=0,r=e.length;t<r;t++)this.appendCharCode(e.charCodeAt(t))},e.prototype.appendCodePoint=function(e){if(e<=65535)this.appendCharCode(e);else{if(!(e<=1114111))throw new Error("appendCodePoint: A code point of "+e+" cannot be encoded in UTF-16");this.appendCharCode(55296+(e-65536>>>10)),this.appendCharCode(56320+(e-65536&1023))}},e.prototype.getOutputString=function(){return this.flushBufferToOutputString(),this.outputString},e.prototype.flushBufferToOutputString=function(){this.outputPosition===this.outputBufferCapacity?this.outputString+=String.fromCharCode.apply(null,this.outputBuffer):this.outputString+=String.fromCharCode.apply(null,this.outputBuffer.subarray(0,this.outputPosition)),this.outputPosition=0},e}();e.StringBuilder=t}(LZUTF8||(LZUTF8={})),function(o){var e=function(){function e(){this.restart()}return e.prototype.restart=function(){this.startTime=e.getTimestamp()},e.prototype.getElapsedTime=function(){return e.getTimestamp()-this.startTime},e.prototype.getElapsedTimeAndRestart=function(){var e=this.getElapsedTime();return this.restart(),e},e.prototype.logAndRestart=function(e,t){void 0===t&&(t=!0);var r=this.getElapsedTime(),n=e+": "+r.toFixed(3)+"ms";return o.log(n,t),this.restart(),r},e.getTimestamp=function(){return this.timestampFunc||this.createGlobalTimestampFunction(),this.timestampFunc()},e.getMicrosecondTimestamp=function(){return Math.floor(1e3*e.getTimestamp())},e.createGlobalTimestampFunction=function(){if("object"==typeof process&&"function"==typeof process.hrtime){var r=0;this.timestampFunc=function(){var e=process.hrtime(),t=1e3*e[0]+e[1]/1e6;return r+t},r=Date.now()-this.timestampFunc()}else if("object"==typeof chrome&&chrome.Interval){var e=Date.now(),t=new chrome.Interval;t.start(),this.timestampFunc=function(){return e+t.microseconds()/1e3}}else if("object"==typeof performance&&performance.now){var n=Date.now()-performance.now();this.timestampFunc=function(){return n+performance.now()}}else Date.now?this.timestampFunc=function(){return Date.now()}:this.timestampFunc=function(){return(new Date).getTime()}},e}();o.Timer=e}(LZUTF8||(LZUTF8={})),function(n){var e=function(){function e(e){void 0===e&&(e=!0),this.MinimumSequenceLength=4,this.MaximumSequenceLength=31,this.MaximumMatchDistance=32767,this.PrefixHashTableSize=65537,this.inputBufferStreamOffset=1,e&&"function"==typeof Uint32Array?this.prefixHashTable=new n.CompressorCustomHashTable(this.PrefixHashTableSize):this.prefixHashTable=new n.CompressorSimpleHashTable(this.PrefixHashTableSize)}return e.prototype.compressBlock=function(e){if(null==e)throw new TypeError("compressBlock: undefined or null input received");return"string"==typeof e&&(e=n.encodeUTF8(e)),e=n.BufferTools.convertToUint8ArrayIfNeeded(e),this.compressUtf8Block(e)},e.prototype.compressUtf8Block=function(e){if(!e||0==e.length)return new Uint8Array(0);var t=this.cropAndAddNewBytesToInputBuffer(e),r=this.inputBuffer,n=this.inputBuffer.length;this.outputBuffer=new Uint8Array(e.length);for(var o=this.outputBufferPosition=0,i=t;i<n;i++){var u=r[i],s=i<o;if(i>n-this.MinimumSequenceLength)s||this.outputRawByte(u);else{var a=this.getBucketIndexForPrefix(i);if(!s){var c=this.findLongestMatch(i,a);null!=c&&(this.outputPointerBytes(c.length,c.distance),o=i+c.length,s=!0)}s||this.outputRawByte(u);var f=this.inputBufferStreamOffset+i;this.prefixHashTable.addValueToBucket(a,f)}}return this.outputBuffer.subarray(0,this.outputBufferPosition)},e.prototype.findLongestMatch=function(e,t){var r=this.prefixHashTable.getArraySegmentForBucketIndex(t,this.reusableArraySegmentObject);if(null==r)return null;for(var n,o=this.inputBuffer,i=0,u=0;u<r.length;u++){var s=r.getInReversedOrder(u)-this.inputBufferStreamOffset,a=e-s,c=void 0;if(c=void 0===n?this.MinimumSequenceLength-1:n<128&&128<=a?i+(i>>>1):i,a>this.MaximumMatchDistance||c>=this.MaximumSequenceLength||e+c>=o.length)break;if(o[s+c]===o[e+c])for(var f=0;;f++){if(e+f===o.length||o[s+f]!==o[e+f]){c<f&&(n=a,i=f);break}if(f===this.MaximumSequenceLength)return{distance:a,length:this.MaximumSequenceLength}}}return void 0!==n?{distance:n,length:i}:null},e.prototype.getBucketIndexForPrefix=function(e){return(7880599*this.inputBuffer[e]+39601*this.inputBuffer[e+1]+199*this.inputBuffer[e+2]+this.inputBuffer[e+3])%this.PrefixHashTableSize},e.prototype.outputPointerBytes=function(e,t){t<128?(this.outputRawByte(192|e),this.outputRawByte(t)):(this.outputRawByte(224|e),this.outputRawByte(t>>>8),this.outputRawByte(255&t))},e.prototype.outputRawByte=function(e){this.outputBuffer[this.outputBufferPosition++]=e},e.prototype.cropAndAddNewBytesToInputBuffer=function(e){if(void 0===this.inputBuffer)return this.inputBuffer=e,0;var t=Math.min(this.inputBuffer.length,this.MaximumMatchDistance),r=this.inputBuffer.length-t;return this.inputBuffer=n.CompressionCommon.getCroppedAndAppendedByteArray(this.inputBuffer,r,t,e),this.inputBufferStreamOffset+=r,t},e}();n.Compressor=e}(LZUTF8||(LZUTF8={})),function(s){var e=function(){function e(e){this.minimumBucketCapacity=4,this.maximumBucketCapacity=64,this.bucketLocators=new Uint32Array(2*e),this.storage=new Uint32Array(2*e),this.storageIndex=1}return e.prototype.addValueToBucket=function(e,t){e<<=1,this.storageIndex>=this.storage.length>>>1&&this.compact();var r,n=this.bucketLocators[e];if(0===n)n=this.storageIndex,r=1,this.storage[this.storageIndex]=t,this.storageIndex+=this.minimumBucketCapacity;else{(r=this.bucketLocators[e+1])===this.maximumBucketCapacity-1&&(r=this.truncateBucketToNewerElements(n,r,this.maximumBucketCapacity/2));var o=n+r;0===this.storage[o]?(this.storage[o]=t,o===this.storageIndex&&(this.storageIndex+=r)):(s.ArrayTools.copyElements(this.storage,n,this.storage,this.storageIndex,r),n=this.storageIndex,this.storageIndex+=r,this.storage[this.storageIndex++]=t,this.storageIndex+=r),r++}this.bucketLocators[e]=n,this.bucketLocators[e+1]=r},e.prototype.truncateBucketToNewerElements=function(e,t,r){var n=e+t-r;return s.ArrayTools.copyElements(this.storage,n,this.storage,e,r),s.ArrayTools.zeroElements(this.storage,e+r,t-r),r},e.prototype.compact=function(){var e=this.bucketLocators,t=this.storage;this.bucketLocators=new Uint32Array(this.bucketLocators.length),this.storageIndex=1;for(var r=0;r<e.length;r+=2){var n=e[r+1];0!==n&&(this.bucketLocators[r]=this.storageIndex,this.bucketLocators[r+1]=n,this.storageIndex+=Math.max(Math.min(2*n,this.maximumBucketCapacity),this.minimumBucketCapacity))}this.storage=new Uint32Array(8*this.storageIndex);for(r=0;r<e.length;r+=2){var o=e[r];if(0!==o){var i=this.bucketLocators[r],u=this.bucketLocators[r+1];s.ArrayTools.copyElements(t,o,this.storage,i,u)}}},e.prototype.getArraySegmentForBucketIndex=function(e,t){e<<=1;var r=this.bucketLocators[e];return 0===r?null:(void 0===t&&(t=new s.ArraySegment(this.storage,r,this.bucketLocators[e+1])),t)},e.prototype.getUsedBucketCount=function(){return Math.floor(s.ArrayTools.countNonzeroValuesInArray(this.bucketLocators)/2)},e.prototype.getTotalElementCount=function(){for(var e=0,t=0;t<this.bucketLocators.length;t+=2)e+=this.bucketLocators[t+1];return e},e}();s.CompressorCustomHashTable=e}(LZUTF8||(LZUTF8={})),function(n){var e=function(){function e(e){this.maximumBucketCapacity=64,this.buckets=new Array(e)}return e.prototype.addValueToBucket=function(e,t){var r=this.buckets[e];void 0===r?this.buckets[e]=[t]:(r.length===this.maximumBucketCapacity-1&&n.ArrayTools.truncateStartingElements(r,this.maximumBucketCapacity/2),r.push(t))},e.prototype.getArraySegmentForBucketIndex=function(e,t){var r=this.buckets[e];return void 0===r?null:(void 0===t&&(t=new n.ArraySegment(r,0,r.length)),t)},e.prototype.getUsedBucketCount=function(){return n.ArrayTools.countNonzeroValuesInArray(this.buckets)},e.prototype.getTotalElementCount=function(){for(var e=0,t=0;t<this.buckets.length;t++)void 0!==this.buckets[t]&&(e+=this.buckets[t].length);return e},e}();n.CompressorSimpleHashTable=e}(LZUTF8||(LZUTF8={})),function(f){var e=function(){function e(){this.MaximumMatchDistance=32767,this.outputPosition=0}return e.prototype.decompressBlockToString=function(e){return e=f.BufferTools.convertToUint8ArrayIfNeeded(e),f.decodeUTF8(this.decompressBlock(e))},e.prototype.decompressBlock=function(e){this.inputBufferRemainder&&(e=f.ArrayTools.concatUint8Arrays([this.inputBufferRemainder,e]),this.inputBufferRemainder=void 0);for(var t=this.cropOutputBufferToWindowAndInitialize(Math.max(4*e.length,1024)),r=0,n=e.length;r<n;r++){var o=e[r];if(o>>>6==3){var i=o>>>5;if(r==n-1||r==n-2&&7==i){this.inputBufferRemainder=e.subarray(r);break}if(e[r+1]>>>7==1)this.outputByte(o);else{var u=31&o,s=void 0;6==i?(s=e[r+1],r+=1):(s=e[r+1]<<8|e[r+2],r+=2);for(var a=this.outputPosition-s,c=0;c<u;c++)this.outputByte(this.outputBuffer[a+c])}}else this.outputByte(o)}return this.rollBackIfOutputBufferEndsWithATruncatedMultibyteSequence(),f.CompressionCommon.getCroppedBuffer(this.outputBuffer,t,this.outputPosition-t)},e.prototype.outputByte=function(e){this.outputPosition===this.outputBuffer.length&&(this.outputBuffer=f.ArrayTools.doubleByteArrayCapacity(this.outputBuffer)),this.outputBuffer[this.outputPosition++]=e},e.prototype.cropOutputBufferToWindowAndInitialize=function(e){if(!this.outputBuffer)return this.outputBuffer=new Uint8Array(e),0;var t=Math.min(this.outputPosition,this.MaximumMatchDistance);if(this.outputBuffer=f.CompressionCommon.getCroppedBuffer(this.outputBuffer,this.outputPosition-t,t,e),this.outputPosition=t,this.outputBufferRemainder){for(var r=0;r<this.outputBufferRemainder.length;r++)this.outputByte(this.outputBufferRemainder[r]);this.outputBufferRemainder=void 0}return t},e.prototype.rollBackIfOutputBufferEndsWithATruncatedMultibyteSequence=function(){for(var e=1;e<=4&&0<=this.outputPosition-e;e++){var t=this.outputBuffer[this.outputPosition-e];if(e<4&&t>>>3==30||e<3&&t>>>4==14||e<2&&t>>>5==6)return this.outputBufferRemainder=this.outputBuffer.subarray(this.outputPosition-e,this.outputPosition),void(this.outputPosition-=e)}},e}();f.Decompressor=e}(LZUTF8||(LZUTF8={})),function(s){var e,t,a,c;e=s.Encoding||(s.Encoding={}),t=e.Base64||(e.Base64={}),a=new Uint8Array([65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,48,49,50,51,52,53,54,55,56,57,43,47]),c=new Uint8Array([255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,62,255,255,255,63,52,53,54,55,56,57,58,59,60,61,255,255,255,0,255,255,255,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,255,255,255,255,255,255,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,255,255,255,255]),t.encode=function(e){return e&&0!=e.length?s.runningInNodeJS()?s.BufferTools.uint8ArrayToBuffer(e).toString("base64"):t.encodeWithJS(e):""},t.decode=function(e){return e?s.runningInNodeJS()?s.BufferTools.bufferToUint8Array(new Buffer(e,"base64")):t.decodeWithJS(e):new Uint8Array(0)},t.encodeWithJS=function(e,t){if(void 0===t&&(t=!0),!e||0==e.length)return"";for(var r,n=a,o=new s.StringBuilder,i=0,u=e.length;i<u;i+=3)i<=u-3?(r=e[i]<<16|e[i+1]<<8|e[i+2],o.appendCharCode(n[r>>>18&63]),o.appendCharCode(n[r>>>12&63]),o.appendCharCode(n[r>>>6&63]),o.appendCharCode(n[63&r]),r=0):i===u-2?(r=e[i]<<16|e[i+1]<<8,o.appendCharCode(n[r>>>18&63]),o.appendCharCode(n[r>>>12&63]),o.appendCharCode(n[r>>>6&63]),t&&o.appendCharCode(61)):i===u-1&&(r=e[i]<<16,o.appendCharCode(n[r>>>18&63]),o.appendCharCode(n[r>>>12&63]),t&&(o.appendCharCode(61),o.appendCharCode(61)));return o.getOutputString()},t.decodeWithJS=function(e,t){if(!e||0==e.length)return new Uint8Array(0);var r=e.length%4;if(1===r)throw new Error("Invalid Base64 string: length % 4 == 1");2===r?e+="==":3===r&&(e+="="),t||(t=new Uint8Array(e.length));for(var n=0,o=e.length,i=0;i<o;i+=4){var u=c[e.charCodeAt(i)]<<18|c[e.charCodeAt(i+1)]<<12|c[e.charCodeAt(i+2)]<<6|c[e.charCodeAt(i+3)];t[n++]=u>>>16&255,t[n++]=u>>>8&255,t[n++]=255&u}return 61==e.charCodeAt(o-1)&&n--,61==e.charCodeAt(o-2)&&n--,t.subarray(0,n)}}(LZUTF8||(LZUTF8={})),function(s){var e,t;e=s.Encoding||(s.Encoding={}),(t=e.BinaryString||(e.BinaryString={})).encode=function(e){if(null==e)throw new TypeError("BinaryString.encode: undefined or null input received");if(0===e.length)return"";for(var t=e.length,r=new s.StringBuilder,n=0,o=1,i=0;i<t;i+=2){var u=void 0;u=i==t-1?e[i]<<8:e[i]<<8|e[i+1],r.appendCharCode(n<<16-o|u>>>o),n=u&(1<<o)-1,15===o?(r.appendCharCode(n),n=0,o=1):o+=1,t-2<=i&&r.appendCharCode(n<<16-o)}return r.appendCharCode(32768|t%2),r.getOutputString()},t.decode=function(e){if("string"!=typeof e)throw new TypeError("BinaryString.decode: invalid input type");if(""==e)return new Uint8Array(0);for(var t,r=new Uint8Array(3*e.length),n=0,o=0,i=0,u=0;u<e.length;u++){var s=e.charCodeAt(u);32768<=s?(32769==s&&n--,i=0):(0==i?o=s:(t=o<<i|s>>>15-i,r[n++]=t>>>8,r[n++]=255&t,o=s&(1<<15-i)-1),15==i?i=0:i+=1)}return r.subarray(0,n)}}(LZUTF8||(LZUTF8={})),function(e){var t,r;t=e.Encoding||(e.Encoding={}),(r=t.CodePoint||(t.CodePoint={})).encodeFromString=function(e,t){var r=e.charCodeAt(t);if(r<55296||56319<r)return r;var n=e.charCodeAt(t+1);if(56320<=n&&n<=57343)return n-56320+(r-55296<<10)+65536;throw new Error("getUnicodeCodePoint: Received a lead surrogate character, char code "+r+", followed by "+n+", which is not a trailing surrogate character code.")},r.decodeToString=function(e){if(e<=65535)return String.fromCharCode(e);if(e<=1114111)return String.fromCharCode(55296+(e-65536>>>10),56320+(e-65536&1023));throw new Error("getStringFromUnicodeCodePoint: A code point of "+e+" cannot be encoded in UTF-16")}}(LZUTF8||(LZUTF8={})),function(e){var t,r,n;t=e.Encoding||(e.Encoding={}),r=t.DecimalString||(t.DecimalString={}),n=["000","001","002","003","004","005","006","007","008","009","010","011","012","013","014","015","016","017","018","019","020","021","022","023","024","025","026","027","028","029","030","031","032","033","034","035","036","037","038","039","040","041","042","043","044","045","046","047","048","049","050","051","052","053","054","055","056","057","058","059","060","061","062","063","064","065","066","067","068","069","070","071","072","073","074","075","076","077","078","079","080","081","082","083","084","085","086","087","088","089","090","091","092","093","094","095","096","097","098","099","100","101","102","103","104","105","106","107","108","109","110","111","112","113","114","115","116","117","118","119","120","121","122","123","124","125","126","127","128","129","130","131","132","133","134","135","136","137","138","139","140","141","142","143","144","145","146","147","148","149","150","151","152","153","154","155","156","157","158","159","160","161","162","163","164","165","166","167","168","169","170","171","172","173","174","175","176","177","178","179","180","181","182","183","184","185","186","187","188","189","190","191","192","193","194","195","196","197","198","199","200","201","202","203","204","205","206","207","208","209","210","211","212","213","214","215","216","217","218","219","220","221","222","223","224","225","226","227","228","229","230","231","232","233","234","235","236","237","238","239","240","241","242","243","244","245","246","247","248","249","250","251","252","253","254","255"],r.encode=function(e){for(var t=[],r=0;r<e.length;r++)t.push(n[e[r]]);return t.join(" ")}}(LZUTF8||(LZUTF8={})),function(e){var t,r;t=e.Encoding||(e.Encoding={}),(r=t.StorageBinaryString||(t.StorageBinaryString={})).encode=function(e){return t.BinaryString.encode(e).replace(/\0/g,"耂")},r.decode=function(e){return t.BinaryString.decode(e.replace(/\u8002/g,"\0"))}}(LZUTF8||(LZUTF8={})),function(a){var i,t,r,n;i=a.Encoding||(a.Encoding={}),(t=i.UTF8||(i.UTF8={})).encode=function(e){return e&&0!=e.length?a.runningInNodeJS()?a.BufferTools.bufferToUint8Array(new Buffer(e,"utf8")):t.createNativeTextEncoderAndDecoderIfAvailable()?r.encode(e):t.encodeWithJS(e):new Uint8Array(0)},t.decode=function(e){return e&&0!=e.length?a.runningInNodeJS()?a.BufferTools.uint8ArrayToBuffer(e).toString("utf8"):t.createNativeTextEncoderAndDecoderIfAvailable()?n.decode(e):t.decodeWithJS(e):""},t.encodeWithJS=function(e,t){if(!e||0==e.length)return new Uint8Array(0);t||(t=new Uint8Array(4*e.length));for(var r=0,n=0;n<e.length;n++){var o=i.CodePoint.encodeFromString(e,n);if(o<=127)t[r++]=o;else if(o<=2047)t[r++]=192|o>>>6,t[r++]=128|63&o;else if(o<=65535)t[r++]=224|o>>>12,t[r++]=128|o>>>6&63,t[r++]=128|63&o;else{if(!(o<=1114111))throw new Error("Invalid UTF-16 string: Encountered a character unsupported by UTF-8/16 (RFC 3629)");t[r++]=240|o>>>18,t[r++]=128|o>>>12&63,t[r++]=128|o>>>6&63,t[r++]=128|63&o,n++}}return t.subarray(0,r)},t.decodeWithJS=function(e,t,r){if(void 0===t&&(t=0),!e||0==e.length)return"";void 0===r&&(r=e.length);for(var n,o,i=new a.StringBuilder,u=t,s=r;u<s;){if((o=e[u])>>>7==0)n=o,u+=1;else if(o>>>5==6){if(r<=u+1)throw new Error("Invalid UTF-8 stream: Truncated codepoint sequence encountered at position "+u);n=(31&o)<<6|63&e[u+1],u+=2}else if(o>>>4==14){if(r<=u+2)throw new Error("Invalid UTF-8 stream: Truncated codepoint sequence encountered at position "+u);n=(15&o)<<12|(63&e[u+1])<<6|63&e[u+2],u+=3}else{if(o>>>3!=30)throw new Error("Invalid UTF-8 stream: An invalid lead byte value encountered at position "+u);if(r<=u+3)throw new Error("Invalid UTF-8 stream: Truncated codepoint sequence encountered at position "+u);n=(7&o)<<18|(63&e[u+1])<<12|(63&e[u+2])<<6|63&e[u+3],u+=4}i.appendCodePoint(n)}return i.getOutputString()},t.createNativeTextEncoderAndDecoderIfAvailable=function(){return!!r||"function"==typeof TextEncoder&&(r=new TextEncoder("utf-8"),n=new TextDecoder("utf-8"),!0)}}(LZUTF8||(LZUTF8={})),function(o){o.compress=function(e,t){if(void 0===t&&(t={}),null==e)throw new TypeError("compress: undefined or null input received");var r=o.CompressionCommon.detectCompressionSourceEncoding(e);t=o.ObjectTools.override({inputEncoding:r,outputEncoding:"ByteArray"},t);var n=(new o.Compressor).compressBlock(e);return o.CompressionCommon.encodeCompressedBytes(n,t.outputEncoding)},o.decompress=function(e,t){if(void 0===t&&(t={}),null==e)throw new TypeError("decompress: undefined or null input received");t=o.ObjectTools.override({inputEncoding:"ByteArray",outputEncoding:"String"},t);var r=o.CompressionCommon.decodeCompressedBytes(e,t.inputEncoding),n=(new o.Decompressor).decompressBlock(r);return o.CompressionCommon.encodeDecompressedBytes(n,t.outputEncoding)},o.compressAsync=function(e,t,r){var n;null==r&&(r=function(){});try{n=o.CompressionCommon.detectCompressionSourceEncoding(e)}catch(e){return void r(void 0,e)}t=o.ObjectTools.override({inputEncoding:n,outputEncoding:"ByteArray",useWebWorker:!0,blockSize:65536},t),o.enqueueImmediate(function(){t.useWebWorker&&o.WebWorker.createGlobalWorkerIfNeeded()?o.WebWorker.compressAsync(e,t,r):o.AsyncCompressor.compressAsync(e,t,r)})},o.decompressAsync=function(e,t,r){if(null==r&&(r=function(){}),null!=e){t=o.ObjectTools.override({inputEncoding:"ByteArray",outputEncoding:"String",useWebWorker:!0,blockSize:65536},t);var n=o.BufferTools.convertToUint8ArrayIfNeeded(e);o.EventLoop.enqueueImmediate(function(){t.useWebWorker&&o.WebWorker.createGlobalWorkerIfNeeded()?o.WebWorker.decompressAsync(n,t,r):o.AsyncDecompressor.decompressAsync(e,t,r)})}else r(void 0,new TypeError("decompressAsync: undefined or null input received"))},o.createCompressionStream=function(){return o.AsyncCompressor.createCompressionStream()},o.createDecompressionStream=function(){return o.AsyncDecompressor.createDecompressionStream()},o.encodeUTF8=function(e){return o.Encoding.UTF8.encode(e)},o.decodeUTF8=function(e){return o.Encoding.UTF8.decode(e)},o.encodeBase64=function(e){return o.Encoding.Base64.encode(e)},o.decodeBase64=function(e){return o.Encoding.Base64.decode(e)},o.encodeBinaryString=function(e){return o.Encoding.BinaryString.encode(e)},o.decodeBinaryString=function(e){return o.Encoding.BinaryString.decode(e)},o.encodeStorageBinaryString=function(e){return o.Encoding.StorageBinaryString.encode(e)},o.decodeStorageBinaryString=function(e){return o.Encoding.StorageBinaryString.decode(e)}}(LZUTF8||(LZUTF8={})); 
-
-if(Object.keys(exports).length){window['lzutf8']=exports;}
-exports={};
-
 //core/utils.js
 exports={};
+
+
+var __caph_definitions__ = window.__caph_definitions__ || {};
+
+
+/** @type {((obj:string)=>true)|(obj:any)=>false} */
+function is_string(obj) {
+  return Object.prototype.toString.call(obj) === "[object String]";
+}
 
 function assert(condition, ...messages) {
   if (condition) return;
@@ -146,6 +138,21 @@ class MyPromise {
 
 
 class MyDocument {
+
+  /**
+   * @param {string} tag 
+   * @param {{
+   *  style?: {[key: string]: string},
+   *  id?: string,
+   * classList?: string[],
+   * text?: string,
+   * html?: string,
+   * eventListeners?: {[key: string]: (e: Event) => void},
+   * parent?: HTMLElement,
+   * where?: 'beforebegin' | 'afterbegin' | 'beforeend' | 'afterend',
+   * }} 
+   * @returns {HTMLElement}
+   */
   static createElement(tag, {
     style = {}, id = null, classList = [], text = null, html = null,
     eventListeners = {}, parent = null, where = null, ...attrs } = {}) {
@@ -333,7 +340,715 @@ function update_property_handler(object, property, create_handler) {
   Object.defineProperty(object, property, create_handler(prev));
 }
 
+
+__caph_definitions__.Dequeue = class {
+  constructor(arr) {
+    this.data = [...(arr || [])];
+    this.lr = [0, arr.length];
+  }
+  get capacity() {
+    return this.data.length;
+  }
+  get length() {
+    const [i, j] = this.lr;
+    return j >= i ? j - i : this.capacity - i + j;
+  }
+  toArray() {
+    const [i, j] = this.lr;
+    if (j >= i) return this.data.slice(i, j);
+    else return this.data.slice(i).concat(this.data.slice(0, j));
+  }
+  resize(newLength) {
+    if (newLength === undefined) {
+      if (this.length + 1 >= this.capacity) this.resize(3 * this.length);
+      if (this.length - 1 <= this.capacity << 2) this.resize(this.length << 1);
+      return;
+    }
+    const arr = this.toArray()
+    this.data = [...arr, ...new Array(newLength - arr.length).fill(null)];
+    this.lr = [0, arr.length];
+  }
+  _mod_add(lrIndex, retK, afterK) {
+    const add = (i, k) => ((i % this.capacity) + k + this.capacity) % this.capacity;
+    const out = add(this.lr[lrIndex], retK);
+    this.lr[lrIndex] = add(this.lr[lrIndex], afterK);
+    return out;
+  }
+  pushRight(x) {
+    this.resize();
+    this.data[this._mod_add(1, 0, +1)] = x;
+  }
+  pushLeft(x) {
+    this.resize();
+    this.data[this._mod_add(0, -1, -1)] = x;
+  }
+  popRight() {
+    this.resize();
+    return this.data[this._mod_add(1, -1, -1)];
+  }
+  popLeft() {
+    this.resize();
+    return this.data[this._mod_add(0, 0, +1)];
+  }
+}
+
 if(Object.keys(exports).length){window['utils']=exports;}
+exports={};
+
+//core/parser.js
+exports={};
+//@ts-check
+/// <reference path="types.js" />
+/// <reference path="utils.js" />
+
+/** @typedef {({children, ...props})=>any} ComponentType*/
+/** @typedef {Object} AttributesType*/
+/** @typedef {string|ComponentType|null} TagType*/
+/** @typedef {(type:any, props:any, ...children)=>any} CreateElementType*/
+/** @typedef {(text:string) => AstNode} RuleParser*/
+/** @typedef {{regStart:string, regEnd:string, parser:RuleParser}} CustomRule*/
+/**
+ * @typedef {string|
+ * [string|ComponentType, AttributesType|null, AstNodeArray]|
+ * [null, null, AstNodeArray]
+ * } AstNode
+*/
+/** @typedef {AstNode[]} AstNodeArray*/
+
+__caph_definitions__.ConsoleProxy = class{
+  log(...args){ console.log(...args);}
+  warn(...args){ console.warn(...args);}
+  error(...args){ console.error(...args);}
+}
+
+
+
+__caph_definitions__.BaseParser = class {
+
+  // constructor(newAstNode=null) {
+  //   this.newAstNode = newAstNode? newAstNode:((tag, props, ...children) => [tag, props, children]);
+  // }
+
+  //console = new __caph_definitions__.ConsoleProxy();
+
+  ESC = '\ue000';
+  SPEC = `https://html.spec.whatwg.org/multipage/syntax.html`;
+  DEBUG = false;
+
+  /**
+   * @param {null|{createElement:CreateElementType, FragmentComponent:ComponentType}} post
+  */
+  static parserFactory(post=null){
+    const cls = this;
+
+    const parse = ({raw:strings}, ...values)=>evalAst(new cls(strings, values).root);
+    const parseAst = ({raw:strings}, ...values)=> new cls(strings, values).root;
+
+    const {createElement, FragmentComponent} = post||{
+      createElement: (type, props, ...children)=> (!type||is_string(type))?
+        [type, props, children] : type({children, ...props}),
+      FragmentComponent: ({children})=>[null, null, children],
+    };
+
+    const evalAst = (/** @type {AstNode}*/ root) => {
+      if(is_string(root)) return root;
+      // HOTFIX: when there is a children list inside the preact parser,
+      // it will not be an AstNode!
+      if (!Array.isArray(root)) return root;
+      let [tag, props, children] = root;
+      children = children.map(child => evalAst(child));
+      if(tag==null){
+        assert(props==null);
+        return FragmentComponent({children});
+      }
+      return createElement(tag, props, ...children);
+    }
+
+    return {parse, parseAst, evalAst};
+  }
+
+  /**
+   * @param {null|{createElement:CreateElementType, FragmentComponent:ComponentType}} post
+  */
+  static debugParserFactory(post=null){
+    const cls = this;
+    const {evalAst, parse, parseAst} = this.parserFactory(post);
+    const parse1 = ({raw:strings}, ...values)=>evalAst(new cls(strings, values, 1).root);
+    const parse2 = ({raw:strings}, ...values)=>evalAst(new cls(strings, values, 2).root);
+    const parseAst1 = ({raw:strings}, ...values)=> new cls(strings, values, 1).root;
+    const parseAst2 = ({raw:strings}, ...values)=> new cls(strings, values, 2).root;
+    return {parse, parse1, parse2, parseAst, parseAst1, parseAst2, evalAst};
+  }
+
+  /** @type {CustomRule[]} */
+  static customRules = [];
+
+  constructor(/** @type {string[]}*/ strings, values, debug=0){
+    let str = strings.join(this.ESC);
+    let escaped = {};
+    str = str.replace(new RegExp(String.raw`${this.ESC}|\\"|\\'|\\\`|\\$\\$|\\$(?=[^\\$])`), (match, index)=>{
+      //console.log(`Escaping ${match} at ${index}`);
+      escaped[index] = match;
+      return this.ESC;
+    });
+    this.pos = 0;
+    this.str = str;
+    this.values = values;
+    this.valueIndex = 0;
+    this.escaped = escaped;
+    this.errorStop = false;
+    debug && console.log('PARSING', this.str);
+    this.DEBUG = debug==2;
+
+    const cls = this.constructor;
+    /** @type {CustomRule[]} */ //@ts-ignore
+    this.customRules = cls.customRules;
+    /** @type {(tag:TagType)=>(null|string[])} */ //@ts-ignore
+    this.optionalClose = cls.optionalClose.bind(cls);
+
+    this.REG_EXP_TEXT = new RegExp(`.*?(?=${[
+      '$', '<', this.ESC,
+      ...this.customRules.map(({regStart})=>regStart),
+    ].join('|')})`, 'ys');
+
+    const elems = this.parseSiblings(null, []);
+    const /** @type {AstNode} */ root = elems.length==1 ? elems[0] : [null, null, elems];
+    if(this.pos!=this.str.length) console.warn(`Not all the string was consumed: ${this.pos}/${this.str.length}`);
+    this.root = root;
+  }
+
+  childlessTags = {
+    br:true, '!doctype': true, area: true, base: true, col: true, command: true, embed: true, hr: true,img: true, input: true,keygen: true, link: true, meta: true, param: true, source: true, track: true, wbr: true
+  };
+
+  spacePreservingTags = {
+    'pre': true, 'span': true, 'code': true, 'p': true, 'b': true, 'i': true,
+    'a': true, 'li': true,
+  };
+
+
+  // https://html.spec.whatwg.org/multipage/syntax.html#optional-tags
+  /** @type {{[key:string]:string[]}}*/
+  static _optionalClose = {
+    'li': ['li'],
+    'dt': ['dt', 'dd'],
+    'dd': ['dd', 'dt'],
+    'p': ['p', 'address', 'article', 'aside', 'blockquote', 'details', 'div', 'dl', 'fieldset', 'figcaption', 'figure', 'footer', 'form', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'header', 'hgroup', 'hr', 'main', 'menu', 'nav', 'ol', 'pre', 'section', 'table'],
+    'rt': ['rt', 'rp'],
+    'rp': ['rp', 'rt'],
+    'optgroup': ['optgroup'],
+    'option': ['option', 'optgroup'],
+    //'caption': [], // Disabled rule
+    //'colgroup': [], // Disabled rule
+    'thead': ['tbody','tfoot'],
+    'tbody': ['tbody', 'tfoot'],
+    'tfoot': [],
+    'tr': ['tr'],
+    'td': ['td', 'th'],
+    'th': ['th', 'td'],
+  };
+
+  static optionalClose(/** @type {TagType}*/ tag){
+    if(!tag || !is_string(tag)) return null;
+    return this._optionalClose[/** @type {string} tag */(tag)];
+  }
+
+  run(/** @type {RegExp}*/regExp){
+    // Execute the regular expression on str at pos, and move forward
+    const {pos, str} = this;
+    regExp.lastIndex = pos;
+    const match = regExp.exec(str);
+    if(!match) throw `No match for ${regExp} with string: ...${str.slice(pos)}`
+    if(match.index<pos) throw `Regexp must use 'ys' flag. Match for at ${match.index} is before previous match at ${pos}`;
+    const out = [...match];
+    this.pos += out[0].length;
+    return out;
+  }
+
+  try_run(/** @type {RegExp}*/regExp){
+    try{ return this.run(regExp); }
+    catch(e){ return null; }
+  }
+  try_run_undo(/** @type {RegExp}*/regExp){
+    const pos = this.pos;
+    try{ return this.run(regExp); }
+    catch(e){ return null; }
+    finally{ this.pos = pos; }
+  }
+
+  _currentPos() { // Just for printing debug info
+    const {pos, str} = this;
+    const short = str.slice(pos, pos+50).replace('\n', '(\\n)');
+    return `${pos}...${short}...${pos+50}`;
+  }
+
+  /**
+   * @param {TagType} parentTag
+   * @param {AstNode[]} siblings
+   * @returns {AstNode[]}*/
+  parseSiblings(parentTag, siblings){
+    /*
+      Parses the children of a parent tag or fragment.
+      Called (i) from the root level,
+      or (ii) after a parent "head" (`<div ...>`) has been consumed,
+      or (iii) after a sibling has been consumed entirely.
+     */
+    this.DEBUG && console.log('parseSibling', parentTag, siblings, this._currentPos());
+    assert(parentTag!==undefined);
+    // Parse text preceeding the first sibling
+    let [text] = this.run(this.REG_EXP_TEXT);
+    if(text.length) text = this.trimText(parentTag, text);
+    if(text.length) siblings.push(text);
+    if(this.try_run(new RegExp(`${this.ESC}`, 'ys'))){
+      let value = this.values[this.valueIndex++];
+      //assert(this.str[this.pos - 1] == this.ESC)
+      if (Array.isArray(value)) siblings.push(...value); // PROBLEM
+      else siblings.push(this.asString(value));
+      return this.parseSiblings(parentTag, siblings);
+    }
+    let endReached = this.pos==this.str.length;
+    if(endReached){
+      if(parentTag && !this.optionalClose(parentTag)){
+        console.warn(`Expected closing tag </${parentTag}> or </> after ${text}. Ignoring what follows`);
+        this.errorStop = true;
+      }
+      return siblings;
+    }
+    if(this.customRules.length){
+      for(let {regStart, regEnd, parser} of this.customRules){
+        let m = this.try_run(new RegExp(`${regStart}(.*?)${regEnd}`, 'ys'));
+        if(m){
+          siblings.push(parser(m[1]));
+          return this.parseSiblings(parentTag, siblings);
+        }
+      }
+    }
+
+    // Comment, DOCTYPE, or CDATA
+    if(this.str.startsWith('<!', this.pos)){
+      let result = this.try_run(new RegExp([
+        `<!--.*?-->`,
+        `<!\\[CDATA\\[.*?\\]\\]>`,
+        `<!DOCTYPE\\s*.*?>`,
+      ].join('|'), 'iys'));
+      if(!result){
+        console.error(`Unexpected <! at ${this._currentPos()}\nIgnoring what follows.`);
+        this.errorStop = true;
+        return siblings;
+      }
+      let [text] = result;
+      if(text.endsWith('/>')) console.warn(`Non compliant tag found.\n${this.SPEC}`);
+      this.replaceText(text, this.pos-text.length); // Consume the fields inside, if any
+      return this.parseSiblings(parentTag, siblings);
+    }
+    // Parent close
+    let /** @type {TagType} */ tag;
+    if(this.try_run(/<\/\s*>/ys)) return siblings;
+    if(this.try_run(/<\//ys)){
+      let result = this.try_run(new RegExp(`(.*?)\\s*>`, 'ys'));
+      if(!result){
+        console.error(`Expected close tag for parent ${parentTag||'fragment'} at ${this._currentPos()}\nIgnoring what follows.`);
+        this.errorStop = true;
+        return siblings;
+      }
+      let _tag = result[1];
+      if (_tag==this.ESC) tag = this.values[this.valueIndex++];
+      else tag = _tag;
+      if(tag!==parentTag){
+        console.error(`Unmatched close tag ${tag}!=${parentTag} at ${this._currentPos()}\nIgnoring what follows.`);
+        this.errorStop = true;
+      }
+      return siblings;
+    }
+    const optionalClose = this.optionalClose(parentTag);
+    if(optionalClose) for(let tag of optionalClose){
+      if(this.try_run_undo(new RegExp(`<${tag}(>|\\s)`, 'ys'),)){
+        return siblings;
+      }
+    }
+    // Parse the first sibling
+    let reg = new RegExp(`<([^\\s>\\/\\.]*)`, 'ys');
+    let _tag = this.run(reg)[1];
+    if (_tag==this.ESC) tag = this.values[this.valueIndex++];
+    else if(!_tag.length) tag = null; //null means fragment
+    else if(_tag.match(/[^a-z0-9._-]/i)){
+      console.error(`Error with tag ${_tag} before ${this._currentPos()}\nIgnoring what follows.`);
+      this.errorStop = true;
+      return siblings;
+    }
+    else tag = _tag;
+    if (tag === undefined) tag = null, console.error(`Undefined component at ${this._currentPos()}`);
+    const newSibling = this.parseParent(tag, null, []);
+    if(tag) siblings.push(newSibling);
+    else siblings.push(... newSibling[2]); // shortcut fragment nieces as siblings
+    if(this.errorStop) return siblings;
+    return this.parseSiblings(parentTag, siblings);
+  }
+
+  /**
+   * @param {TagType} tag
+   * @param {Object|null} props
+   * @param {AstNode[]} children
+   * @returns {AstNode}*/
+  parseParent(tag, props=null, children=[]){
+    /*
+      Parses after `<div ` has been consumed
+      or after `<div attr1 attr2="value" ` has been consumed
+      Thus, it just checks for more attributes or `>` or `/>`
+    */
+    this.DEBUG && console.log('parseParent ', tag, props, children, this._currentPos());
+    if(tag===undefined) throw '';
+    this.run(/\s*/ys); // Consume whitespace
+    if(this.pos==this.str.length){
+      console.warn(`Expected closing end ...> or .../> for tag ${tag}`);
+      this.errorStop = true;
+      return [tag, props, children];
+    }
+    let headClosed = !!this.try_run(/>/ys);
+    let fullyClosed = (headClosed && !!this.childlessTags[(''+tag)?.toLowerCase()]) ||
+      !!this.try_run(/\/>/ys);
+    if(fullyClosed) return [tag, props, children];
+    if(headClosed){
+      children = this.parseSiblings(tag, children);
+      return [tag, props, children];
+    }
+    if(!props) props = {};
+    if(this.try_run(new RegExp(`\\.\\.\\.${this.ESC}`, 'ys'))){
+      props = {...props, ...this.values[this.valueIndex++]};
+    }
+    else{
+      let [key] = this.run(/.*?(?=\s|>|=)/ys);
+      let _value = this.try_run(/=/ys) && this.run(new RegExp(`\\".*?\\"|\\'.*?\\'|${this.ESC}`, 'ys'))[0];
+      let value;
+      if(!_value) value = true;
+      else if(_value==this.ESC) value=this.values[this.valueIndex++];
+      else value = this.replaceText(_value.slice(1,-1), this.pos-_value.length+1); // slice for quotes
+      props[key] = value;
+    }
+    return this.parseParent(tag, props, children);
+  }
+
+  /**
+   * @param {TagType} parentTag
+   * @param {string} text
+   * @returns {string}*/
+  trimText(parentTag, text){
+    const spaceMatters = parentTag && this.spacePreservingTags[(''+parentTag).toLocaleLowerCase()];
+    // console.log(`REPLACE :|${text}|`);
+    if(spaceMatters){
+      // Trim multiple spaces to single space. No other modification.
+      text = text.replace(/^\s+(.*?)$/, ' $1');
+      text = text.replace(/^(.*?)\s+$/, '$1 ');
+    } else{
+      // Replace multiple spaces with single space everywhere. Trim.
+      text = text.replace(/\s+/g, ' ');
+      text = text.trim();
+    }
+    // console.log(`REPLACED:|${text}|`);
+    return text;
+  }
+
+  /**
+   * @param {string} text
+   * @param {number} posOfText
+   * @returns {string}*/
+  replaceText(text, posOfText){
+    return text.replace(new RegExp(this.ESC, 'g'), (_, index)=>{
+      const original = this.escaped[posOfText+index];
+      if (original != this.ESC) return original;
+      return this.asString(this.values[this.valueIndex++]);
+    });
+  }
+
+  asString(obj) {
+    let out = `${obj}`;
+
+    if (out == "[object Object]") {
+      // let seen = [];
+      // out = JSON.stringify(obj, function (key, val) {
+      //   if (val != null && typeof val == "object") {
+      //     if (seen.indexOf(val) >= 0) return;
+      //     seen.push(val);
+      //   }
+      //   return val; // https://stackoverflow.com/q/9382167
+      // });
+      out = obj; //PROBLEM
+    }
+    return out;
+  }
+
+}
+
+/**
+ * TO DO:
+ * 1. Implement "close with sibling"
+ * 2. Make a new class that inherits from this one and adds math support. It must be extensible.
+ * 3. Make a new class that inherits from math and adds code support. It must be extensible.
+ * 4. Make a new class that inherits from math and adds paragraphs support. It must be extensible.
+ */
+
+ __caph_definitions__.NewParser = class extends __caph_definitions__.BaseParser {
+
+  static customRules = [
+    ...__caph_definitions__.BaseParser.customRules,
+    {
+      regStart: `(?<!\\\\)\\$\\$`,
+      regEnd: `(?<!\\\\)\\$\\$`,
+      parser: /**@type {RuleParser}*/ ((text)=>['caph', {plugin: 'caph-math', displayMode:true}, [text]]),
+    },
+    {
+      regStart: `(?<!\\\\)\\$`,
+      regEnd: `(?<!\\\\)\\$`,
+      parser: /**@type {RuleParser}*/ ((text)=>['caph', {plugin: 'caph-math'}, [text]]),
+    },
+  ];
+
+}
+
+//------------------------------------------------------------------------------
+
+__caph_definitions__.Parser = class {
+  // /**
+  //  * @template T
+  //  * @param {string} str
+  //  * @param {(type: string, props: (Object|null), ...children: T[])=>string} post
+  //  * @returns {T|string}
+  //  * */
+  // main(str, post){
+  //   const root = this._main(str);
+  //   function rec(/** @type {AstNode}*/root){
+  //     if(is_string(root)) return root;
+
+  //   }
+  //   return post(ast);
+  // }
+
+  constructor(newAstNode=null) {
+    if(newAstNode===null){
+      this.newAstNode = (tag, props, ...children) => [tag, props, children];
+    } else {
+      this.newAstNode = newAstNode;
+    }
+    // based on xhtm, which is based on htm. Differences:
+    // 1. Replaces html entities
+    // 2. Parses math markup.
+    // 3. Renders errors instead of blocking.
+
+    const empty = {};
+    const FIELD = '\ue000';
+    const QUOTES = '\ue001';
+    const ESCAPED_DOLLAR = '\ue002';
+    const SPACE = '\ue003';
+    const each_FIELD = new RegExp(FIELD, 'g');
+    const each_QUOTES = new RegExp(QUOTES, 'g');
+    const each_ESCAPED_DOLLAR = new RegExp(ESCAPED_DOLLAR, 'g');
+    const each_SPACE = new RegExp(SPACE, 'g');
+
+    'area base br col command embed hr img input keygen link meta param source track wbr ! !doctype ? ?xml'.split(' ').map(v => empty[v] = empty[v.toUpperCase()] = true)
+    // https://html.spec.whatwg.org/multipage/syntax.html#optional-tags
+    // closed by the corresponding tag or end of parent content
+    const close = {
+      'li': ['li'],
+      'dt': ['dt', 'dd'],
+      'dd': ['dd', 'dt'],
+      'p': ['p', 'address', 'article', 'aside', 'blockquote', 'details', 'div', 'dl', 'fieldset', 'figcaption', 'figure', 'footer', 'form', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'header', 'hgroup', 'hr', 'main', 'menu', 'nav', 'ol', 'pre', 'section', 'table'],
+      'rt': ['rt', 'rp'],
+      'rp': ['rp', 'rt'],
+      'optgroup': ['optgroup'],
+      'option': ['option', 'optgroup'],
+      //'caption': [], // Disabled rule
+      //'colgroup': [], // Disabled rule
+      'thead': ['tbody','tfoot'],
+      'tbody': ['tbody', 'tfoot'],
+      'tfoot': [],
+      'tr': ['tr'],
+      'td': ['td', 'th'],
+      'th': ['th', 'td'],
+    };
+    for (let tag in close) {
+      [...close[tag].split(' '), tag].map(closer => {
+        close[tag] =
+          close[tag.toUpperCase()] =
+          close[tag + closer] =
+          close[tag.toUpperCase() + closer] =
+          close[tag + closer.toUpperCase()] =
+          close[tag.toUpperCase() + closer.toUpperCase()] =
+          true;
+      })
+    }
+    this._parseEnv = { empty, close, FIELD, QUOTES, ESCAPED_DOLLAR, each_FIELD, each_QUOTES, each_ESCAPED_DOLLAR, SPACE, each_SPACE };
+  }
+
+  html_is_valid_attr_key(key) {
+    return /^[a-zA-Z_:][a-zA-Z0-9_:.-]*$/.test(key);
+  }
+
+  _parse(parse_math, strings, ...values) {
+    const { empty, close, SPACE, each_SPACE, FIELD, QUOTES, ESCAPED_DOLLAR, each_FIELD, each_QUOTES, each_ESCAPED_DOLLAR } = this._parseEnv;
+
+    const fields = new __caph_definitions__.Dequeue(values);
+    let prev = 0, args, name, value, quotes = [], quote = 0, last;
+    let /** @type {any}*/current = [];
+
+    current.root = true;
+
+    const evaluate = (str, parts = [], raw) => {
+      let i = 0;
+      str = !raw && str === QUOTES ?
+        quotes[quote++].slice(1, -1) :
+        str.replace(each_QUOTES, m => quotes[quote++]);
+      if (!str) return str;
+      str.replace(each_FIELD, (match, idx) => {
+        if (idx) parts.push(str.slice(i, idx));
+        i = idx + 1;
+        return parts.push(fields.popLeft());
+      })
+      if (i < str.length) parts.push(str.slice(i));
+      return parts.length > 1 ? parts : parts[0];
+    }
+    // close level
+    const up = () => {
+      [current, last, ...args] = current;
+      const elem = this.newAstNode(last, ...args);
+      current.push(elem);
+      depth -= 1;
+    }
+    const setAttr = (props, key, value) => {
+      if (key == 'style' && Array.isArray(value)) value = value.join(' ');
+      if (this.html_is_valid_attr_key(key))
+        return props[key] = value;
+      console.log(props);
+      // Fix the error to avoid blocking the whole render process
+      const tag = current[1];
+      console.error(`Parsing error near <${tag} ... ${key}.`)
+      if (key[0] == '<') {
+        const newTag = key.slice(1);
+        console.warn(`Ignoring <${tag}. Assuming <${newTag}...`);
+        current[1] = newTag;
+      }
+    }
+    let s = strings.join(FIELD);
+    s = s.replace(/<!--[^]*-->/g, '');
+    s = s.replace(/<!\[CDATA\[[^]*?\]\]>/g, '');
+    s = s.replace(/\s+/g, ' ');
+    if(parse_math){
+      s = s.replace(/\\\$/g, ESCAPED_DOLLAR);
+      // s = s.replace(/([^\\]|^)\$\$(.*?[^\\])\$\$(.|$)/sg,
+      //   (match, before, tex, after) =>
+      //     `${before}${parseMath(tex, true, match)}${after}`,
+      // );
+      // s = s.replace(
+      //   /([^\\]|^)\$(.*?[^\\])\$(.|$)/sg,
+      //   (match, before, tex, after) =>
+      //     `${before}${parseMath(tex, false, match)}${after}`,
+      // );
+      //
+      s = s.replace(/(\$\$|\$)([^\1]*?)\1( ?)/sg, (match, mark, tex, space) => {
+        // if (match.search(/\/\>/) != -1) {
+        //   match = match.replace(each_ESCAPED_DOLLAR, '\\\$');
+        //   console.error('Math parsing error:', match);
+        //   const safe = this._html_safe(match);
+        //   return `<caph plugin="core-error">${safe}</>`;
+        // }
+        tex = tex.replace(/\</g, '\\lt ');
+        tex = tex.replace(/\>/g, '\\gt ');
+        tex = tex.replace(each_ESCAPED_DOLLAR, '\\\$');
+        const mode = mark == '$$' ? ' displayMode' : '';
+        const end = space.length ? `<span children=" "/>` : '';
+        return `<caph plugin="caph-math" ${mode}>${tex}</>${end}`;
+      });
+      s = s.replace(each_ESCAPED_DOLLAR, '$'); // \$ in html becomes $
+    }
+    // There is a deep error here: they assume arg="..." will never occur in the html unless it
+    // is being part of a <tag arg="...">.
+    s = s.replace(/= *('|")([^\1]*?)\1/g, (match, quote, content) => {
+      quotes.push(`${quote}${content}${quote}`);
+      return `=${QUOTES}`;
+    });
+    // ...>text<... sequence
+    let depth = -1;
+    s = s.replace(/(?:^|>)([^<]*)(?:$|<)/g, (match, text, idx, str) => {
+      depth += 1;
+      let closeTag, tag;
+      if (idx) {
+        let ss = str.slice(prev, idx);
+        // <abc/> → <abc />
+        // console.log(`${'|'.repeat(depth)}${ss}. ${text}`);
+        ss = ss.replace(/(\S)\/$/, '$1 /');
+        ss.split(' ').map((part, i) => {
+          // console.log(' '.repeat(depth), i, part);
+          if (part[0] === '/') {
+            closeTag = tag || part.slice(1) || 1;
+            depth -= 1;
+          }
+          else if (!i) {
+            tag = evaluate(part);
+            // <p>abc<p>def, <tr><td>x<tr>
+            while (close[current[1] + tag]) up();
+            current = [current, tag, null];
+            if (empty[tag]) closeTag = tag;
+          }
+          else if (part) {
+            let props = current[2] || (current[2] = {});
+            if (part.slice(0, 3) === '...') {
+              const newProps = fields.popLeft();
+              for (let key in newProps) {
+                setAttr(props, key, newProps[key]);
+              }
+            }
+            else {
+              [name, value] = part.split('=');
+              setAttr(props, evaluate(name), value ? evaluate(value) : true);
+            }
+          }
+        })
+      }
+      if (closeTag) {
+        up();
+        // if last child is closable - closeTag it too
+        while (last !== closeTag && close[last]) up();
+      }
+      prev = idx + match.length;
+      if (text && (text !== ' ' || tag == 'span')) evaluate((last = 0, text), current, true);
+    });
+    if (!current.root) up();
+    return current.length > 1 ? current : current[0];
+  }
+
+
+  parse({ raw: strings }, ...values) {
+    return this._parse(true, strings, ...values);
+  }
+  parseNoMarkup({ raw: strings }, ...values) {
+    return this._parse(false, strings, ...values);
+  }
+
+  parseEsc(strings, ...values) {
+    return this._parse(true, strings, ...values);
+  }
+  parseNoMarkupEsc(strings, ...values) {
+    return this._parse(false, strings, ...values);
+  }
+}
+
+if(Object.keys(exports).length){window['parser']=exports;}
+exports={};
+
+//libraries/lzutf8-0.5.5/lzutf8.min.js
+exports={};
+/*!
+ LZ-UTF8 v0.5.5
+
+ Copyright (c) 2018, Rotem Dan
+ Released under the MIT license.
+
+ Build date: 2018-07-30 
+
+ Please report any issue at https://github.com/rotemdan/lzutf8.js/issues
+*/
+var LZUTF8;if(function(n){n.runningInNodeJS=function(){return"object"==typeof process&&"object"==typeof process.versions&&"string"==typeof process.versions.node},n.runningInMainNodeJSModule=function(){return n.runningInNodeJS()&&require.main===module},n.commonJSAvailable=function(){return"object"==typeof module&&"object"==typeof module.exports},n.runningInWebWorker=function(){return"undefined"==typeof window&&"object"==typeof self&&"function"==typeof self.addEventListener&&"function"==typeof self.close},n.runningInNodeChildProcess=function(){return n.runningInNodeJS()&&"function"==typeof process.send},n.runningInNullOrigin=function(){return"object"==typeof window&&"object"==typeof window.location&&("http:"!==document.location.protocol&&"https:"!==document.location.protocol)},n.webWorkersAvailable=function(){return"function"==typeof Worker&&!n.runningInNullOrigin()&&(!n.runningInNodeJS()&&!(navigator&&navigator.userAgent&&0<=navigator.userAgent.indexOf("Android 4.3")))},n.log=function(e,t){void 0===t&&(t=!1),"object"==typeof console&&(console.log(e),t&&"object"==typeof document&&(document.body.innerHTML+=e+"<br/>"))},n.createErrorMessage=function(e,t){if(void 0===t&&(t="Unhandled exception"),null==e)return t;if(t+=": ","object"==typeof e.content){if(n.runningInNodeJS())return t+e.content.stack;var r=JSON.stringify(e.content);return"{}"!==r?t+r:t+e.content}return"string"==typeof e.content?t+e.content:t+e},n.printExceptionAndStackTraceToConsole=function(e,t){void 0===t&&(t="Unhandled exception"),n.log(n.createErrorMessage(e,t))},n.getGlobalObject=function(){return"object"==typeof global?global:"object"==typeof window?window:"object"==typeof self?self:{}},n.toString=Object.prototype.toString,n.commonJSAvailable()&&(module.exports=n)}(LZUTF8||(LZUTF8={})),"function"==typeof Uint8Array&&0!==new Uint8Array(1).subarray(1).byteLength){var subarray=function(e,t){var r=function(e,t,r){return e<t?t:r<e?r:e};e|=0,t|=0,arguments.length<1&&(e=0),arguments.length<2&&(t=this.length),e<0&&(e=this.length+e),t<0&&(t=this.length+t),e=r(e,0,this.length);var n=(t=r(t,0,this.length))-e;return n<0&&(n=0),new this.constructor(this.buffer,this.byteOffset+e*this.BYTES_PER_ELEMENT,n)},types=["Int8Array","Uint8Array","Uint8ClampedArray","Int16Array","Uint16Array","Int32Array","Uint32Array","Float32Array","Float64Array"],globalObject=void 0;if("object"==typeof window?globalObject=window:"object"==typeof self&&(globalObject=self),void 0!==globalObject)for(var i=0;i<types.length;i++)globalObject[types[i]]&&(globalObject[types[i]].prototype.subarray=subarray)}!function(f){var e=function(){function e(){}return e.compressAsync=function(e,n,o){var i=new f.Timer,u=new f.Compressor;if(!o)throw new TypeError("compressAsync: No callback argument given");if("string"==typeof e)e=f.encodeUTF8(e);else if(null==e||!(e instanceof Uint8Array))return void o(void 0,new TypeError("compressAsync: Invalid input argument, only 'string' and 'Uint8Array' are supported"));var s=f.ArrayTools.splitByteArray(e,n.blockSize),a=[],c=function(e){if(e<s.length){var t=void 0;try{t=u.compressBlock(s[e])}catch(e){return void o(void 0,e)}a.push(t),i.getElapsedTime()<=20?c(e+1):(f.enqueueImmediate(function(){return c(e+1)}),i.restart())}else{var r=f.ArrayTools.concatUint8Arrays(a);f.enqueueImmediate(function(){var e;try{e=f.CompressionCommon.encodeCompressedBytes(r,n.outputEncoding)}catch(e){return void o(void 0,e)}f.enqueueImmediate(function(){return o(e)})})}};f.enqueueImmediate(function(){return c(0)})},e.createCompressionStream=function(){var o=new f.Compressor,i=new(window.stream.Transform)({decodeStrings:!0,highWaterMark:65536});return i._transform=function(e,t,r){var n;try{n=f.BufferTools.uint8ArrayToBuffer(o.compressBlock(f.BufferTools.bufferToUint8Array(e)))}catch(e){return void i.emit("error",e)}i.push(n),r()},i},e}();f.AsyncCompressor=e}(LZUTF8||(LZUTF8={})),function(f){var e=function(){function e(){}return e.decompressAsync=function(e,n,o){if(!o)throw new TypeError("decompressAsync: No callback argument given");var i=new f.Timer;try{e=f.CompressionCommon.decodeCompressedBytes(e,n.inputEncoding)}catch(e){return void o(void 0,e)}var u=new f.Decompressor,s=f.ArrayTools.splitByteArray(e,n.blockSize),a=[],c=function(e){if(e<s.length){var t=void 0;try{t=u.decompressBlock(s[e])}catch(e){return void o(void 0,e)}a.push(t),i.getElapsedTime()<=20?c(e+1):(f.enqueueImmediate(function(){return c(e+1)}),i.restart())}else{var r=f.ArrayTools.concatUint8Arrays(a);f.enqueueImmediate(function(){var e;try{e=f.CompressionCommon.encodeDecompressedBytes(r,n.outputEncoding)}catch(e){return void o(void 0,e)}f.enqueueImmediate(function(){return o(e)})})}};f.enqueueImmediate(function(){return c(0)})},e.createDecompressionStream=function(){var o=new f.Decompressor,i=new(window.stream.Transform)({decodeStrings:!0,highWaterMark:65536});return i._transform=function(e,t,r){var n;try{n=f.BufferTools.uint8ArrayToBuffer(o.decompressBlock(f.BufferTools.bufferToUint8Array(e)))}catch(e){return void i.emit("error",e)}i.push(n),r()},i},e}();f.AsyncDecompressor=e}(LZUTF8||(LZUTF8={})),function(i){var e,u;(u=e=i.WebWorker||(i.WebWorker={})).compressAsync=function(e,t,r){if("ByteArray"!=t.inputEncoding||e instanceof Uint8Array){var n={token:Math.random().toString(),type:"compress",data:e,inputEncoding:t.inputEncoding,outputEncoding:t.outputEncoding},o=function(e){var t=e.data;t&&t.token==n.token&&(u.globalWorker.removeEventListener("message",o),"error"==t.type?r(void 0,new Error(t.error)):r(t.data))};u.globalWorker.addEventListener("message",o),u.globalWorker.postMessage(n,[])}else r(void 0,new TypeError("compressAsync: input is not a Uint8Array"))},u.decompressAsync=function(e,t,r){var n={token:Math.random().toString(),type:"decompress",data:e,inputEncoding:t.inputEncoding,outputEncoding:t.outputEncoding},o=function(e){var t=e.data;t&&t.token==n.token&&(u.globalWorker.removeEventListener("message",o),"error"==t.type?r(void 0,new Error(t.error)):r(t.data))};u.globalWorker.addEventListener("message",o),u.globalWorker.postMessage(n,[])},u.installWebWorkerIfNeeded=function(){"object"==typeof self&&void 0===self.document&&null!=self.addEventListener&&(self.addEventListener("message",function(e){var t=e.data;if("compress"==t.type){var r=void 0;try{r=i.compress(t.data,{outputEncoding:t.outputEncoding})}catch(e){return void self.postMessage({token:t.token,type:"error",error:i.createErrorMessage(e)},[])}(n={token:t.token,type:"compressionResult",data:r,encoding:t.outputEncoding}).data instanceof Uint8Array&&-1===navigator.appVersion.indexOf("MSIE 10")?self.postMessage(n,[n.data.buffer]):self.postMessage(n,[])}else if("decompress"==t.type){var n,o=void 0;try{o=i.decompress(t.data,{inputEncoding:t.inputEncoding,outputEncoding:t.outputEncoding})}catch(e){return void self.postMessage({token:t.token,type:"error",error:i.createErrorMessage(e)},[])}(n={token:t.token,type:"decompressionResult",data:o,encoding:t.outputEncoding}).data instanceof Uint8Array&&-1===navigator.appVersion.indexOf("MSIE 10")?self.postMessage(n,[n.data.buffer]):self.postMessage(n,[])}}),self.addEventListener("error",function(e){i.log(i.createErrorMessage(e.error,"Unexpected LZUTF8 WebWorker exception"))}))},u.createGlobalWorkerIfNeeded=function(){if(u.globalWorker)return!0;if(!i.webWorkersAvailable())return!1;if(!u.scriptURI&&"object"==typeof document){var e=document.getElementById("lzutf8");null!=e&&(u.scriptURI=e.getAttribute("src")||void 0)}return!!u.scriptURI&&(u.globalWorker=new Worker(u.scriptURI),!0)},u.terminate=function(){u.globalWorker&&(u.globalWorker.terminate(),u.globalWorker=void 0)},e.installWebWorkerIfNeeded()}(LZUTF8||(LZUTF8={})),function(e){var t=function(){function e(e,t,r){this.container=e,this.startPosition=t,this.length=r}return e.prototype.get=function(e){return this.container[this.startPosition+e]},e.prototype.getInReversedOrder=function(e){return this.container[this.startPosition+this.length-1-e]},e.prototype.set=function(e,t){this.container[this.startPosition+e]=t},e}();e.ArraySegment=t}(LZUTF8||(LZUTF8={})),function(e){var t;(t=e.ArrayTools||(e.ArrayTools={})).copyElements=function(e,t,r,n,o){for(;o--;)r[n++]=e[t++]},t.zeroElements=function(e,t,r){for(;r--;)e[t++]=0},t.countNonzeroValuesInArray=function(e){for(var t=0,r=0;r<e.length;r++)e[r]&&t++;return t},t.truncateStartingElements=function(e,t){if(e.length<=t)throw new RangeError("truncateStartingElements: Requested length should be smaller than array length");for(var r=e.length-t,n=0;n<t;n++)e[n]=e[r+n];e.length=t},t.doubleByteArrayCapacity=function(e){var t=new Uint8Array(2*e.length);return t.set(e),t},t.concatUint8Arrays=function(e){for(var t=0,r=0,n=e;r<n.length;r++)t+=(a=n[r]).length;for(var o=new Uint8Array(t),i=0,u=0,s=e;u<s.length;u++){var a=s[u];o.set(a,i),i+=a.length}return o},t.splitByteArray=function(e,t){for(var r=[],n=0;n<e.length;){var o=Math.min(t,e.length-n);r.push(e.subarray(n,n+o)),n+=o}return r}}(LZUTF8||(LZUTF8={})),function(e){var t;(t=e.BufferTools||(e.BufferTools={})).convertToUint8ArrayIfNeeded=function(e){return"function"==typeof Buffer&&Buffer.isBuffer(e)?t.bufferToUint8Array(e):e},t.uint8ArrayToBuffer=function(e){if(Buffer.prototype instanceof Uint8Array){var t=new Uint8Array(e.buffer,e.byteOffset,e.byteLength);return Object.setPrototypeOf(t,Buffer.prototype),t}for(var r=e.length,n=new Buffer(r),o=0;o<r;o++)n[o]=e[o];return n},t.bufferToUint8Array=function(e){if(Buffer.prototype instanceof Uint8Array)return new Uint8Array(e.buffer,e.byteOffset,e.byteLength);for(var t=e.length,r=new Uint8Array(t),n=0;n<t;n++)r[n]=e[n];return r}}(LZUTF8||(LZUTF8={})),function(o){var e;(e=o.CompressionCommon||(o.CompressionCommon={})).getCroppedBuffer=function(e,t,r,n){void 0===n&&(n=0);var o=new Uint8Array(r+n);return o.set(e.subarray(t,t+r)),o},e.getCroppedAndAppendedByteArray=function(e,t,r,n){return o.ArrayTools.concatUint8Arrays([e.subarray(t,t+r),n])},e.detectCompressionSourceEncoding=function(e){if(null==e)throw new TypeError("detectCompressionSourceEncoding: input is null or undefined");if("string"==typeof e)return"String";if(e instanceof Uint8Array||"function"==typeof Buffer&&Buffer.isBuffer(e))return"ByteArray";throw new TypeError("detectCompressionSourceEncoding: input must be of type 'string', 'Uint8Array' or 'Buffer'")},e.encodeCompressedBytes=function(e,t){switch(t){case"ByteArray":return e;case"Buffer":return o.BufferTools.uint8ArrayToBuffer(e);case"Base64":return o.encodeBase64(e);case"BinaryString":return o.encodeBinaryString(e);case"StorageBinaryString":return o.encodeStorageBinaryString(e);default:throw new TypeError("encodeCompressedBytes: invalid output encoding requested")}},e.decodeCompressedBytes=function(e,t){if(null==t)throw new TypeError("decodeCompressedData: Input is null or undefined");switch(t){case"ByteArray":case"Buffer":var r=o.BufferTools.convertToUint8ArrayIfNeeded(e);if(!(r instanceof Uint8Array))throw new TypeError("decodeCompressedData: 'ByteArray' or 'Buffer' input type was specified but input is not a Uint8Array or Buffer");return r;case"Base64":if("string"!=typeof e)throw new TypeError("decodeCompressedData: 'Base64' input type was specified but input is not a string");return o.decodeBase64(e);case"BinaryString":if("string"!=typeof e)throw new TypeError("decodeCompressedData: 'BinaryString' input type was specified but input is not a string");return o.decodeBinaryString(e);case"StorageBinaryString":if("string"!=typeof e)throw new TypeError("decodeCompressedData: 'StorageBinaryString' input type was specified but input is not a string");return o.decodeStorageBinaryString(e);default:throw new TypeError("decodeCompressedData: invalid input encoding requested: '"+t+"'")}},e.encodeDecompressedBytes=function(e,t){switch(t){case"String":return o.decodeUTF8(e);case"ByteArray":return e;case"Buffer":if("function"!=typeof Buffer)throw new TypeError("encodeDecompressedBytes: a 'Buffer' type was specified but is not supported at the current envirnment");return o.BufferTools.uint8ArrayToBuffer(e);default:throw new TypeError("encodeDecompressedBytes: invalid output encoding requested")}}}(LZUTF8||(LZUTF8={})),function(o){var t,e,i,u;e=t=o.EventLoop||(o.EventLoop={}),u=[],e.enqueueImmediate=function(e){u.push(e),1===u.length&&i()},e.initializeScheduler=function(){var t=function(){for(var e=0,t=u;e<t.length;e++){var r=t[e];try{r.call(void 0)}catch(e){o.printExceptionAndStackTraceToConsole(e,"enqueueImmediate exception")}}u.length=0};if(o.runningInNodeJS()&&(i=function(){return setImmediate(function(){return t()})}),"object"==typeof window&&"function"==typeof window.addEventListener&&"function"==typeof window.postMessage){var e,r="enqueueImmediate-"+Math.random().toString();window.addEventListener("message",function(e){e.data===r&&t()}),e=o.runningInNullOrigin()?"*":window.location.href,i=function(){return window.postMessage(r,e)}}else if("function"==typeof MessageChannel&&"function"==typeof MessagePort){var n=new MessageChannel;n.port1.onmessage=function(){return t()},i=function(){return n.port2.postMessage(0)}}else i=function(){return setTimeout(function(){return t()},0)}},e.initializeScheduler(),o.enqueueImmediate=function(e){return t.enqueueImmediate(e)}}(LZUTF8||(LZUTF8={})),function(e){var r;(r=e.ObjectTools||(e.ObjectTools={})).override=function(e,t){return r.extend(e,t)},r.extend=function(e,t){if(null==e)throw new TypeError("obj is null or undefined");if("object"!=typeof e)throw new TypeError("obj is not an object");if(null==t&&(t={}),"object"!=typeof t)throw new TypeError("newProperties is not an object");if(null!=t)for(var r in t)e[r]=t[r];return e}}(LZUTF8||(LZUTF8={})),function(o){o.getRandomIntegerInRange=function(e,t){return e+Math.floor(Math.random()*(t-e))},o.getRandomUTF16StringOfLength=function(e){for(var t="",r=0;r<e;r++){for(var n=void 0;55296<=(n=o.getRandomIntegerInRange(0,1114112))&&n<=57343;);t+=o.Encoding.CodePoint.decodeToString(n)}return t}}(LZUTF8||(LZUTF8={})),function(e){var t=function(){function e(e){void 0===e&&(e=1024),this.outputBufferCapacity=e,this.outputPosition=0,this.outputString="",this.outputBuffer=new Uint16Array(this.outputBufferCapacity)}return e.prototype.appendCharCode=function(e){this.outputBuffer[this.outputPosition++]=e,this.outputPosition===this.outputBufferCapacity&&this.flushBufferToOutputString()},e.prototype.appendCharCodes=function(e){for(var t=0,r=e.length;t<r;t++)this.appendCharCode(e[t])},e.prototype.appendString=function(e){for(var t=0,r=e.length;t<r;t++)this.appendCharCode(e.charCodeAt(t))},e.prototype.appendCodePoint=function(e){if(e<=65535)this.appendCharCode(e);else{if(!(e<=1114111))throw new Error("appendCodePoint: A code point of "+e+" cannot be encoded in UTF-16");this.appendCharCode(55296+(e-65536>>>10)),this.appendCharCode(56320+(e-65536&1023))}},e.prototype.getOutputString=function(){return this.flushBufferToOutputString(),this.outputString},e.prototype.flushBufferToOutputString=function(){this.outputPosition===this.outputBufferCapacity?this.outputString+=String.fromCharCode.apply(null,this.outputBuffer):this.outputString+=String.fromCharCode.apply(null,this.outputBuffer.subarray(0,this.outputPosition)),this.outputPosition=0},e}();e.StringBuilder=t}(LZUTF8||(LZUTF8={})),function(o){var e=function(){function e(){this.restart()}return e.prototype.restart=function(){this.startTime=e.getTimestamp()},e.prototype.getElapsedTime=function(){return e.getTimestamp()-this.startTime},e.prototype.getElapsedTimeAndRestart=function(){var e=this.getElapsedTime();return this.restart(),e},e.prototype.logAndRestart=function(e,t){void 0===t&&(t=!0);var r=this.getElapsedTime(),n=e+": "+r.toFixed(3)+"ms";return o.log(n,t),this.restart(),r},e.getTimestamp=function(){return this.timestampFunc||this.createGlobalTimestampFunction(),this.timestampFunc()},e.getMicrosecondTimestamp=function(){return Math.floor(1e3*e.getTimestamp())},e.createGlobalTimestampFunction=function(){if("object"==typeof process&&"function"==typeof process.hrtime){var r=0;this.timestampFunc=function(){var e=process.hrtime(),t=1e3*e[0]+e[1]/1e6;return r+t},r=Date.now()-this.timestampFunc()}else if("object"==typeof chrome&&chrome.Interval){var e=Date.now(),t=new chrome.Interval;t.start(),this.timestampFunc=function(){return e+t.microseconds()/1e3}}else if("object"==typeof performance&&performance.now){var n=Date.now()-performance.now();this.timestampFunc=function(){return n+performance.now()}}else Date.now?this.timestampFunc=function(){return Date.now()}:this.timestampFunc=function(){return(new Date).getTime()}},e}();o.Timer=e}(LZUTF8||(LZUTF8={})),function(n){var e=function(){function e(e){void 0===e&&(e=!0),this.MinimumSequenceLength=4,this.MaximumSequenceLength=31,this.MaximumMatchDistance=32767,this.PrefixHashTableSize=65537,this.inputBufferStreamOffset=1,e&&"function"==typeof Uint32Array?this.prefixHashTable=new n.CompressorCustomHashTable(this.PrefixHashTableSize):this.prefixHashTable=new n.CompressorSimpleHashTable(this.PrefixHashTableSize)}return e.prototype.compressBlock=function(e){if(null==e)throw new TypeError("compressBlock: undefined or null input received");return"string"==typeof e&&(e=n.encodeUTF8(e)),e=n.BufferTools.convertToUint8ArrayIfNeeded(e),this.compressUtf8Block(e)},e.prototype.compressUtf8Block=function(e){if(!e||0==e.length)return new Uint8Array(0);var t=this.cropAndAddNewBytesToInputBuffer(e),r=this.inputBuffer,n=this.inputBuffer.length;this.outputBuffer=new Uint8Array(e.length);for(var o=this.outputBufferPosition=0,i=t;i<n;i++){var u=r[i],s=i<o;if(i>n-this.MinimumSequenceLength)s||this.outputRawByte(u);else{var a=this.getBucketIndexForPrefix(i);if(!s){var c=this.findLongestMatch(i,a);null!=c&&(this.outputPointerBytes(c.length,c.distance),o=i+c.length,s=!0)}s||this.outputRawByte(u);var f=this.inputBufferStreamOffset+i;this.prefixHashTable.addValueToBucket(a,f)}}return this.outputBuffer.subarray(0,this.outputBufferPosition)},e.prototype.findLongestMatch=function(e,t){var r=this.prefixHashTable.getArraySegmentForBucketIndex(t,this.reusableArraySegmentObject);if(null==r)return null;for(var n,o=this.inputBuffer,i=0,u=0;u<r.length;u++){var s=r.getInReversedOrder(u)-this.inputBufferStreamOffset,a=e-s,c=void 0;if(c=void 0===n?this.MinimumSequenceLength-1:n<128&&128<=a?i+(i>>>1):i,a>this.MaximumMatchDistance||c>=this.MaximumSequenceLength||e+c>=o.length)break;if(o[s+c]===o[e+c])for(var f=0;;f++){if(e+f===o.length||o[s+f]!==o[e+f]){c<f&&(n=a,i=f);break}if(f===this.MaximumSequenceLength)return{distance:a,length:this.MaximumSequenceLength}}}return void 0!==n?{distance:n,length:i}:null},e.prototype.getBucketIndexForPrefix=function(e){return(7880599*this.inputBuffer[e]+39601*this.inputBuffer[e+1]+199*this.inputBuffer[e+2]+this.inputBuffer[e+3])%this.PrefixHashTableSize},e.prototype.outputPointerBytes=function(e,t){t<128?(this.outputRawByte(192|e),this.outputRawByte(t)):(this.outputRawByte(224|e),this.outputRawByte(t>>>8),this.outputRawByte(255&t))},e.prototype.outputRawByte=function(e){this.outputBuffer[this.outputBufferPosition++]=e},e.prototype.cropAndAddNewBytesToInputBuffer=function(e){if(void 0===this.inputBuffer)return this.inputBuffer=e,0;var t=Math.min(this.inputBuffer.length,this.MaximumMatchDistance),r=this.inputBuffer.length-t;return this.inputBuffer=n.CompressionCommon.getCroppedAndAppendedByteArray(this.inputBuffer,r,t,e),this.inputBufferStreamOffset+=r,t},e}();n.Compressor=e}(LZUTF8||(LZUTF8={})),function(s){var e=function(){function e(e){this.minimumBucketCapacity=4,this.maximumBucketCapacity=64,this.bucketLocators=new Uint32Array(2*e),this.storage=new Uint32Array(2*e),this.storageIndex=1}return e.prototype.addValueToBucket=function(e,t){e<<=1,this.storageIndex>=this.storage.length>>>1&&this.compact();var r,n=this.bucketLocators[e];if(0===n)n=this.storageIndex,r=1,this.storage[this.storageIndex]=t,this.storageIndex+=this.minimumBucketCapacity;else{(r=this.bucketLocators[e+1])===this.maximumBucketCapacity-1&&(r=this.truncateBucketToNewerElements(n,r,this.maximumBucketCapacity/2));var o=n+r;0===this.storage[o]?(this.storage[o]=t,o===this.storageIndex&&(this.storageIndex+=r)):(s.ArrayTools.copyElements(this.storage,n,this.storage,this.storageIndex,r),n=this.storageIndex,this.storageIndex+=r,this.storage[this.storageIndex++]=t,this.storageIndex+=r),r++}this.bucketLocators[e]=n,this.bucketLocators[e+1]=r},e.prototype.truncateBucketToNewerElements=function(e,t,r){var n=e+t-r;return s.ArrayTools.copyElements(this.storage,n,this.storage,e,r),s.ArrayTools.zeroElements(this.storage,e+r,t-r),r},e.prototype.compact=function(){var e=this.bucketLocators,t=this.storage;this.bucketLocators=new Uint32Array(this.bucketLocators.length),this.storageIndex=1;for(var r=0;r<e.length;r+=2){var n=e[r+1];0!==n&&(this.bucketLocators[r]=this.storageIndex,this.bucketLocators[r+1]=n,this.storageIndex+=Math.max(Math.min(2*n,this.maximumBucketCapacity),this.minimumBucketCapacity))}this.storage=new Uint32Array(8*this.storageIndex);for(r=0;r<e.length;r+=2){var o=e[r];if(0!==o){var i=this.bucketLocators[r],u=this.bucketLocators[r+1];s.ArrayTools.copyElements(t,o,this.storage,i,u)}}},e.prototype.getArraySegmentForBucketIndex=function(e,t){e<<=1;var r=this.bucketLocators[e];return 0===r?null:(void 0===t&&(t=new s.ArraySegment(this.storage,r,this.bucketLocators[e+1])),t)},e.prototype.getUsedBucketCount=function(){return Math.floor(s.ArrayTools.countNonzeroValuesInArray(this.bucketLocators)/2)},e.prototype.getTotalElementCount=function(){for(var e=0,t=0;t<this.bucketLocators.length;t+=2)e+=this.bucketLocators[t+1];return e},e}();s.CompressorCustomHashTable=e}(LZUTF8||(LZUTF8={})),function(n){var e=function(){function e(e){this.maximumBucketCapacity=64,this.buckets=new Array(e)}return e.prototype.addValueToBucket=function(e,t){var r=this.buckets[e];void 0===r?this.buckets[e]=[t]:(r.length===this.maximumBucketCapacity-1&&n.ArrayTools.truncateStartingElements(r,this.maximumBucketCapacity/2),r.push(t))},e.prototype.getArraySegmentForBucketIndex=function(e,t){var r=this.buckets[e];return void 0===r?null:(void 0===t&&(t=new n.ArraySegment(r,0,r.length)),t)},e.prototype.getUsedBucketCount=function(){return n.ArrayTools.countNonzeroValuesInArray(this.buckets)},e.prototype.getTotalElementCount=function(){for(var e=0,t=0;t<this.buckets.length;t++)void 0!==this.buckets[t]&&(e+=this.buckets[t].length);return e},e}();n.CompressorSimpleHashTable=e}(LZUTF8||(LZUTF8={})),function(f){var e=function(){function e(){this.MaximumMatchDistance=32767,this.outputPosition=0}return e.prototype.decompressBlockToString=function(e){return e=f.BufferTools.convertToUint8ArrayIfNeeded(e),f.decodeUTF8(this.decompressBlock(e))},e.prototype.decompressBlock=function(e){this.inputBufferRemainder&&(e=f.ArrayTools.concatUint8Arrays([this.inputBufferRemainder,e]),this.inputBufferRemainder=void 0);for(var t=this.cropOutputBufferToWindowAndInitialize(Math.max(4*e.length,1024)),r=0,n=e.length;r<n;r++){var o=e[r];if(o>>>6==3){var i=o>>>5;if(r==n-1||r==n-2&&7==i){this.inputBufferRemainder=e.subarray(r);break}if(e[r+1]>>>7==1)this.outputByte(o);else{var u=31&o,s=void 0;6==i?(s=e[r+1],r+=1):(s=e[r+1]<<8|e[r+2],r+=2);for(var a=this.outputPosition-s,c=0;c<u;c++)this.outputByte(this.outputBuffer[a+c])}}else this.outputByte(o)}return this.rollBackIfOutputBufferEndsWithATruncatedMultibyteSequence(),f.CompressionCommon.getCroppedBuffer(this.outputBuffer,t,this.outputPosition-t)},e.prototype.outputByte=function(e){this.outputPosition===this.outputBuffer.length&&(this.outputBuffer=f.ArrayTools.doubleByteArrayCapacity(this.outputBuffer)),this.outputBuffer[this.outputPosition++]=e},e.prototype.cropOutputBufferToWindowAndInitialize=function(e){if(!this.outputBuffer)return this.outputBuffer=new Uint8Array(e),0;var t=Math.min(this.outputPosition,this.MaximumMatchDistance);if(this.outputBuffer=f.CompressionCommon.getCroppedBuffer(this.outputBuffer,this.outputPosition-t,t,e),this.outputPosition=t,this.outputBufferRemainder){for(var r=0;r<this.outputBufferRemainder.length;r++)this.outputByte(this.outputBufferRemainder[r]);this.outputBufferRemainder=void 0}return t},e.prototype.rollBackIfOutputBufferEndsWithATruncatedMultibyteSequence=function(){for(var e=1;e<=4&&0<=this.outputPosition-e;e++){var t=this.outputBuffer[this.outputPosition-e];if(e<4&&t>>>3==30||e<3&&t>>>4==14||e<2&&t>>>5==6)return this.outputBufferRemainder=this.outputBuffer.subarray(this.outputPosition-e,this.outputPosition),void(this.outputPosition-=e)}},e}();f.Decompressor=e}(LZUTF8||(LZUTF8={})),function(s){var e,t,a,c;e=s.Encoding||(s.Encoding={}),t=e.Base64||(e.Base64={}),a=new Uint8Array([65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,48,49,50,51,52,53,54,55,56,57,43,47]),c=new Uint8Array([255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,62,255,255,255,63,52,53,54,55,56,57,58,59,60,61,255,255,255,0,255,255,255,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,255,255,255,255,255,255,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,255,255,255,255]),t.encode=function(e){return e&&0!=e.length?s.runningInNodeJS()?s.BufferTools.uint8ArrayToBuffer(e).toString("base64"):t.encodeWithJS(e):""},t.decode=function(e){return e?s.runningInNodeJS()?s.BufferTools.bufferToUint8Array(new Buffer(e,"base64")):t.decodeWithJS(e):new Uint8Array(0)},t.encodeWithJS=function(e,t){if(void 0===t&&(t=!0),!e||0==e.length)return"";for(var r,n=a,o=new s.StringBuilder,i=0,u=e.length;i<u;i+=3)i<=u-3?(r=e[i]<<16|e[i+1]<<8|e[i+2],o.appendCharCode(n[r>>>18&63]),o.appendCharCode(n[r>>>12&63]),o.appendCharCode(n[r>>>6&63]),o.appendCharCode(n[63&r]),r=0):i===u-2?(r=e[i]<<16|e[i+1]<<8,o.appendCharCode(n[r>>>18&63]),o.appendCharCode(n[r>>>12&63]),o.appendCharCode(n[r>>>6&63]),t&&o.appendCharCode(61)):i===u-1&&(r=e[i]<<16,o.appendCharCode(n[r>>>18&63]),o.appendCharCode(n[r>>>12&63]),t&&(o.appendCharCode(61),o.appendCharCode(61)));return o.getOutputString()},t.decodeWithJS=function(e,t){if(!e||0==e.length)return new Uint8Array(0);var r=e.length%4;if(1===r)throw new Error("Invalid Base64 string: length % 4 == 1");2===r?e+="==":3===r&&(e+="="),t||(t=new Uint8Array(e.length));for(var n=0,o=e.length,i=0;i<o;i+=4){var u=c[e.charCodeAt(i)]<<18|c[e.charCodeAt(i+1)]<<12|c[e.charCodeAt(i+2)]<<6|c[e.charCodeAt(i+3)];t[n++]=u>>>16&255,t[n++]=u>>>8&255,t[n++]=255&u}return 61==e.charCodeAt(o-1)&&n--,61==e.charCodeAt(o-2)&&n--,t.subarray(0,n)}}(LZUTF8||(LZUTF8={})),function(s){var e,t;e=s.Encoding||(s.Encoding={}),(t=e.BinaryString||(e.BinaryString={})).encode=function(e){if(null==e)throw new TypeError("BinaryString.encode: undefined or null input received");if(0===e.length)return"";for(var t=e.length,r=new s.StringBuilder,n=0,o=1,i=0;i<t;i+=2){var u=void 0;u=i==t-1?e[i]<<8:e[i]<<8|e[i+1],r.appendCharCode(n<<16-o|u>>>o),n=u&(1<<o)-1,15===o?(r.appendCharCode(n),n=0,o=1):o+=1,t-2<=i&&r.appendCharCode(n<<16-o)}return r.appendCharCode(32768|t%2),r.getOutputString()},t.decode=function(e){if("string"!=typeof e)throw new TypeError("BinaryString.decode: invalid input type");if(""==e)return new Uint8Array(0);for(var t,r=new Uint8Array(3*e.length),n=0,o=0,i=0,u=0;u<e.length;u++){var s=e.charCodeAt(u);32768<=s?(32769==s&&n--,i=0):(0==i?o=s:(t=o<<i|s>>>15-i,r[n++]=t>>>8,r[n++]=255&t,o=s&(1<<15-i)-1),15==i?i=0:i+=1)}return r.subarray(0,n)}}(LZUTF8||(LZUTF8={})),function(e){var t,r;t=e.Encoding||(e.Encoding={}),(r=t.CodePoint||(t.CodePoint={})).encodeFromString=function(e,t){var r=e.charCodeAt(t);if(r<55296||56319<r)return r;var n=e.charCodeAt(t+1);if(56320<=n&&n<=57343)return n-56320+(r-55296<<10)+65536;throw new Error("getUnicodeCodePoint: Received a lead surrogate character, char code "+r+", followed by "+n+", which is not a trailing surrogate character code.")},r.decodeToString=function(e){if(e<=65535)return String.fromCharCode(e);if(e<=1114111)return String.fromCharCode(55296+(e-65536>>>10),56320+(e-65536&1023));throw new Error("getStringFromUnicodeCodePoint: A code point of "+e+" cannot be encoded in UTF-16")}}(LZUTF8||(LZUTF8={})),function(e){var t,r,n;t=e.Encoding||(e.Encoding={}),r=t.DecimalString||(t.DecimalString={}),n=["000","001","002","003","004","005","006","007","008","009","010","011","012","013","014","015","016","017","018","019","020","021","022","023","024","025","026","027","028","029","030","031","032","033","034","035","036","037","038","039","040","041","042","043","044","045","046","047","048","049","050","051","052","053","054","055","056","057","058","059","060","061","062","063","064","065","066","067","068","069","070","071","072","073","074","075","076","077","078","079","080","081","082","083","084","085","086","087","088","089","090","091","092","093","094","095","096","097","098","099","100","101","102","103","104","105","106","107","108","109","110","111","112","113","114","115","116","117","118","119","120","121","122","123","124","125","126","127","128","129","130","131","132","133","134","135","136","137","138","139","140","141","142","143","144","145","146","147","148","149","150","151","152","153","154","155","156","157","158","159","160","161","162","163","164","165","166","167","168","169","170","171","172","173","174","175","176","177","178","179","180","181","182","183","184","185","186","187","188","189","190","191","192","193","194","195","196","197","198","199","200","201","202","203","204","205","206","207","208","209","210","211","212","213","214","215","216","217","218","219","220","221","222","223","224","225","226","227","228","229","230","231","232","233","234","235","236","237","238","239","240","241","242","243","244","245","246","247","248","249","250","251","252","253","254","255"],r.encode=function(e){for(var t=[],r=0;r<e.length;r++)t.push(n[e[r]]);return t.join(" ")}}(LZUTF8||(LZUTF8={})),function(e){var t,r;t=e.Encoding||(e.Encoding={}),(r=t.StorageBinaryString||(t.StorageBinaryString={})).encode=function(e){return t.BinaryString.encode(e).replace(/\0/g,"耂")},r.decode=function(e){return t.BinaryString.decode(e.replace(/\u8002/g,"\0"))}}(LZUTF8||(LZUTF8={})),function(a){var i,t,r,n;i=a.Encoding||(a.Encoding={}),(t=i.UTF8||(i.UTF8={})).encode=function(e){return e&&0!=e.length?a.runningInNodeJS()?a.BufferTools.bufferToUint8Array(new Buffer(e,"utf8")):t.createNativeTextEncoderAndDecoderIfAvailable()?r.encode(e):t.encodeWithJS(e):new Uint8Array(0)},t.decode=function(e){return e&&0!=e.length?a.runningInNodeJS()?a.BufferTools.uint8ArrayToBuffer(e).toString("utf8"):t.createNativeTextEncoderAndDecoderIfAvailable()?n.decode(e):t.decodeWithJS(e):""},t.encodeWithJS=function(e,t){if(!e||0==e.length)return new Uint8Array(0);t||(t=new Uint8Array(4*e.length));for(var r=0,n=0;n<e.length;n++){var o=i.CodePoint.encodeFromString(e,n);if(o<=127)t[r++]=o;else if(o<=2047)t[r++]=192|o>>>6,t[r++]=128|63&o;else if(o<=65535)t[r++]=224|o>>>12,t[r++]=128|o>>>6&63,t[r++]=128|63&o;else{if(!(o<=1114111))throw new Error("Invalid UTF-16 string: Encountered a character unsupported by UTF-8/16 (RFC 3629)");t[r++]=240|o>>>18,t[r++]=128|o>>>12&63,t[r++]=128|o>>>6&63,t[r++]=128|63&o,n++}}return t.subarray(0,r)},t.decodeWithJS=function(e,t,r){if(void 0===t&&(t=0),!e||0==e.length)return"";void 0===r&&(r=e.length);for(var n,o,i=new a.StringBuilder,u=t,s=r;u<s;){if((o=e[u])>>>7==0)n=o,u+=1;else if(o>>>5==6){if(r<=u+1)throw new Error("Invalid UTF-8 stream: Truncated codepoint sequence encountered at position "+u);n=(31&o)<<6|63&e[u+1],u+=2}else if(o>>>4==14){if(r<=u+2)throw new Error("Invalid UTF-8 stream: Truncated codepoint sequence encountered at position "+u);n=(15&o)<<12|(63&e[u+1])<<6|63&e[u+2],u+=3}else{if(o>>>3!=30)throw new Error("Invalid UTF-8 stream: An invalid lead byte value encountered at position "+u);if(r<=u+3)throw new Error("Invalid UTF-8 stream: Truncated codepoint sequence encountered at position "+u);n=(7&o)<<18|(63&e[u+1])<<12|(63&e[u+2])<<6|63&e[u+3],u+=4}i.appendCodePoint(n)}return i.getOutputString()},t.createNativeTextEncoderAndDecoderIfAvailable=function(){return!!r||"function"==typeof TextEncoder&&(r=new TextEncoder("utf-8"),n=new TextDecoder("utf-8"),!0)}}(LZUTF8||(LZUTF8={})),function(o){o.compress=function(e,t){if(void 0===t&&(t={}),null==e)throw new TypeError("compress: undefined or null input received");var r=o.CompressionCommon.detectCompressionSourceEncoding(e);t=o.ObjectTools.override({inputEncoding:r,outputEncoding:"ByteArray"},t);var n=(new o.Compressor).compressBlock(e);return o.CompressionCommon.encodeCompressedBytes(n,t.outputEncoding)},o.decompress=function(e,t){if(void 0===t&&(t={}),null==e)throw new TypeError("decompress: undefined or null input received");t=o.ObjectTools.override({inputEncoding:"ByteArray",outputEncoding:"String"},t);var r=o.CompressionCommon.decodeCompressedBytes(e,t.inputEncoding),n=(new o.Decompressor).decompressBlock(r);return o.CompressionCommon.encodeDecompressedBytes(n,t.outputEncoding)},o.compressAsync=function(e,t,r){var n;null==r&&(r=function(){});try{n=o.CompressionCommon.detectCompressionSourceEncoding(e)}catch(e){return void r(void 0,e)}t=o.ObjectTools.override({inputEncoding:n,outputEncoding:"ByteArray",useWebWorker:!0,blockSize:65536},t),o.enqueueImmediate(function(){t.useWebWorker&&o.WebWorker.createGlobalWorkerIfNeeded()?o.WebWorker.compressAsync(e,t,r):o.AsyncCompressor.compressAsync(e,t,r)})},o.decompressAsync=function(e,t,r){if(null==r&&(r=function(){}),null!=e){t=o.ObjectTools.override({inputEncoding:"ByteArray",outputEncoding:"String",useWebWorker:!0,blockSize:65536},t);var n=o.BufferTools.convertToUint8ArrayIfNeeded(e);o.EventLoop.enqueueImmediate(function(){t.useWebWorker&&o.WebWorker.createGlobalWorkerIfNeeded()?o.WebWorker.decompressAsync(n,t,r):o.AsyncDecompressor.decompressAsync(e,t,r)})}else r(void 0,new TypeError("decompressAsync: undefined or null input received"))},o.createCompressionStream=function(){return o.AsyncCompressor.createCompressionStream()},o.createDecompressionStream=function(){return o.AsyncDecompressor.createDecompressionStream()},o.encodeUTF8=function(e){return o.Encoding.UTF8.encode(e)},o.decodeUTF8=function(e){return o.Encoding.UTF8.decode(e)},o.encodeBase64=function(e){return o.Encoding.Base64.encode(e)},o.decodeBase64=function(e){return o.Encoding.Base64.decode(e)},o.encodeBinaryString=function(e){return o.Encoding.BinaryString.encode(e)},o.decodeBinaryString=function(e){return o.Encoding.BinaryString.decode(e)},o.encodeStorageBinaryString=function(e){return o.Encoding.StorageBinaryString.encode(e)},o.decodeStorageBinaryString=function(e){return o.Encoding.StorageBinaryString.decode(e)}}(LZUTF8||(LZUTF8={})); 
+
+if(Object.keys(exports).length){window['lzutf8']=exports;}
 exports={};
 
 //libraries/preact-10.4.6/preact.min.js
@@ -358,39 +1073,126 @@ delete window.hooks;
 window.caph_requirements = JSON.parse(LZUTF8.decompress("W3sicmVmIjoiY2FwaC1kb2NzL2NvcmUvcGx1Z2luLWxvYWRlci5jc3MiLCJjb250ZW50IjoiLsUuZXJyb3J7XG4gIGNvbG9yOiAjY2UxMTExO1xufVxuxiRmbGFzaGluZ8UnLXdlYmtpdC1hbmltYXRpb246IMQlRsckQcgXIDFzIGxpbmVhciBpbmZpbml0ZTvEQN841zh9XG5Aa2V5ZnJhbWVz1znlAJ8wJSB7IG9wYWNpdHk6IDAuMzsgfcQYMTDOGjHFGH1cbugA5WhpZGRlbsVEZGlzcGxheTogbm9ux33IJmJveC1zaGFkb3fFKsoPOiAwcHjGBC4zcmVtIDAuMDXECHZhcigtyzgp7AFay0Bob3Zl5gGJ3VUy31RoLWZ1bGxzY3JlZW4tbGF5x1R3aWR0aDrlAQblAYZoZWlnaHTLEXBvc2nmAZZmaXhlZMUUdG9wOiAwxQtsZWZ0yAx6LWluZGV4xT3MeWhib3h76gE9ZmxleOUBZcYedtQexAYtZGlyZWPGfGNvbHVtbss2Ym94Y2VudGVyeyBqdXN0aWZ5LecCwjogxhnLLXNwYWNlLWFyb3VuZNMwzB/RNmJldHdlZW7ZN8cgyzjkALx75QDC6AJO7QJJ6QDr5QJFyh/nA5XfJmJvcmTpAg/ECzogc29saWQgMnB45wH/dGV4dC1zdHJvbmfnAgAifV0=", {inputEncoding: 'Base64'}));
 
 
-// //@ts-check
+//@ts-check
+/// <reference path="types.js" />
+/// <reference path="utils.js" />
+/// <reference path="parser.js" />
 
 /* lzutf8, utils, preact, preact hook are injected above this comment*/
 
 
-// /**
-//  * @interface VirtualDOM_Parent<T>
-//  * @type {object}
-//  * @property {?T[]} children
-//  */
-// /*Recursive type solution: https://stackoverflow.com/a/47842314/3671939*/
-// /**
-//  * @interface VirtualDOM_Ancestor @extends VirtualDOM_Parent<VirtualDOM>
-//  */
+__caph_definitions__.Plugin = class {
 
-// /**
-//  * @typedef {string|number|boolean|null|VirtualDOM_Ancestor} VirtualDOM_Element
-//  */
-// /**
-//  * @typedef {string|number|boolean|null|any} VirtualDOM_Element
-//  */
+  async loader() { }
 
-// /**
-//  * @typedef {Object} Preact
-//  * @property {()=>any} createElement
-//  * @property {()=>any} createContext
-//  * @property {any} useCallback
-// */
-// //@ts-ignore
-// var /**@type {Preact}*/preact = window.preact;
+  Component({ children, ...props }) {
+    console.error('Override the Component method of this object:', this);
+    return caph.parse`<${caph.plugin('core-error')}> Override the Component method</> `;
+  }
+
+}
+
+__caph_definitions__.PluginLoader = class extends __caph_definitions__.Plugin {
+
+  constructor(key) {
+    super();
+    this.key = key;
+    this.loader();
+    caph.load('caph-docs/core/plugin-loader.css');
+  }
+
+  //@ts-ignore
+  /** @type {caph.Plugin} */ plugin = null;
+  error = null;
+  renderReady = false;
+
+  async loader() {
+    // 1. Put the plugin script in the document head
+    // 2. Wait for the browser to load the script
+    this.plugin = await this.loadPlugin();
+    // 3. Start but don't wait for the plugin loader
+    this.pluginLoader();
+  }
+
+  async loadPlugin() {
+    const key = this.key;
+    if (caph.pluginDefs[key]) {
+      return caph.pluginDefs[key]; // already loaded
+    }
+    if (caph.officialPlugins.includes(key)) {
+      const url = `${caph.dist}/plugin-${key}.js`;
+      return caph.pluginDefs[key] = caph.pluginLoader(url);
+    }
+    else if (key.match(/[^#\?]+.js(#.*|\?.*|)$/)) {
+      let isOfficial = caph.officialPlugins.map(k => `${caph.dist}/plugin-${k}.js`).includes(key);
+      const url = isOfficial ? key : `${key}?${caph._randomSessionSuffix}`;
+      await caph.load(url);
+      caph.pluginDefs[key] = caph.pluginDefs[key] || caph.pluginDefs[url];
+      assert(caph.pluginDefs[key], 'Plugin not declared in file: ' + key);
+      if (key != url) delete caph.pluginDefs[url];
+      return caph.pluginDefs[key];
+    }
+    // User plugin
+    return await MyPromise.until(() => caph.pluginDefs[key]);
+  }
+
+  async pluginLoader() {
+    try {
+      await this.plugin.loader();
+      this.renderReady = true;
+    } catch (err) {
+      this.error = err || true;
+      console.error(err);
+    }
+  }
+
+
+  Component({ children, ...props }) {
+    // eventually overridden by FinalComponent
+    return this.TemporalComponent({ children, ...props });
+  }
+
+  TemporalComponent({ children, ...props }) {
+    const [_, setTrigger] = preact.useState(0);
+
+    preact.useEffect(async () => {
+      await MyPromise.until(() => this.renderReady || this.error);
+      setTrigger(Math.random() * 1e12); // refresh this component
+    }, []);
+
+    if (this.renderReady) return this.FinalComponent({ children, ...props });
+    else if (this.error) return this._loadErrorComponent({ children });
+    else return this._loadingComponent({ children });
+  }
+
+  FinalComponent({ children, ...props }) {
+    this.Component = this.FinalComponent; // override the Component method
+    try {
+      return this.plugin.Component({ children, ...props });
+    } catch (err) {
+      console.error(`Rendering error in plugin ${this.key}:`, err);
+      return caph.parse`<code class="flashing">${children || '...'}</code>`;
+    }
+  }
+
+  _loadingComponent({ children }) {
+    return caph.parse`
+    <code class="caph-flashing" title=${`${this.key} is loading...`}>
+      ${children || '...'}
+    </code>`;
+  }
+
+  _loadErrorComponent({ children }) {
+    return caph.parse`<${caph.plugin('core-error')} tooltip=${this.error}/>`;
+  }
+}
+
 
 
 const caph = new class {
+
+  Plugin = __caph_definitions__.Plugin;
+  PluginLoader = __caph_definitions__.PluginLoader;
 
   mathPlugin = 'katex';
   mathMacros = {};
@@ -418,7 +1220,25 @@ const caph = new class {
     }
   };
 
+
+  // template literal parsers
+
+
   constructor() {
+    const { parseAst, parse } = __caph_definitions__.NewParser.parserFactory({
+      createElement: this.createElement.bind(this),
+      FragmentComponent: preact.Fragment,
+    });
+    const { parse: parseNoMarkup } = __caph_definitions__.BaseParser.parserFactory({
+      createElement: this.createElement.bind(this),
+      FragmentComponent: preact.Fragment,
+    });
+
+    this.parse = parse;
+    this.parseAst = parseAst;
+    this.parseNoMarkup = parseNoMarkup;
+
+
     //@ts-ignore
     const requirements = window.caph_requirements || [];
     //@ts-ignore
@@ -478,6 +1298,15 @@ const caph = new class {
       onEnter = {};
       onExit = {};
       hold = {};
+
+      /**
+       * @param {string} option
+       * @param {{
+       *  onEnter?:()=>void,
+       *  onExit?:()=>void,
+       *  hold?:boolean,
+       * }} [options]
+      */
       addOption(option, { onEnter, onExit, hold } = {}) {
         this.onEnter[option] = onEnter;
         this.onExit[option] = onExit;
@@ -537,12 +1366,13 @@ const caph = new class {
   // }
 
   /**
-   * @param {str} eventName 
-   * @param {()=>void} callback 
+   * @param {string} eventName 
+   * @param {(data:any)=>void} callback 
    */
   listenToEvent(eventName, callback) {
     preact.useEffect(() => {
-      const actualCallback = (e) =>{
+      const actualCallback = (/** @type {Event|CustomEvent}*/ e) => {
+        //@ts-ignore: event.detail is not defined for non-custom events
         try{callback(e.detail);}
         catch(err){}
       }
@@ -585,6 +1415,16 @@ const caph = new class {
     }
   }
 
+
+  /**
+   * @param {string} ref 
+   * @param {{
+   * parent?: HTMLElement|null,
+   * where?: 'beforebegin' | 'afterbegin' | 'beforeend' | 'afterend',
+   * attrs?: {[key:string]:string},
+   * auto_attrs?: boolean,
+   * }} param1
+   */
   async load(ref, {
     attrs = {}, parent = null, where = 'beforeend',
     auto_attrs = true
@@ -593,7 +1433,7 @@ const caph = new class {
     const ext = ref.split('#')[0].split('?')[0].split('.').pop();
     let tag = ext == 'js' ? 'script' : ext == 'css' ? 'link' : null;
     if (tag == null) throw new Error('Only .js and .css files can be _sources. Got: ' + ext + ' ' + ref);
-    let defaults = {};
+    let /** @type {{[key:string]:string}}*/ defaults = {};
     if (auto_attrs && tag == 'link') defaults = { rel: 'stylesheet', type: 'text/css' };
     Object.keys(attrs).forEach(k => defaults[k] = attrs[k]);
     let content = this.getAttachment(ref);
@@ -668,11 +1508,13 @@ const caph = new class {
     return new Promise((_ok, _err) => {
       let e = document.createElement(tag);
       let done = false;
-      e.onload = () => { if (!done) { done = true; _ok(); } };
+      e.onload = () => { if (!done) { done = true; _ok(null); } };
       e.onerror = (x) => { if (!done) { done = true; _err(x); } }; // HTTP errors only
       Object.keys(attrs).map(key => e.setAttribute(key, attrs[key]));
       if (content) {
+        //@ts-ignore
         let r = window._loaded_resources || {};
+        //@ts-ignore
         window._loaded_resources = r;
         r[ref] = false;
         content += `\nwindow._loaded_resources['${ref}']=true;\n`;
@@ -680,11 +1522,11 @@ const caph = new class {
         if (tag == 'script') {
           (async () => {
             while (!r[ref]) await sleep(100);
-            done = true; _ok();
+            done = true; _ok(null);
           })();
         } else if (tag == 'style') {
           let ms = 10;
-          setTimeout(() => { done = true, _ok() }, ms);
+          setTimeout(() => { done = true, _ok(null) }, ms);
         }
       }
       parent.insertAdjacentElement(where, e);
@@ -692,87 +1534,19 @@ const caph = new class {
     });
   };
 
-  // template literal parsers
-
-
-  parse({ raw: strings }, ...values) {
-    return this._parse(true, strings, ...values);
-  }
-
-  parseEsc(strings, ...values) {
-    return this._parse(true, strings, ...values);
-  }
-
-  parseNoMarkup({ raw: strings }, ...values) {
-    return this._parse(false, strings, ...values);
-  }
-  parseNoMarkupEsc(strings, ...values) {
-    return this._parse(false, strings, ...values);
-  }
-
-  _parse_init() {
-    // copied from xhtm
-    const empty = {};
-    const FIELD = '\ue000';
-    const QUOTES = '\ue001';
-    const ESCAPED_DOLLAR = '\ue002';
-    const SPACE = '\ue003';
-    const each_FIELD = new RegExp(FIELD, 'g');
-    const each_QUOTES = new RegExp(QUOTES, 'g');
-    const each_ESCAPED_DOLLAR = new RegExp(ESCAPED_DOLLAR, 'g');
-    const each_SPACE = new RegExp(SPACE, 'g');
-
-    'area base br col command embed hr img input keygen link meta param source track wbr ! !doctype ? ?xml'.split(' ').map(v => empty[v] = empty[v.toUpperCase()] = true)
-
-    // https://html.spec.whatwg.org/multipage/syntax.html#optional-tags
-    // closed by the corresponding tag or end of parent content
-    const close = {
-      'li': '',
-      'dt': 'dd',
-      'dd': 'dt',
-      'p': 'address article aside blockquote details div dl fieldset figcaption figure footer form h1 h2 h3 h4 h5 h6 header hgroup hr main menu nav ol pre section table',
-      'rt': 'rp',
-      'rp': 'rt',
-      'optgroup': '',
-      'option': 'optgroup',
-      'caption': 'tbody thead tfoot tr colgroup',
-      'colgroup': 'thead tbody tfoot tr caption',
-      'thead': 'tbody tfoot caption',
-      'tbody': 'tfoot caption',
-      'tfoot': 'caption',
-      'tr': 'tbody tfoot',
-      'td': 'th tr',
-      'th': 'td tr tbody',
-    };
-    for (let tag in close) {
-      [...close[tag].split(' '), tag].map(closer => {
-        close[tag] =
-          close[tag.toUpperCase()] =
-          close[tag + closer] =
-          close[tag.toUpperCase() + closer] =
-          close[tag + closer.toUpperCase()] =
-          close[tag.toUpperCase() + closer.toUpperCase()] =
-          true;
-      })
-    }
-    this._parseEnv = { empty, close, FIELD, QUOTES, ESCAPED_DOLLAR, each_FIELD, each_QUOTES, each_ESCAPED_DOLLAR, SPACE, each_SPACE };
-  }
 
   createElement(type, props, ...children) {
     if (type == 'caph') {
-      const pluginKey = props && props['plugin'];
+      let pluginKey = props && props['plugin'];
+      if (pluginKey == 'caph-math') pluginKey = this.mathPlugin;
       if (pluginKey) type = this.plugin(pluginKey);
       else console.warn('caph tag without plugin attribute');
     }
     children = children.map(
-      x => this._is_string(x) ? this._html_safe_undo(x) : x);
+      x => is_string(x) ? this._html_safe_undo(x) : x);
     return preact.createElement(type, props, ...children);
   }
 
-
-  _is_string(obj) {
-    return Object.prototype.toString.call(obj) === "[object String]";
-  }
   _html_safe(str) {
     // e.g. converts < into &lt;
     return new Option(str).innerHTML;
@@ -783,301 +1557,7 @@ const caph = new class {
     const text = doc.documentElement.textContent;
     return text;
   }
-  _html_is_valid_attr_key(key) {
-    return /^[a-zA-Z_:][a-zA-Z0-9_:.-]*$/.test(key);
-  }
 
-  Deque = class{
-    constructor(arr) {
-      this.data = [...(arr||[])];
-      this.lr = [0, arr.length];
-    }
-    get capacity() {
-      return this.data.length;
-    }
-    get length() {
-      const [i, j] = this.lr;
-      return j >= i? j - i: this.capacity - i + j;
-    }
-    toArray(){
-      const [i, j] = this.lr;
-      if(j>=i) return this.data.slice(i,j);
-      else return this.data.slice(i).concat(this.data.slice(0,j));
-    }
-    resize(newLength){
-      if(newLength===undefined){
-        if(this.length+1 >= this.capacity) this.resize(3*this.length);
-        if(this.length-1 <= this.capacity<<2) this.resize(this.length<<1);
-        return;
-      }
-      const arr = this.toArray()
-      this.data = [...arr, ...new Array(newLength-arr.length).fill(null)];
-      this.lr = [0, arr.length];
-    }
-    _mod_add(lrIndex, retK, afterK){
-      const add = (i, k)=>((i%this.capacity) + k + this.capacity) % this.capacity;
-      const out = add(this.lr[lrIndex], retK);
-      this.lr[lrIndex] = add(this.lr[lrIndex], afterK);
-      return out;
-    }
-    pushRight(x) {
-      this.resize();
-      this.data[this._mod_add(1, 0, +1)] = x;
-    }
-    pushLeft(x) {
-      this.resize();
-      this.data[this._mod_add(0, -1, -1)] = x;
-    }
-    popRight() {
-      this.resize();
-      return this.data[this._mod_add(1, -1, -1)];
-    }
-    popLeft() {
-      this.resize();
-      return this.data[this._mod_add(0, 0, +1)];
-    }
-  }
-  _parse(parse_math, strings, ...values) {
-    // based on xhtm, which is based on htm. Differences:
-    // 1. Replaces html entities
-    // 2. Parses math markup.
-    // 3. Solves some errors instead of blocking.
-    if (this._parseEnv === undefined) this._parse_init();
-    const { empty, close, SPACE, each_SPACE, FIELD, QUOTES, ESCAPED_DOLLAR, each_FIELD, each_QUOTES, each_ESCAPED_DOLLAR } = this._parseEnv;
-
-    let prev = 0, current = [], args, name, value, quotes = [], quote = 0, last;
-    current.root = true;
-
-    values = new this.Deque(values);
-
-    const evaluate = (str, parts = [], raw) => {
-      let i = 0;
-      str = !raw && str === QUOTES ?
-        quotes[quote++].slice(1, -1) :
-        str.replace(each_QUOTES, m => quotes[quote++]);
-      if (!str) return str;
-      str.replace(each_FIELD, (match, idx) => {
-        if (idx) parts.push(str.slice(i, idx));
-        i = idx + 1;
-        return parts.push(values.popLeft());
-      })
-      if (i < str.length) parts.push(str.slice(i));
-      return parts.length > 1 ? parts : parts[0];
-    }
-    // close level
-    const up = () => {
-      [current, last, ...args] = current;
-      const elem = this.createElement(last, ...args);
-      current.push(elem);
-      depth-=1;
-    }
-    const setAttr = (props, key, value) => {
-      if(key=='style' && Array.isArray(value)) value = value.join(' ');
-      if (this._html_is_valid_attr_key(key))
-        return props[key] = value;
-      console.log(props);
-      // Fix the error to avoid blocking the whole render process
-      const tag = current[1];
-      console.error(`Parsing error near <${tag} ... ${key}.`)
-      if (key[0] == '<') {
-        const newTag = key.slice(1);
-        console.warn(`Ignoring <${tag}. Assuming <${newTag}...`);
-        current[1] = newTag;
-      }
-    }
-    let s = strings.join(FIELD);
-    s = s.replace(/<!--[^]*-->/g, '');
-    s = s.replace(/<!\[CDATA\[[^]*\]\]>/g, '');
-    s = s.replace(/\s+/g, ' ');
-    if (parse_math) {
-      s = s.replace(/\\\$/g, ESCAPED_DOLLAR);
-      // s = s.replace(/([^\\]|^)\$\$(.*?[^\\])\$\$(.|$)/sg,
-      //   (match, before, tex, after) =>
-      //     `${before}${parseMath(tex, true, match)}${after}`,
-      // );
-      // s = s.replace(
-      //   /([^\\]|^)\$(.*?[^\\])\$(.|$)/sg,
-      //   (match, before, tex, after) =>
-      //     `${before}${parseMath(tex, false, match)}${after}`,
-      // );
-      //
-      s = s.replace(/(\$\$|\$)([^\1]*?)\1( ?)/sg, (match, mark, tex, space) => {
-        // if (match.search(/\/\>/) != -1) {
-        //   match = match.replace(each_ESCAPED_DOLLAR, '\\\$');
-        //   console.error('Math parsing error:', match);
-        //   const safe = this._html_safe(match);
-        //   return `<caph plugin="core-error">${safe}</>`;
-        // }
-        tex = tex.replace(/\</g, '\\lt ');
-        tex = tex.replace(/\>/g, '\\gt ');
-        tex = tex.replace(each_ESCAPED_DOLLAR, '\\\$');
-        const mode = mark=='$$'?' displayMode':'';
-        const end = space.length?`<span children=" "/>`:'';
-        return `<caph plugin="${this.mathPlugin}" ${mode}>${tex}</>${end}`;
-      });
-      s = s.replace(each_ESCAPED_DOLLAR, '$'); // \$ in html becomes $
-    }
-    // There is a deep error here: they assume arg="..." will never occur in the html unless it
-    // is being part of a <tag arg="...">. 
-    s = s.replace(/= *('|")([^\1]*?)\1/g, (match,quote,content) => {
-      quotes.push(`${quote}${content}${quote}`);
-      return `=${QUOTES}`;
-    });
-    // ...>text<... sequence
-    let depth=-1;
-    s = s.replace(/(?:^|>)([^<]*)(?:$|<)/g, (match, text, idx, str) => {
-      depth+=1;
-      let closeTag, tag;
-      if (idx) {
-        let ss = str.slice(prev, idx);
-        // <abc/> → <abc />
-        // console.log(`${'|'.repeat(depth)}${ss}. ${text}`);
-        ss = ss.replace(/(\S)\/$/, '$1 /');
-        ss.split(' ').map((part, i) => {
-          // console.log(' '.repeat(depth), i, part);
-          if (part[0] === '/') {
-            closeTag = tag || part.slice(1) || 1;
-            depth-=1;
-          }
-          else if (!i) {
-            tag = evaluate(part);
-            // <p>abc<p>def, <tr><td>x<tr>
-            while (close[current[1] + tag]) up();
-            current = [current, tag, null];
-            if (empty[tag]) closeTag = tag;
-          }
-          else if (part) {
-            let props = current[2] || (current[2] = {});
-            if (part.slice(0, 3) === '...') {
-              const newProps = values.popLeft();
-              for (let key in newProps) {
-                setAttr(props, key, newProps[key]);
-              }
-            }
-            else {
-              [name, value] = part.split('=');
-              setAttr(props, evaluate(name), value ? evaluate(value) : true);
-            }
-          }
-        })
-      }
-      if (closeTag) {
-        up();
-        // if last child is closable - closeTag it too
-        while (last !== closeTag && close[last]) up();
-      }
-      prev = idx + match.length;
-      if (text && (text !== ' ' || tag=='span')) evaluate((last = 0, text), current, true);
-    });
-    if (!current.root) up();
-    return current.length > 1 ? current : current[0];
-  }
-}
-
-
-caph.Plugin = class {
-
-  async loader() { }
-
-  Component({ children, ...props }) {
-    console.error('Override the Component method of this object:', this);
-    return caph.parse`<${caph.plugin('core-error')}> Override the Component method</> `;
-  }
-
-}
-
-caph.PluginLoader = class extends caph.Plugin {
-
-  constructor(key) {
-    super();
-    this.key = key;
-    this.loader();
-    caph.load('caph-docs/core/plugin-loader.css');
-  }
-
-  plugin = null;
-  error = null;
-  renderReady = false;
-
-  async loader() {
-    // 1. Put the plugin script in the document head
-    // 2. Wait for the browser to load the script
-    this.plugin = await this.loadPlugin();
-    // 3. Start but don't wait for the plugin loader
-    this.pluginLoader();
-  }
-
-  async loadPlugin() {
-    const key = this.key;
-    if (caph.pluginDefs[key]) {
-      return caph.pluginDefs[key]; // already loaded
-    }
-    if (caph.officialPlugins.includes(key)) {
-      const url = `${caph.dist}/plugin-${key}.js`;
-      return caph.pluginDefs[key] = caph.pluginLoader(url);
-    }
-    else if (key.match(/[^#\?]+.js(#.*|\?.*|)$/)) {
-      let isOfficial = caph.officialPlugins.map(k => `${caph.dist}/plugin-${k}.js`).includes(key);
-      const url = isOfficial ? key : `${key}?${caph._randomSessionSuffix}`;
-      await caph.load(url);
-      caph.pluginDefs[key] = caph.pluginDefs[key] || caph.pluginDefs[url];
-      assert(caph.pluginDefs[key], 'Plugin not declared in file: ' + key);
-      if (key != url) delete caph.pluginDefs[url];
-      return caph.pluginDefs[key];
-    }
-    // User plugin
-    return await MyPromise.until(() => caph.pluginDefs[key]);
-  }
-
-  async pluginLoader() {
-    try {
-      await this.plugin.loader();
-      this.renderReady = true;
-    } catch (err) {
-      this.error = err || true;
-      console.error(err);
-    }
-  }
-
-
-  Component({ children, ...props }) {
-    // eventually overridden by FinalComponent
-    return this.TemporalComponent({ children, ...props });
-  }
-
-  TemporalComponent({ children, ...props }) {
-    const [_, setTrigger] = preact.useState(0);
-
-    preact.useEffect(async () => {
-      await MyPromise.until(() => this.renderReady || this.error);
-      setTrigger(Math.random() * 1e12); // refresh this component
-    }, []);
-
-    if (this.renderReady) return this.FinalComponent({ children, ...props });
-    else if (this.error) return this._loadErrorComponent({ children });
-    else return this._loadingComponent({ children });
-  }
-
-  FinalComponent({ children, ...props }) {
-    this.Component = this.FinalComponent; // override the Component method
-    try {
-      return this.plugin.Component({ children, ...props });
-    } catch (err) {
-      console.error(`Rendering error in plugin ${this.key}:`, err);
-      return caph.parse`<code class="flashing">${children||'...'}</code>`;
-    }
-  }
-
-  _loadingComponent({ children }) {
-    return caph.parse`
-    <code class="caph-flashing" title=${`${this.key} is loading...`}>
-      ${children||'...'}
-    </code>`;
-  }
-
-  _loadErrorComponent({ children }) {
-    return caph.parse`<${caph.plugin('core-error')} tooltip=${this.error}/>`;
-  }
 }
 
 caph.pluginDefs['core-error'] = new class extends caph.Plugin {
@@ -1085,6 +1565,7 @@ caph.pluginDefs['core-error'] = new class extends caph.Plugin {
   Component({ children, tooltip }) {
     const help = preact.useCallback(() => {
       const win = window.open('', '_blank');
+      if (!win) throw new Error('Popup blocked');
       win.document.write(`
         <div>
           1. In tex, use \\lt and \\gt instead of &lt; and &gt;.
@@ -1097,7 +1578,7 @@ caph.pluginDefs['core-error'] = new class extends caph.Plugin {
     }, []);
     return caph.parse`
       <a href="./error-help" onclick=${(e) => {
-        window.preventDefault(e);
+      e.preventDefault();
         help();
       }}>(help?)</a> 
       <code class="caph-flashing caph-error" title=${tooltip}>
