@@ -740,9 +740,9 @@ __caph_definitions__.BaseParser = class {
       text = text.replace(/^\s+(.*?)$/, ' $1');
       text = text.replace(/^(.*?)\s+$/, '$1 ');
     } else{
-      // Replace multiple spaces with single space everywhere. Trim.
+      // Replace multiple spaces with single space everywhere.
       text = text.replace(/\s+/g, ' ');
-      text = text.trim();
+      if (text == ' ') text = '';
     }
     // console.log(`REPLACED:|${text}|`);
     return text;
