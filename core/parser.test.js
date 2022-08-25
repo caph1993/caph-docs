@@ -69,12 +69,37 @@ function main(){
     ['div', null, []],
   );
   assertTest(
-    parseAst1`<div>  <div> hello </div>  </div>`,
-    ['div', null, [['div', null, ['hello']]]],
+    parse1`<p>No space</>`,
+    ['p', null, ['No space']],
+  );
+  assertTest(
+    parse1`<p> Left space</>`,
+    ['p', null, [' Left space']],
+  );
+  assertTest(
+    parse1`<p>Right space </>`,
+    ['p', null, ['Right space ']],
+  );
+  assertTest(
+    parse1`<p> Both spaces </>`,
+    ['p', null, [' Both spaces ']],
+  );
+  assertTest(
+    parse1`<p>Space <a>after</a> link</>`,
+    ['p', null, ['Space ', ['a', null, ['after']], ' link']],
+  );
+
+  assertTest(
+    parseAst1`
+      <div>
+        <div> hello </div>
+      </div>
+    `,
+    ['div', null, [['div', null, [' hello ']]]],
   );
   assertTest(
     parseAst1`<div><div> </div></div>`,
-    ['div', null, [['div', null, []]]],
+    ['div', null, [['div', null, [' ']]]],
   );
   assertTest(
     parseAst1`<div><div></div><div></div><div></div></div>`,
@@ -110,7 +135,7 @@ function main(){
   );
   assertTest(
     parseAst1`<><> A </><>B </><> C</></>`,
-    [null, null, ['A', 'B', 'C']],
+    [null, null, [' A ', 'B ', ' C']],
   );
   assertTest(parseAst1`
     <!DOCTYPE html>
@@ -216,10 +241,10 @@ function main(){
     parse1`<ul>${['A', 'B', 'C'].map(s => parse1`<li>${s}</li>`)}</>`,
     ['ul', null, [['li', null, ['A']], ['li', null, ['B']], ['li', null, ['C']]]],
   );
-
   // assertEq(
   //   parser.parse`<div title="10$"><div title="10$"></div></div>`,
   //   ['caph', {plugin:'caph-math'}, ['e^2']],
   // );
 }
+
 main();

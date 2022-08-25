@@ -42,9 +42,6 @@ __caph_definitions__.BaseParser = class {
   static parserFactory(post=null){
     const cls = this;
 
-    const parse = ({raw:strings}, ...values)=>evalAst(new cls(strings, values).root);
-    const parseAst = ({raw:strings}, ...values)=> new cls(strings, values).root;
-
     const {createElement, FragmentComponent} = post||{
       createElement: (type, props, ...children)=> (!type||is_string(type))?
         [type, props, children] : type({children, ...props}),
@@ -57,13 +54,17 @@ __caph_definitions__.BaseParser = class {
       // it will not be an AstNode!
       if (!Array.isArray(root)) return root;
       let [tag, props, children] = root;
+      assert(Array.isArray(children), root.toString());
       children = children.map(child => evalAst(child));
       if(tag==null){
         assert(props==null);
-        return FragmentComponent({children});
+        tag = FragmentComponent;
       }
       return createElement(tag, props, ...children);
     }
+
+    const parse = ({raw:strings}, ...values)=>evalAst(new cls(strings, values).root);
+    const parseAst = ({raw:strings}, ...values)=> new cls(strings, values).root;
 
     return {parse, parseAst, evalAst};
   }
@@ -113,7 +114,8 @@ __caph_definitions__.BaseParser = class {
     ].join('|')})`, 'ys');
 
     const elems = this.parseSiblings(null, []);
-    const /** @type {AstNode} */ root = elems.length==1 ? elems[0] : [null, null, elems];
+    /** @type {AstNode} */
+    const root = elems.length==1 ? elems[0] : [null, null, elems];
     if(this.pos!=this.str.length) console.warn(`Not all the string was consumed: ${this.pos}/${this.str.length}`);
     this.root = root;
   }
@@ -198,14 +200,13 @@ __caph_definitions__.BaseParser = class {
     assert(parentTag!==undefined);
     // Parse text preceeding the first sibling
     let [text] = this.run(this.REG_EXP_TEXT);
-    if(text.length) text = this.trimText(text, parentTag, !siblings.length);
+    if(text.length) text = this.trimText(text);
     if(text.length) siblings.push(text);
 
     if(this.try_run(new RegExp(`${this.ESC}`, 'ys'))){
       let value = this.values[this.valueIndex++];
-      const spaceTrick = (obj)=> obj===' '? '&nbsp;' : obj;
-      if (Array.isArray(value)) siblings.push(...value.map(spaceTrick));
-      else siblings.push(spaceTrick(value));
+      if (Array.isArray(value)) siblings.push(...value);
+      else siblings.push(value);
       return this.parseSiblings(parentTag, siblings);
     }
 
@@ -248,7 +249,7 @@ __caph_definitions__.BaseParser = class {
     let /** @type {TagType} */ tag;
     if(this.try_run(/<\/\s*>/ys)) return siblings;
     if(this.try_run(/<\//ys)){
-      let result = this.try_run(new RegExp(`(.*?)\\s*>`, 'ys'));
+      let result = this.try_run(new RegExp(`([^>\\s]+)\\s*>`, 'ys'));
       if(!result){
         console.error(`Expected close tag for parent ${parentTag||'fragment'} at ${this._currentPos()}\nIgnoring what follows.`);
         this.errorStop = true;
@@ -333,25 +334,17 @@ __caph_definitions__.BaseParser = class {
 
   /**
    * @param {string} text
-   * @param {TagType} parentTag
-   * @param {boolean} firstChild
    * @returns {string}*/
-  trimText(text, parentTag, firstChild){
-    const spaceMatters = parentTag && this.spacePreservingTags[(''+parentTag).toLocaleLowerCase()];
-    // console.log(`REPLACE :|${text}|`);
-    if(spaceMatters){
-      // Trim multiple spaces to single space. No other modification.
-      // const space = '\u00a0';
-      text = text.replace(/^\s+(.*?)$/s, ' $1');
-      text = text.replace(/^(.*?)\s+$/s, '$1 ');
-      // if(firstChild && text.startsWith('\u00a0')) text = text.slice(1);
-    } else{
-      // Replace multiple spaces with single space everywhere.
-      text = text.replace(/\s+/g, ' ');
-      if (text == ' ') text = '';
-    }
-    // console.log(`REPLACED:|${text}|`);
-    return text;
+  trimText(text){
+    // End spaces are preserved only if they are exclusively inline
+    // https://reactjs.org/blog/2014/02/20/react-v0.9.html#jsx-whitespace
+    // https://www.w3.org/TR/REC-html40/struct/text.html#h-9.1
+    // https://stackoverflow.com/q/433493
+    return text.replace(/^(\s*)(.*?)(\s*)$/s, (_, l, middle, r)=>{
+      if(l.includes('\n')) l='';
+      if(r.includes('\n')) r='';
+      return `${l}${middle}${r}`
+    });
   }
 
   /**
@@ -361,7 +354,7 @@ __caph_definitions__.BaseParser = class {
   replaceText(text, posOfText){
     return text.replace(new RegExp(this.ESC, 'g'), (_, index)=>{
       const original = this.escaped[posOfText+index];
-      if (original != this.ESC) return original===' '?'\u00a0':original;
+      if (original != this.ESC) return original;
       return this.values[this.valueIndex++];
     });
   }

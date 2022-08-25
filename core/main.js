@@ -162,7 +162,6 @@ const caph = new class {
     this.parse = parse;
     this.parseAst = parseAst;
     this.parseNoMarkup = parseNoMarkup;
-    this.unicodeSpace = "\u00a0"
 
     //@ts-ignore
     const requirements = window.caph_requirements || [];
@@ -467,8 +466,7 @@ const caph = new class {
       if (pluginKey) type = this.plugin(pluginKey);
       else console.warn('caph tag without plugin attribute');
     }
-    children = children.map(
-      x => is_string(x) ? this._html_safe_undo(x) : x);
+    // children = children.map(x => is_string(x) ? this._html_safe_undo(x) : x);
     return preact.createElement(type, props, ...children);
   }
 
