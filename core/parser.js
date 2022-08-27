@@ -104,7 +104,7 @@ __caph_definitions__.BaseParser = (class {
     /** @type {CustomRule[]} */ //@ts-ignore
     this.customRules = this.constructor.customRules;
     /** @type {(tag:TagType)=>(null|string[])} */ //@ts-ignore
-    this.optionalClose = cls.optionalClose.bind(cls);
+    this.optionalClose = this.constructor.optionalClose.bind(this.constructor);
 
     this.REG_EXP_TEXT = new RegExp(`.*?(?=${[
       '$', '<', this.ESC,
@@ -114,7 +114,7 @@ __caph_definitions__.BaseParser = (class {
     const elems = this.parseSiblings(null, []);
     /** @type {AstNode} */
     const root = elems.length==1 ? elems[0] : [null, null, elems];
-    if(this.pos!=this.str.length) console.warn(`Not all the string was consumed: ${this.pos}/${this.str.length}`);
+    if(this.pos!=this.str.length) this.warn(`Not all the string was consumed: ${this.pos}/${this.str.length}`);
     this.root = root;
   }
 
@@ -130,7 +130,7 @@ __caph_definitions__.BaseParser = (class {
 
   // https://html.spec.whatwg.org/multipage/syntax.html#optional-tags
   /** @type {{[key:string]:string[]}}*/
-  _optionalClose = {
+  static _optionalClose = {
     'li': ['li'],
     'dt': ['dt', 'dd'],
     'dd': ['dd', 'dt'],
@@ -149,7 +149,7 @@ __caph_definitions__.BaseParser = (class {
     'th': ['th', 'td'],
   };
 
-  optionalClose(/** @type {TagType}*/ tag){
+  static optionalClose(/** @type {TagType}*/ tag){
     if(!tag || !is_string(tag)) return null;
     return this._optionalClose[/** @type {string} tag */(tag)];
   }
@@ -381,9 +381,9 @@ __caph_definitions__.BaseParser = (class {
  * 2. Make a new class that inherits from this one and adds math support. It must be extensible.
  * 3. Make a new class that inherits from math and adds code support. It must be extensible.
  * 4. Make a new class that inherits from math and adds paragraphs support. It must be extensible.
- */
+*/
 
- __caph_definitions__.NewParser = class extends __caph_definitions__.BaseParser {
+__caph_definitions__.NewParser = class extends __caph_definitions__.BaseParser {
 
   static customRules = [
     ...super.customRules,

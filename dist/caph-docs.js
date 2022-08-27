@@ -10,6 +10,33 @@ function is_string(obj) {
   return Object.prototype.toString.call(obj) === "[object String]";
 }
 
+// utils = {
+//   unindent: (text) => {
+//     let lines = text.split('\n');
+//     let n = lines.filter(l => l.trim().length)
+//       .map(l => l.length - l.trimStart().length)
+//       .reduce((p, c) => Math.min(c, p), 1000);
+//     return lines.map(l => l.slice(n)).join('\n');
+//   }
+// };
+// _URL_resolve(url) {
+//   return new URL(url, document.baseURI).href;
+// }
+// // _URL_is_absolute(url) {
+// //   //https://stackoverflow.com/q/10687099
+// //   return new URL(document.baseURI).origin !== new URL(url, document.baseURI).origin;
+// // }
+
+// _html_safe(str) {
+//   // e.g. converts < into &lt;
+//   return new Option(str).innerHTML;
+// }
+// _html_safe_undo(str) {
+//   // e.g. converts &lt; into <
+//   const doc = new DOMParser().parseFromString(str, "text/html");
+//   const text = doc.documentElement.textContent;
+//   return text;
+// }
 function assert(condition, ...messages) {
   if (condition) return;
   throw new Error(...messages);
@@ -417,19 +444,14 @@ exports={};
 
 __caph_definitions__.ConsoleProxy = class{
   log(...args){ console.log(...args);}
-  warn(...args){ console.warn(...args);}
-  error(...args){ console.error(...args);}
+  warn(...args){ this.warn(...args);}
+  error(...args){ this.error(...args);}
 }
 
 
+//https://stackoverflow.com/a/70329711
 
-__caph_definitions__.BaseParser = class {
-
-  // constructor(newAstNode=null) {
-  //   this.newAstNode = newAstNode? newAstNode:((tag, props, ...children) => [tag, props, children]);
-  // }
-
-  //console = new __caph_definitions__.ConsoleProxy();
+__caph_definitions__.BaseParser = (class {
 
   ESC = '\ue000';
   SPEC = `https://html.spec.whatwg.org/multipage/syntax.html`;
@@ -484,6 +506,10 @@ __caph_definitions__.BaseParser = class {
   /** @type {CustomRule[]} */
   static customRules = [];
 
+
+  warn(...args){console.warn(...args)}; // Overriden during tests
+  error(...args){console.error(...args)}; // Overriden during tests
+
   constructor(/** @type {string[]}*/ strings, values, debug=0){
     let str = strings.join(this.ESC);
     let escaped = {};
@@ -501,11 +527,10 @@ __caph_definitions__.BaseParser = class {
     debug && console.log('PARSING', this.str);
     this.DEBUG = debug==2;
 
-    const cls = this.constructor;
     /** @type {CustomRule[]} */ //@ts-ignore
-    this.customRules = cls.customRules;
+    this.customRules = this.constructor.customRules;
     /** @type {(tag:TagType)=>(null|string[])} */ //@ts-ignore
-    this.optionalClose = cls.optionalClose.bind(cls);
+    this.optionalClose = this.constructor.optionalClose.bind(this.constructor);
 
     this.REG_EXP_TEXT = new RegExp(`.*?(?=${[
       '$', '<', this.ESC,
@@ -515,7 +540,7 @@ __caph_definitions__.BaseParser = class {
     const elems = this.parseSiblings(null, []);
     /** @type {AstNode} */
     const root = elems.length==1 ? elems[0] : [null, null, elems];
-    if(this.pos!=this.str.length) console.warn(`Not all the string was consumed: ${this.pos}/${this.str.length}`);
+    if(this.pos!=this.str.length) this.warn(`Not all the string was consumed: ${this.pos}/${this.str.length}`);
     this.root = root;
   }
 
@@ -578,7 +603,7 @@ __caph_definitions__.BaseParser = class {
     finally{ this.pos = pos; }
   }
 
-  _currentPos() { // Just for printing debug info
+  _currentPos(){ // Just for printing debug info
     const {pos, str} = this;
     const short = str.slice(pos, pos+50).replace('\n', '(\\n)');
     return `${pos}...${short}...${pos+50}`;
@@ -612,7 +637,7 @@ __caph_definitions__.BaseParser = class {
     let endReached = this.pos==this.str.length;
     if(endReached){
       if(parentTag && !this.optionalClose(parentTag)){
-        console.warn(`Expected closing tag </${parentTag}> or </> after ${text}. Ignoring what follows`);
+        this.warn(`Expected closing tag </${parentTag}> or </> after ${text}. Ignoring what follows`);
         this.errorStop = true;
       }
       return siblings;
@@ -635,12 +660,12 @@ __caph_definitions__.BaseParser = class {
         `<!DOCTYPE\\s*.*?>`,
       ].join('|'), 'iys'));
       if(!result){
-        console.error(`Unexpected <! at ${this._currentPos()}\nIgnoring what follows.`);
+        this.error(`Unexpected <! at ${this._currentPos()}\nIgnoring what follows.`);
         this.errorStop = true;
         return siblings;
       }
       let [text] = result;
-      if(text.endsWith('/>')) console.warn(`Non compliant tag found.\n${this.SPEC}`);
+      if(text.endsWith('/>')) this.warn(`Non compliant tag found.\n${this.SPEC}`);
       this.replaceText(text, this.pos-text.length); // Consume the fields inside, if any
       return this.parseSiblings(parentTag, siblings);
     }
@@ -650,7 +675,7 @@ __caph_definitions__.BaseParser = class {
     if(this.try_run(/<\//ys)){
       let result = this.try_run(new RegExp(`([^>\\s]+)\\s*>`, 'ys'));
       if(!result){
-        console.error(`Expected close tag for parent ${parentTag||'fragment'} at ${this._currentPos()}\nIgnoring what follows.`);
+        this.error(`Expected close tag for parent ${parentTag||'fragment'} at ${this._currentPos()}\nIgnoring what follows.`);
         this.errorStop = true;
         return siblings;
       }
@@ -658,7 +683,7 @@ __caph_definitions__.BaseParser = class {
       if (_tag==this.ESC) tag = this.values[this.valueIndex++];
       else tag = _tag;
       if(tag!==parentTag){
-        console.error(`Unmatched close tag ${tag}!=${parentTag} at ${this._currentPos()}\nIgnoring what follows.`);
+        this.error(`Unmatched close tag ${tag}!=${parentTag} at ${this._currentPos()}\nIgnoring what follows.`);
         this.errorStop = true;
       }
       return siblings;
@@ -675,12 +700,12 @@ __caph_definitions__.BaseParser = class {
     if (_tag==this.ESC) tag = this.values[this.valueIndex++];
     else if(!_tag.length) tag = null; //null means fragment
     else if(_tag.match(/[^a-z0-9._-]/i)){
-      console.error(`Error with tag ${_tag} before ${this._currentPos()}\nIgnoring what follows.`);
+      this.error(`Error with tag ${_tag} before ${this._currentPos()}\nIgnoring what follows.`);
       this.errorStop = true;
       return siblings;
     }
     else tag = _tag;
-    if (tag === undefined) tag = null, console.error(`Undefined component at ${this._currentPos()}`);
+    if (tag === undefined) tag = null, this.error(`Undefined component at ${this._currentPos()}`);
     const newSibling = this.parseParent(tag, null, []);
     if(tag) siblings.push(newSibling);
     else siblings.push(... newSibling[2]); // shortcut fragment nieces as siblings
@@ -703,7 +728,7 @@ __caph_definitions__.BaseParser = class {
     if(tag===undefined) throw '';
     this.run(/\s*/ys); // Consume whitespace
     if(this.pos==this.str.length){
-      console.warn(`Expected closing end ...> or .../> for tag ${tag}`);
+      this.warn(`Expected closing end ...> or .../> for tag ${tag}`);
       this.errorStop = true;
       return [tag, props, children];
     }
@@ -774,7 +799,7 @@ __caph_definitions__.BaseParser = class {
     return out;
   }
 
-}
+});
 
 /**
  * TO DO:
@@ -782,12 +807,12 @@ __caph_definitions__.BaseParser = class {
  * 2. Make a new class that inherits from this one and adds math support. It must be extensible.
  * 3. Make a new class that inherits from math and adds code support. It must be extensible.
  * 4. Make a new class that inherits from math and adds paragraphs support. It must be extensible.
- */
+*/
 
- __caph_definitions__.NewParser = class extends __caph_definitions__.BaseParser {
+__caph_definitions__.NewParser = class extends __caph_definitions__.BaseParser {
 
   static customRules = [
-    ...__caph_definitions__.BaseParser.customRules,
+    ...super.customRules,
     {
       regStart: `(?<!\\\\)\\$\\$`,
       regEnd: `(?<!\\\\)\\$\\$`,
@@ -800,232 +825,6 @@ __caph_definitions__.BaseParser = class {
     },
   ];
 
-}
-
-//------------------------------------------------------------------------------
-
-__caph_definitions__.Parser = class {
-  // /**
-  //  * @template T
-  //  * @param {string} str
-  //  * @param {(type: string, props: (Object|null), ...children: T[])=>string} post
-  //  * @returns {T|string}
-  //  * */
-  // main(str, post){
-  //   const root = this._main(str);
-  //   function rec(/** @type {AstNode}*/root){
-  //     if(is_string(root)) return root;
-
-  //   }
-  //   return post(ast);
-  // }
-
-  constructor(newAstNode=null) {
-    if(newAstNode===null){
-      this.newAstNode = (tag, props, ...children) => [tag, props, children];
-    } else {
-      this.newAstNode = newAstNode;
-    }
-    // based on xhtm, which is based on htm. Differences:
-    // 1. Replaces html entities
-    // 2. Parses math markup.
-    // 3. Renders errors instead of blocking.
-
-    const empty = {};
-    const FIELD = '\ue000';
-    const QUOTES = '\ue001';
-    const ESCAPED_DOLLAR = '\ue002';
-    const SPACE = '\ue003';
-    const each_FIELD = new RegExp(FIELD, 'g');
-    const each_QUOTES = new RegExp(QUOTES, 'g');
-    const each_ESCAPED_DOLLAR = new RegExp(ESCAPED_DOLLAR, 'g');
-    const each_SPACE = new RegExp(SPACE, 'g');
-
-    'area base br col command embed hr img input keygen link meta param source track wbr ! !doctype ? ?xml'.split(' ').map(v => empty[v] = empty[v.toUpperCase()] = true)
-    // https://html.spec.whatwg.org/multipage/syntax.html#optional-tags
-    // closed by the corresponding tag or end of parent content
-    const close = {
-      'li': ['li'],
-      'dt': ['dt', 'dd'],
-      'dd': ['dd', 'dt'],
-      'p': ['p', 'address', 'article', 'aside', 'blockquote', 'details', 'div', 'dl', 'fieldset', 'figcaption', 'figure', 'footer', 'form', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'header', 'hgroup', 'hr', 'main', 'menu', 'nav', 'ol', 'pre', 'section', 'table'],
-      'rt': ['rt', 'rp'],
-      'rp': ['rp', 'rt'],
-      'optgroup': ['optgroup'],
-      'option': ['option', 'optgroup'],
-      //'caption': [], // Disabled rule
-      //'colgroup': [], // Disabled rule
-      'thead': ['tbody','tfoot'],
-      'tbody': ['tbody', 'tfoot'],
-      'tfoot': [],
-      'tr': ['tr'],
-      'td': ['td', 'th'],
-      'th': ['th', 'td'],
-    };
-    for (let tag in close) {
-      [...close[tag].split(' '), tag].map(closer => {
-        close[tag] =
-          close[tag.toUpperCase()] =
-          close[tag + closer] =
-          close[tag.toUpperCase() + closer] =
-          close[tag + closer.toUpperCase()] =
-          close[tag.toUpperCase() + closer.toUpperCase()] =
-          true;
-      })
-    }
-    this._parseEnv = { empty, close, FIELD, QUOTES, ESCAPED_DOLLAR, each_FIELD, each_QUOTES, each_ESCAPED_DOLLAR, SPACE, each_SPACE };
-  }
-
-  html_is_valid_attr_key(key) {
-    return /^[a-zA-Z_:][a-zA-Z0-9_:.-]*$/.test(key);
-  }
-
-  _parse(parse_math, strings, ...values) {
-    const { empty, close, SPACE, each_SPACE, FIELD, QUOTES, ESCAPED_DOLLAR, each_FIELD, each_QUOTES, each_ESCAPED_DOLLAR } = this._parseEnv;
-
-    const fields = new __caph_definitions__.Dequeue(values);
-    let prev = 0, args, name, value, quotes = [], quote = 0, last;
-    let /** @type {any}*/current = [];
-
-    current.root = true;
-
-    const evaluate = (str, parts = [], raw) => {
-      let i = 0;
-      str = !raw && str === QUOTES ?
-        quotes[quote++].slice(1, -1) :
-        str.replace(each_QUOTES, m => quotes[quote++]);
-      if (!str) return str;
-      str.replace(each_FIELD, (match, idx) => {
-        if (idx) parts.push(str.slice(i, idx));
-        i = idx + 1;
-        return parts.push(fields.popLeft());
-      })
-      if (i < str.length) parts.push(str.slice(i));
-      return parts.length > 1 ? parts : parts[0];
-    }
-    // close level
-    const up = () => {
-      [current, last, ...args] = current;
-      const elem = this.newAstNode(last, ...args);
-      current.push(elem);
-      depth -= 1;
-    }
-    const setAttr = (props, key, value) => {
-      if (key == 'style' && Array.isArray(value)) value = value.join(' ');
-      if (this.html_is_valid_attr_key(key))
-        return props[key] = value;
-      console.log(props);
-      // Fix the error to avoid blocking the whole render process
-      const tag = current[1];
-      console.error(`Parsing error near <${tag} ... ${key}.`)
-      if (key[0] == '<') {
-        const newTag = key.slice(1);
-        console.warn(`Ignoring <${tag}. Assuming <${newTag}...`);
-        current[1] = newTag;
-      }
-    }
-    let s = strings.join(FIELD);
-    s = s.replace(/<!--[^]*-->/g, '');
-    s = s.replace(/<!\[CDATA\[[^]*?\]\]>/g, '');
-    s = s.replace(/\s+/g, ' ');
-    if(parse_math){
-      s = s.replace(/\\\$/g, ESCAPED_DOLLAR);
-      // s = s.replace(/([^\\]|^)\$\$(.*?[^\\])\$\$(.|$)/sg,
-      //   (match, before, tex, after) =>
-      //     `${before}${parseMath(tex, true, match)}${after}`,
-      // );
-      // s = s.replace(
-      //   /([^\\]|^)\$(.*?[^\\])\$(.|$)/sg,
-      //   (match, before, tex, after) =>
-      //     `${before}${parseMath(tex, false, match)}${after}`,
-      // );
-      //
-      s = s.replace(/(\$\$|\$)([^\1]*?)\1( ?)/sg, (match, mark, tex, space) => {
-        // if (match.search(/\/\>/) != -1) {
-        //   match = match.replace(each_ESCAPED_DOLLAR, '\\\$');
-        //   console.error('Math parsing error:', match);
-        //   const safe = this._html_safe(match);
-        //   return `<caph plugin="core-error">${safe}</>`;
-        // }
-        tex = tex.replace(/\</g, '\\lt ');
-        tex = tex.replace(/\>/g, '\\gt ');
-        tex = tex.replace(each_ESCAPED_DOLLAR, '\\\$');
-        const mode = mark == '$$' ? ' displayMode' : '';
-        const end = space.length ? `<span children=" "/>` : '';
-        return `<caph plugin="caph-math" ${mode}>${tex}</>${end}`;
-      });
-      s = s.replace(each_ESCAPED_DOLLAR, '$'); // \$ in html becomes $
-    }
-    // There is a deep error here: they assume arg="..." will never occur in the html unless it
-    // is being part of a <tag arg="...">.
-    s = s.replace(/= *('|")([^\1]*?)\1/g, (match, quote, content) => {
-      quotes.push(`${quote}${content}${quote}`);
-      return `=${QUOTES}`;
-    });
-    // ...>text<... sequence
-    let depth = -1;
-    s = s.replace(/(?:^|>)([^<]*)(?:$|<)/g, (match, text, idx, str) => {
-      depth += 1;
-      let closeTag, tag;
-      if (idx) {
-        let ss = str.slice(prev, idx);
-        // <abc/> → <abc />
-        // console.log(`${'|'.repeat(depth)}${ss}. ${text}`);
-        ss = ss.replace(/(\S)\/$/, '$1 /');
-        ss.split(' ').map((part, i) => {
-          // console.log(' '.repeat(depth), i, part);
-          if (part[0] === '/') {
-            closeTag = tag || part.slice(1) || 1;
-            depth -= 1;
-          }
-          else if (!i) {
-            tag = evaluate(part);
-            // <p>abc<p>def, <tr><td>x<tr>
-            while (close[current[1] + tag]) up();
-            current = [current, tag, null];
-            if (empty[tag]) closeTag = tag;
-          }
-          else if (part) {
-            let props = current[2] || (current[2] = {});
-            if (part.slice(0, 3) === '...') {
-              const newProps = fields.popLeft();
-              for (let key in newProps) {
-                setAttr(props, key, newProps[key]);
-              }
-            }
-            else {
-              [name, value] = part.split('=');
-              setAttr(props, evaluate(name), value ? evaluate(value) : true);
-            }
-          }
-        })
-      }
-      if (closeTag) {
-        up();
-        // if last child is closable - closeTag it too
-        while (last !== closeTag && close[last]) up();
-      }
-      prev = idx + match.length;
-      if (text && (text !== ' ' || tag == 'span')) evaluate((last = 0, text), current, true);
-    });
-    if (!current.root) up();
-    return current.length > 1 ? current : current[0];
-  }
-
-
-  parse({ raw: strings }, ...values) {
-    return this._parse(true, strings, ...values);
-  }
-  parseNoMarkup({ raw: strings }, ...values) {
-    return this._parse(false, strings, ...values);
-  }
-
-  parseEsc(strings, ...values) {
-    return this._parse(true, strings, ...values);
-  }
-  parseNoMarkupEsc(strings, ...values) {
-    return this._parse(false, strings, ...values);
-  }
 }
 
 if(Object.keys(exports).length){window['parser']=exports;}
@@ -1048,193 +847,20 @@ var LZUTF8;if(function(n){n.runningInNodeJS=function(){return"object"==typeof pr
 if(Object.keys(exports).length){window['lzutf8']=exports;}
 exports={};
 
-//libraries/preact-10.4.6/preact.min.js
+//core/script-loader.js
 exports={};
-!function(){var n,l,u,t,i,o,r,e,f={},c=[],a=/acit|ex(?:s|g|n|p|$)|rph|grid|ows|mnc|ntw|ine[ch]|zoo|^ord|itera/i;function s(n,l){for(var u in l)n[u]=l[u];return n}function v(n){var l=n.parentNode;l&&l.removeChild(n)}function h(n,l,u){var t,i=arguments,o={};for(t in l)"key"!==t&&"ref"!==t&&(o[t]=l[t]);if(arguments.length>3)for(u=[u],t=3;t<arguments.length;t++)u.push(i[t]);if(null!=u&&(o.children=u),"function"==typeof n&&null!=n.defaultProps)for(t in n.defaultProps)void 0===o[t]&&(o[t]=n.defaultProps[t]);return y(n,o,l&&l.key,l&&l.ref,null)}function y(l,u,t,i,o){var r={type:l,props:u,key:t,ref:i,__k:null,__:null,__b:0,__e:null,__d:void 0,__c:null,constructor:void 0,__v:o};return null==o&&(r.__v=r),n.vnode&&n.vnode(r),r}function d(n){return n.children}function p(n,l){this.props=n,this.context=l}function _(n,l){if(null==l)return n.__?_(n.__,n.__.__k.indexOf(n)+1):null;for(var u;l<n.__k.length;l++)if(null!=(u=n.__k[l])&&null!=u.__e)return u.__e;return"function"==typeof n.type?_(n):null}function m(n){var l,u;if(null!=(n=n.__)&&null!=n.__c){for(n.__e=n.__c.base=null,l=0;l<n.__k.length;l++)if(null!=(u=n.__k[l])&&null!=u.__e){n.__e=n.__c.base=u.__e;break}return m(n)}}function w(l){(!l.__d&&(l.__d=!0)&&u.push(l)&&!k.__r++||i!==n.debounceRendering)&&((i=n.debounceRendering)||t)(k)}function k(){for(var n;k.__r=u.length;)n=u.sort(function(n,l){return n.__v.__b-l.__v.__b}),u=[],n.some(function(n){var l,u,t,i,o,r,e;n.__d&&(r=(o=(l=n).__v).__e,(e=l.__P)&&(u=[],(t=s({},o)).__v=t,i=N(e,o,t,l.__n,void 0!==e.ownerSVGElement,null,u,null==r?_(o):r),z(u,o),i!=r&&m(o)))})}function g(n,l,u,t,i,o,r,e,a,s){var h,p,m,w,k,g,x,C=t&&t.__k||c,A=C.length;for(a==f&&(a=null!=r?r[0]:A?_(t,0):null),u.__k=[],h=0;h<l.length;h++)if(null!=(w=u.__k[h]=null==(w=l[h])||"boolean"==typeof w?null:"string"==typeof w||"number"==typeof w?y(null,w,null,null,w):Array.isArray(w)?y(d,{children:w},null,null,null):null!=w.__e||null!=w.__c?y(w.type,w.props,w.key,null,w.__v):w)){if(w.__=u,w.__b=u.__b+1,null===(m=C[h])||m&&w.key==m.key&&w.type===m.type)C[h]=void 0;else for(p=0;p<A;p++){if((m=C[p])&&w.key==m.key&&w.type===m.type){C[p]=void 0;break}m=null}k=N(n,w,m=m||f,i,o,r,e,a,s),(p=w.ref)&&m.ref!=p&&(x||(x=[]),m.ref&&x.push(m.ref,null,w),x.push(p,w.__c||k,w)),null!=k?(null==g&&(g=k),a=b(n,w,m,C,r,k,a),s||"option"!=u.type?"function"==typeof u.type&&(u.__d=a):n.value=""):a&&m.__e==a&&a.parentNode!=n&&(a=_(m))}if(u.__e=g,null!=r&&"function"!=typeof u.type)for(h=r.length;h--;)null!=r[h]&&v(r[h]);for(h=A;h--;)null!=C[h]&&j(C[h],C[h]);if(x)for(h=0;h<x.length;h++)$(x[h],x[++h],x[++h])}function b(n,l,u,t,i,o,r){var e,f,c;if(void 0!==l.__d)e=l.__d,l.__d=void 0;else if(i==u||o!=r||null==o.parentNode)n:if(null==r||r.parentNode!==n)n.appendChild(o),e=null;else{for(f=r,c=0;(f=f.nextSibling)&&c<t.length;c+=2)if(f==o)break n;n.insertBefore(o,r),e=r}return void 0!==e?e:o.nextSibling}function x(n,l,u,t,i){var o;for(o in u)"children"===o||"key"===o||o in l||A(n,o,null,u[o],t);for(o in l)i&&"function"!=typeof l[o]||"children"===o||"key"===o||"value"===o||"checked"===o||u[o]===l[o]||A(n,o,l[o],u[o],t)}function C(n,l,u){"-"===l[0]?n.setProperty(l,u):n[l]="number"==typeof u&&!1===a.test(l)?u+"px":null==u?"":u}function A(n,l,u,t,i){var o,r,e,f,c;if(i?"className"===l&&(l="class"):"class"===l&&(l="className"),"style"===l)if(o=n.style,"string"==typeof u)o.cssText=u;else{if("string"==typeof t&&(o.cssText="",t=null),t)for(f in t)u&&f in u||C(o,f,"");if(u)for(c in u)t&&u[c]===t[c]||C(o,c,u[c])}else"o"===l[0]&&"n"===l[1]?(r=l!==(l=l.replace(/Capture$/,"")),e=l.toLowerCase(),l=(e in n?e:l).slice(2),u?(t||n.addEventListener(l,P,r),(n.l||(n.l={}))[l]=u):n.removeEventListener(l,P,r)):"list"!==l&&"tagName"!==l&&"form"!==l&&"type"!==l&&"size"!==l&&"download"!==l&&!i&&l in n?n[l]=null==u?"":u:"function"!=typeof u&&"dangerouslySetInnerHTML"!==l&&(l!==(l=l.replace(/^xlink:?/,""))?null==u||!1===u?n.removeAttributeNS("http://www.w3.org/1999/xlink",l.toLowerCase()):n.setAttributeNS("http://www.w3.org/1999/xlink",l.toLowerCase(),u):null==u||!1===u&&!/^ar/.test(l)?n.removeAttribute(l):n.setAttribute(l,u))}function P(l){this.l[l.type](n.event?n.event(l):l)}function E(n,l,u){var t,i;for(t=0;t<n.__k.length;t++)(i=n.__k[t])&&(i.__=n,i.__e&&("function"==typeof i.type&&i.__k.length>1&&E(i,l,u),l=b(u,i,i,n.__k,null,i.__e,l),"function"==typeof n.type&&(n.__d=l)))}function N(l,u,t,i,o,r,e,f,c){var a,v,h,y,_,m,w,k,b,x,C,A=u.type;if(void 0!==u.constructor)return null;(a=n.__b)&&a(u);try{n:if("function"==typeof A){if(k=u.props,b=(a=A.contextType)&&i[a.__c],x=a?b?b.props.value:a.__:i,t.__c?w=(v=u.__c=t.__c).__=v.__E:("prototype"in A&&A.prototype.render?u.__c=v=new A(k,x):(u.__c=v=new p(k,x),v.constructor=A,v.render=F),b&&b.sub(v),v.props=k,v.state||(v.state={}),v.context=x,v.__n=i,h=v.__d=!0,v.__h=[]),null==v.__s&&(v.__s=v.state),null!=A.getDerivedStateFromProps&&(v.__s==v.state&&(v.__s=s({},v.__s)),s(v.__s,A.getDerivedStateFromProps(k,v.__s))),y=v.props,_=v.state,h)null==A.getDerivedStateFromProps&&null!=v.componentWillMount&&v.componentWillMount(),null!=v.componentDidMount&&v.__h.push(v.componentDidMount);else{if(null==A.getDerivedStateFromProps&&k!==y&&null!=v.componentWillReceiveProps&&v.componentWillReceiveProps(k,x),!v.__e&&null!=v.shouldComponentUpdate&&!1===v.shouldComponentUpdate(k,v.__s,x)||u.__v===t.__v){v.props=k,v.state=v.__s,u.__v!==t.__v&&(v.__d=!1),v.__v=u,u.__e=t.__e,u.__k=t.__k,v.__h.length&&e.push(v),E(u,f,l);break n}null!=v.componentWillUpdate&&v.componentWillUpdate(k,v.__s,x),null!=v.componentDidUpdate&&v.__h.push(function(){v.componentDidUpdate(y,_,m)})}v.context=x,v.props=k,v.state=v.__s,(a=n.__r)&&a(u),v.__d=!1,v.__v=u,v.__P=l,a=v.render(v.props,v.state,v.context),v.state=v.__s,null!=v.getChildContext&&(i=s(s({},i),v.getChildContext())),h||null==v.getSnapshotBeforeUpdate||(m=v.getSnapshotBeforeUpdate(y,_)),C=null!=a&&a.type==d&&null==a.key?a.props.children:a,g(l,Array.isArray(C)?C:[C],u,t,i,o,r,e,f,c),v.base=u.__e,v.__h.length&&e.push(v),w&&(v.__E=v.__=null),v.__e=!1}else null==r&&u.__v===t.__v?(u.__k=t.__k,u.__e=t.__e):u.__e=T(t.__e,u,t,i,o,r,e,c);(a=n.diffed)&&a(u)}catch(l){u.__v=null,n.__e(l,u,t)}return u.__e}function z(l,u){n.__c&&n.__c(u,l),l.some(function(u){try{l=u.__h,u.__h=[],l.some(function(n){n.call(u)})}catch(l){n.__e(l,u.__v)}})}function T(n,l,u,t,i,o,r,e){var a,s,v,h,y,d=u.props,p=l.props;if(i="svg"===l.type||i,null!=o)for(a=0;a<o.length;a++)if(null!=(s=o[a])&&((null===l.type?3===s.nodeType:s.localName===l.type)||n==s)){n=s,o[a]=null;break}if(null==n){if(null===l.type)return document.createTextNode(p);n=i?document.createElementNS("http://www.w3.org/2000/svg",l.type):document.createElement(l.type,p.is&&{is:p.is}),o=null,e=!1}if(null===l.type)d!==p&&n.data!==p&&(n.data=p);else{if(null!=o&&(o=c.slice.call(n.childNodes)),v=(d=u.props||f).dangerouslySetInnerHTML,h=p.dangerouslySetInnerHTML,!e){if(null!=o)for(d={},y=0;y<n.attributes.length;y++)d[n.attributes[y].name]=n.attributes[y].value;(h||v)&&(h&&v&&h.__html==v.__html||(n.innerHTML=h&&h.__html||""))}x(n,p,d,i,e),h?l.__k=[]:(a=l.props.children,g(n,Array.isArray(a)?a:[a],l,u,t,"foreignObject"!==l.type&&i,o,r,f,e)),e||("value"in p&&void 0!==(a=p.value)&&a!==n.value&&A(n,"value",a,d.value,!1),"checked"in p&&void 0!==(a=p.checked)&&a!==n.checked&&A(n,"checked",a,d.checked,!1))}return n}function $(l,u,t){try{"function"==typeof l?l(u):l.current=u}catch(l){n.__e(l,t)}}function j(l,u,t){var i,o,r;if(n.unmount&&n.unmount(l),(i=l.ref)&&(i.current&&i.current!==l.__e||$(i,null,u)),t||"function"==typeof l.type||(t=null!=(o=l.__e)),l.__e=l.__d=void 0,null!=(i=l.__c)){if(i.componentWillUnmount)try{i.componentWillUnmount()}catch(l){n.__e(l,u)}i.base=i.__P=null}if(i=l.__k)for(r=0;r<i.length;r++)i[r]&&j(i[r],u,t);null!=o&&v(o)}function F(n,l,u){return this.constructor(n,u)}function H(l,u,t){var i,r,e;n.__&&n.__(l,u),r=(i=t===o)?null:t&&t.__k||u.__k,l=h(d,null,[l]),e=[],N(u,(i?u:t||u).__k=l,r||f,f,void 0!==u.ownerSVGElement,t&&!i?[t]:r?null:u.childNodes.length?c.slice.call(u.childNodes):null,e,t||f,i),z(e,l)}n={__e:function(n,l){for(var u,t;l=l.__;)if((u=l.__c)&&!u.__)try{if(u.constructor&&null!=u.constructor.getDerivedStateFromError&&(t=!0,u.setState(u.constructor.getDerivedStateFromError(n))),null!=u.componentDidCatch&&(t=!0,u.componentDidCatch(n)),t)return w(u.__E=u)}catch(l){n=l}throw n}},l=function(n){return null!=n&&void 0===n.constructor},p.prototype.setState=function(n,l){var u;u=null!=this.__s&&this.__s!==this.state?this.__s:this.__s=s({},this.state),"function"==typeof n&&(n=n(u,this.props)),n&&s(u,n),null!=n&&this.__v&&(l&&this.__h.push(l),w(this))},p.prototype.forceUpdate=function(n){this.__v&&(this.__e=!0,n&&this.__h.push(n),w(this))},p.prototype.render=d,u=[],t="function"==typeof Promise?Promise.prototype.then.bind(Promise.resolve()):setTimeout,k.__r=0,o=f,r=0,e={render:H,hydrate:function(n,l){H(n,l,o)},createElement:h,h:h,Fragment:d,createRef:function(){return{current:null}},isValidElement:l,Component:p,cloneElement:function(n,l){var u,t;for(t in l=s(s({},n.props),l),arguments.length>2&&(l.children=c.slice.call(arguments,2)),u={},l)"key"!==t&&"ref"!==t&&(u[t]=l[t]);return y(n.type,u,l.key||n.key,l.ref||n.ref,null)},createContext:function(n){var l={},u={__c:"__cC"+r++,__:n,Consumer:function(n,l){return n.children(l)},Provider:function(n){var t,i=this;return this.getChildContext||(t=[],this.getChildContext=function(){return l[u.__c]=i,l},this.shouldComponentUpdate=function(n){i.props.value!==n.value&&t.some(function(l){l.context=n.value,w(l)})},this.sub=function(n){t.push(n);var l=n.componentWillUnmount;n.componentWillUnmount=function(){t.splice(t.indexOf(n),1),l&&l.call(n)}}),n.children}};return u.Consumer.contextType=u,u.Provider.__=u,u},toChildArray:function n(l){return null==l||"boolean"==typeof l?[]:Array.isArray(l)?c.concat.apply([],l.map(n)):[l]},__u:j,options:n},typeof module<"u"?module.exports=e:self.preact=e}();
-
-if(Object.keys(exports).length){window['preact']=exports;}
-exports={};
-
-//libraries/preact-10.4.6/hooks.js
-exports={};
-var n,t,r,u=window.preact,o=0,i=[],c=u.options.__r,e=u.options.diffed,f=u.options.__c,a=u.options.unmount;function p(n,r){u.options.__h&&u.options.__h(t,n,o||r),o=0;var i=t.__H||(t.__H={__:[],__h:[]});return n>=i.__.length&&i.__.push({}),i.__[n]}function v(n){return o=1,s(A,n)}function s(r,u,o){var i=p(n++,2);return i.t=r,i.__c||(i.__c=t,i.__=[o?o(u):A(void 0,u),function(n){var t=i.t(i.__[0],n);i.__[0]!==t&&(i.__=[t,i.__[1]],i.__c.setState({}))}]),i.__}function x(r,o){var i=p(n++,4);!u.options.__s&&q(i.__H,o)&&(i.__=r,i.__H=o,t.__h.push(i))}function m(t,r){var u=p(n++,7);return q(u.__H,r)?(u.__H=r,u.__h=t,u.__=t()):u.__}function y(){i.some(function(n){if(n.__P)try{n.__H.__h.forEach(h),n.__H.__h.forEach(_),n.__H.__h=[]}catch(t){return n.__H.__h=[],u.options.__e(t,n.__v),!0}}),i=[]}u.options.__r=function(r){c&&c(r),n=0;var u=(t=r.__c).__H;u&&(u.__h.forEach(h),u.__h.forEach(_),u.__h=[])},u.options.diffed=function(n){e&&e(n);var t=n.__c;t&&t.__H&&t.__H.__h.length&&(1!==i.push(t)&&r===u.options.requestAnimationFrame||((r=u.options.requestAnimationFrame)||function(n){var t,r=function(){clearTimeout(u),l&&cancelAnimationFrame(t),setTimeout(n)},u=setTimeout(r,100);l&&(t=requestAnimationFrame(r))})(y))},u.options.__c=function(n,t){t.some(function(n){try{n.__h.forEach(h),n.__h=n.__h.filter(function(n){return!n.__||_(n)})}catch(r){t.some(function(n){n.__h&&(n.__h=[])}),t=[],u.options.__e(r,n.__v)}}),f&&f(n,t)},u.options.unmount=function(n){a&&a(n);var t=n.__c;if(t&&t.__H)try{t.__H.__.forEach(h)}catch(n){u.options.__e(n,t.__v)}};var l="function"==typeof requestAnimationFrame;function h(n){"function"==typeof n.u&&n.u()}function _(n){n.u=n.__()}function q(n,t){return!n||t.some(function(t,r){return t!==n[r]})}function A(n,t){return"function"==typeof t?t(n):t}exports.useState=v,exports.useReducer=s,exports.useEffect=function(r,o){var i=p(n++,3);!u.options.__s&&q(i.__H,o)&&(i.__=r,i.__H=o,t.__H.__h.push(i))},exports.useLayoutEffect=x,exports.useRef=function(n){return o=5,m(function(){return{current:n}},[])},exports.useImperativeHandle=function(n,t,r){o=6,x(function(){"function"==typeof n?n(t()):n&&(n.current=t())},null==r?r:r.concat(n))},exports.useMemo=m,exports.useCallback=function(n,t){return o=8,m(function(){return n},t)},exports.useContext=function(r){var u=t.context[r.__c],o=p(n++,9);return o.__c=r,u?(null==o.__&&(o.__=!0,u.sub(t)),u.props.value):r.__},exports.useDebugValue=function(n,t){u.options.useDebugValue&&u.options.useDebugValue(t?t(n):n)},exports.useErrorBoundary=function(r){var u=p(n++,10),o=v();return u.__=r,t.componentDidCatch||(t.componentDidCatch=function(n){u.__&&u.__(n),o[1](n)}),[o[0],function(){o[1](void 0)}]};
-
-if(Object.keys(exports).length){window['hooks']=exports;}
-exports={};
-for(let key in hooks) preact[key]=hooks[key];
-delete window.hooks;
-
-
-
-
-window.caph_requirements = JSON.parse(LZUTF8.decompress("W3sicmVmIjoiY2FwaC1kb2NzL2NvcmUvcGx1Z2luLWxvYWRlci5jc3MiLCJjb250ZW50IjoiLsUuZXJyb3J7XG4gIGNvbG9yOiAjY2UxMTExO1xufVxuxiRmbGFzaGluZ8UnLXdlYmtpdC1hbmltYXRpb246IMQlRsckQcgXIDFzIGxpbmVhciBpbmZpbml0ZTvEQN841zh9XG5Aa2V5ZnJhbWVz1znlAJ8wJSB7IG9wYWNpdHk6IDAuMzsgfcQYMTDOGjHFGH1cbugA5WhpZGRlbsVEZGlzcGxheTogbm9ux33IJmJveC1zaGFkb3fFKsoPOiAwcHjGBC4zcmVtIDAuMDXECHZhcigtyzgp7AFay0Bob3Zl5gGJ3VUy31RoLWZ1bGxzY3JlZW4tbGF5x1R3aWR0aDrlAQblAYZoZWlnaHTLEXBvc2nmAZZmaXhlZMUUdG9wOiAwxQtsZWZ0yAx6LWluZGV4xT3MeWhib3h76gE9ZmxleOUBZcYedtQexAYtZGlyZWPGfGNvbHVtbss2Ym94Y2VudGVyeyBqdXN0aWZ5LecCwjogxhnLLXNwYWNlLWFyb3VuZNMwzB/RNmJldHdlZW7ZN8cgyzjkALx75QDC6AJO7QJJ6QDr5QJFyh/nA5XfJmJvcmTpAg/ECzogc29saWQgMnB45wH/dGV4dC1zdHJvbmfnAgAifV0=", {inputEncoding: 'Base64'}));
-
-
 //@ts-check
 /// <reference path="types.js" />
 /// <reference path="utils.js" />
 /// <reference path="parser.js" />
+/// <reference path="preact-globals.js" />
 
 /* lzutf8, utils, preact, preact hook are injected above this comment*/
 
 
-__caph_definitions__.Plugin = class {
-
-  async loader() { }
-
-  Component({ children, ...props }) {
-    console.error('Override the Component method of this object:', this);
-    return caph.parse`<${caph.plugin('core-error')}> Override the Component method</> `;
-  }
-
-}
-
-__caph_definitions__.PluginLoader = class extends __caph_definitions__.Plugin {
-
-  constructor(key) {
-    super();
-    this.key = key;
-    this.loader();
-    caph.load('caph-docs/core/plugin-loader.css');
-  }
-
-  //@ts-ignore
-  /** @type {caph.Plugin} */ plugin = null;
-  error = null;
-  renderReady = false;
-
-  async loader() {
-    // 1. Put the plugin script in the document head
-    // 2. Wait for the browser to load the script
-    this.plugin = await this.loadPlugin();
-    // 3. Start but don't wait for the plugin loader
-    this.pluginLoader();
-  }
-
-  async loadPlugin() {
-    const key = this.key;
-    if (caph.pluginDefs[key]) {
-      return caph.pluginDefs[key]; // already loaded
-    }
-    if (caph.officialPlugins.includes(key)) {
-      const url = `${caph.dist}/plugin-${key}.js`;
-      return caph.pluginDefs[key] = caph.pluginLoader(url);
-    }
-    else if (key.match(/[^#\?]+.js(#.*|\?.*|)$/)) {
-      let isOfficial = caph.officialPlugins.map(k => `${caph.dist}/plugin-${k}.js`).includes(key);
-      const url = isOfficial ? key : `${key}?${caph._randomSessionSuffix}`;
-      await caph.load(url);
-      caph.pluginDefs[key] = caph.pluginDefs[key] || caph.pluginDefs[url];
-      assert(caph.pluginDefs[key], 'Plugin not declared in file: ' + key);
-      if (key != url) delete caph.pluginDefs[url];
-      return caph.pluginDefs[key];
-    }
-    // User plugin
-    return await MyPromise.until(() => caph.pluginDefs[key]);
-  }
-
-  async pluginLoader() {
-    try {
-      await this.plugin.loader();
-      this.renderReady = true;
-    } catch (err) {
-      this.error = err || true;
-      console.error(err);
-    }
-  }
-
-
-  Component({ children, ...props }) {
-    // eventually overridden by FinalComponent
-    return this.TemporalComponent({ children, ...props });
-  }
-
-  TemporalComponent({ children, ...props }) {
-    const [_, setTrigger] = preact.useState(0);
-
-    preact.useEffect(async () => {
-      await MyPromise.until(() => this.renderReady || this.error);
-      setTrigger(Math.random() * 1e12); // refresh this component
-    }, []);
-
-    if (this.renderReady) return this.FinalComponent({ children, ...props });
-    else if (this.error) return this._loadErrorComponent({ children });
-    else return this._loadingComponent({ children });
-  }
-
-  FinalComponent({ children, ...props }) {
-    this.Component = this.FinalComponent; // override the Component method
-    try {
-      return this.plugin.Component({ children, ...props });
-    } catch (err) {
-      console.error(`Rendering error in plugin ${this.key}:`, err);
-      return caph.parse`<code class="flashing">${children || '...'}</code>`;
-    }
-  }
-
-  _loadingComponent({ children }) {
-    return caph.parse`
-    <code class="caph-flashing" title=${`${this.key} is loading...`}>
-      ${children || '...'}
-    </code>`;
-  }
-
-  _loadErrorComponent({ children }) {
-    return caph.parse`<${caph.plugin('core-error')} tooltip=${this.error}/>`;
-  }
-}
-
-
-
-const caph = new class {
-
-  Plugin = __caph_definitions__.Plugin;
-  PluginLoader = __caph_definitions__.PluginLoader;
-
-  mathPlugin = 'katex';
-  mathMacros = {};
-
-  officialPlugins = [
-    'core-menu',
-    'core-about',
-    'katex',
-    'document',
-    'whiteboard',
-    'hyphenator',
-    // 'slides',
-    // 'fabric',
-    // 'figure-editor',
-    // 'mathjax-svg',
-  ];
-
-  utils = {
-    unindent: (text) => {
-      let lines = text.split('\n');
-      let n = lines.filter(l => l.trim().length)
-        .map(l => l.length - l.trimStart().length)
-        .reduce((p, c) => Math.min(c, p), 1000);
-      return lines.map(l => l.slice(n)).join('\n');
-    }
-  };
-
-
-  // template literal parsers
-
+__caph_definitions__.ScriptLoader = class {
 
   constructor() {
-    const { parseAst, parse } = __caph_definitions__.NewParser.parserFactory({
-      createElement: this.createElement.bind(this),
-      FragmentComponent: preact.Fragment,
-    });
-    const { parse: parseNoMarkup } = __caph_definitions__.BaseParser.parserFactory({
-      createElement: this.createElement.bind(this),
-      FragmentComponent: preact.Fragment,
-    });
-
-    this.parse = parse;
-    this.parseAst = parseAst;
-    this.parseNoMarkup = parseNoMarkup;
-
     //@ts-ignore
     const requirements = window.caph_requirements || [];
     //@ts-ignore
@@ -1247,6 +873,7 @@ const caph = new class {
       if (e.src.endsWith('/caph-docs.js'))
         this.dist = e.src.slice(0, -13);
     }
+    //console.log(this.dist);
 
     this.div = document.getElementById('core-sources');
     if (!this.div) {
@@ -1256,145 +883,6 @@ const caph = new class {
         where: 'beforeend',
       });
     }
-    this.contexts = {};
-    this.contexts['core-menu'] = preact.createContext();
-    this._loadMenu();
-
-    // this.user = { // Exported functions
-    //   core: this,
-    //   contexts: this.contexts,
-    //   parse: this.parse.bind(this),
-    //   plugin: this.plugin.bind(this),
-    //   page: this.page.bind(this),
-    //   Plugin?
-    // };
-  }
-  get currentSrc() {
-    //@ts-ignore
-    return document.currentScript.src;
-  }
-
-  async injectStyle(styleStr) {
-    MyDocument.createElement('style', {
-      parent: this.div,
-      where: 'beforeend',
-      text: styleStr,
-    });
-    await sleep(10);
-  }
-
-  _loadMenu() {
-    const caph = this;
-    caph.menu = new class {
-      constructor() {
-        this.addOption('Default', { hold: true });
-        this.latest = this.option = 'Default';
-      }
-      options = [];
-      onEnter = {};
-      onExit = {};
-      hold = {};
-
-      /**
-       * @param {string} option
-       * @param {{
-       *  onEnter?:()=>void,
-       *  onExit?:()=>void,
-       *  hold?:boolean,
-       * }} [options]
-      */
-      addOption(option, { onEnter, onExit, hold } = {}) {
-        this.onEnter[option] = onEnter;
-        this.onExit[option] = onExit;
-        this.hold[option] = hold;
-        if (this.options[option]) return;
-        this.options.push(option);
-        this.options[option] = 1;
-        caph.dispatchGlobal('caph-menu-options', Math.random());
-      }
-      setOption(option) {
-        caph.dispatchGlobal('caph-menu-option', Math.random());
-        if (this.hold[option]) {
-          this.onExit[this.latest] && this.onExit[this.latest]();
-          this.latest = this.option;
-          this.option = option;
-        }
-        this.onEnter[option] && this.onEnter[option]();
-      }
-    };
-    async function inject(vDom) {
-      // const node = MyDocument.createElement('div', {
-      //   parent: document.body,
-      //   where: 'afterbegin',
-      //   id: 'core-body',
-      // })
-      const node = document.body;
-      preact.render(vDom, node);
-    }
-    MyPromise.until(() => document.body && this.PluginLoader).then(()=>{
-      inject(this.parse`
-        <${this.plugin('core-menu')}/>
-        <${this.plugin('core-about')}/>
-      `);
-    });
-  }
-
-
-  // const metaContent = document.querySelector('meta[content]');
-  // if (!metaContent) MyDocument.createElement('div', {
-  //   parent: document.head,
-  //   where: 'afterbegin',
-  //   name: 'viewport',
-  //   content: window.innerWidth > 960 ?
-  //     'width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no'
-  //     : 'width=1024'
-  // });
-
-  // async createElementReplace(rootElement, vDom = null) {
-  //   vDom = vDom || dataParser([`${rootElement.outerHTML}`]);
-  //   const sibling = MyDocument.createElement('div', {
-  //     'parent': rootElement,
-  //     'where': 'afterend',
-  //   });
-  //   rootElement.parentNode.removeChild(rootElement);
-  //   preact.Component(vDom, sibling.parentNode, sibling);
-  //   //this.setReady();
-  // }
-
-  /**
-   * @param {string} eventName 
-   * @param {(data:any)=>void} callback 
-   */
-  listenToEvent(eventName, callback) {
-    preact.useEffect(() => {
-      const actualCallback = (/** @type {Event|CustomEvent}*/ e) => {
-        //@ts-ignore: event.detail is not defined for non-custom events
-        try{callback(e.detail);}
-        catch(err){}
-      }
-      window.addEventListener(eventName, actualCallback);
-      return () => {
-        window.removeEventListener(eventName, actualCallback);
-      }
-    }, [eventName, callback]);
-  }
-
-  _globals = {};
-  dispatchGlobal(eventName, value) {
-    this._globals[eventName] = value;
-    let event = new CustomEvent(eventName, {detail:value});
-    window.dispatchEvent(event);
-    return;
-  }
-  async untilGlobal(eventName) {
-    await MyPromise.until(() => this._globals[eventName]);
-    await MyPromise.sleep(500);
-  }
-  listenToGlobal(eventName) {
-    const initial = preact.useMemo(()=>this._globals[eventName], [eventName]);
-    const [value, setValue] = preact.useState(initial);
-    this.listenToEvent(eventName, setValue);
-    return value;
   }
 
   _attachments = [];
@@ -1422,8 +910,7 @@ const caph = new class {
    * }} param1
    */
   async load(ref, {
-    attrs = {}, parent = null, where = 'beforeend',
-    auto_attrs = true
+    attrs = {}, parent = null, where = 'beforeend', auto_attrs = true,
   } = {}) {
     if (parent == null) parent = this.div;
     const ext = ref.split('#')[0].split('?')[0].split('.').pop();
@@ -1453,33 +940,8 @@ const caph = new class {
   async loadFont(name) {
     return await this.load(`${this.dist}/font-${name}.css`);
   }
-
-  pluginDefs = {};
-  _pluginComponents = {}
-  plugin(key) {
-    // key is either a tag or a url
-    let out = this._pluginComponents[key];
-    if (out) return out;
-    const plugin = this.pluginLoader(key);
-    out = plugin.Component.bind(plugin);
-    return this._pluginComponents[key] = out;
-  }
-
-  _pluginLoaders = {};
-  _randomSessionSuffix = ('' + Math.random()).slice(2);
-  pluginLoader(key) {
-    if (key.match(/[^#\?]*.js(#.*|\?.*|)$/)) key = this._URL_resolve(key);
-    let out = this._pluginLoaders[key];
-    if (out) return out;
-    return this._pluginLoaders[key] = new this.PluginLoader(key);
-  }
-
-  _URL_resolve(url) {
-    return new URL(url, document.baseURI).href;
-  }
-  _URL_is_absolute(url) {
-    //https://stackoverflow.com/q/10687099
-    return new URL(document.baseURI).origin !== new URL(url, document.baseURI).origin;
+  async loadPlugin(name) {
+    return await this.load(`${this.dist}/plugin-${name}.js`);
   }
 
   _loadStatus = {};
@@ -1530,17 +992,266 @@ const caph = new class {
     });
   };
 
+  async injectStyle(styleStr) {
+    MyDocument.createElement('style', {
+      parent: this.div,
+      where: 'beforeend',
+      text: styleStr,
+    });
+    await sleep(10);
+  }
+}
+
+__caph_definitions__.scriptLoader = new __caph_definitions__.ScriptLoader();
+
+if(Object.keys(exports).length){window['script-loader']=exports;}
+exports={};
+
+//libraries/preact-10.4.6/preact.min.js
+exports={};
+!function(){var n,l,u,t,i,o,r,e,f={},c=[],a=/acit|ex(?:s|g|n|p|$)|rph|grid|ows|mnc|ntw|ine[ch]|zoo|^ord|itera/i;function s(n,l){for(var u in l)n[u]=l[u];return n}function v(n){var l=n.parentNode;l&&l.removeChild(n)}function h(n,l,u){var t,i=arguments,o={};for(t in l)"key"!==t&&"ref"!==t&&(o[t]=l[t]);if(arguments.length>3)for(u=[u],t=3;t<arguments.length;t++)u.push(i[t]);if(null!=u&&(o.children=u),"function"==typeof n&&null!=n.defaultProps)for(t in n.defaultProps)void 0===o[t]&&(o[t]=n.defaultProps[t]);return y(n,o,l&&l.key,l&&l.ref,null)}function y(l,u,t,i,o){var r={type:l,props:u,key:t,ref:i,__k:null,__:null,__b:0,__e:null,__d:void 0,__c:null,constructor:void 0,__v:o};return null==o&&(r.__v=r),n.vnode&&n.vnode(r),r}function d(n){return n.children}function p(n,l){this.props=n,this.context=l}function _(n,l){if(null==l)return n.__?_(n.__,n.__.__k.indexOf(n)+1):null;for(var u;l<n.__k.length;l++)if(null!=(u=n.__k[l])&&null!=u.__e)return u.__e;return"function"==typeof n.type?_(n):null}function m(n){var l,u;if(null!=(n=n.__)&&null!=n.__c){for(n.__e=n.__c.base=null,l=0;l<n.__k.length;l++)if(null!=(u=n.__k[l])&&null!=u.__e){n.__e=n.__c.base=u.__e;break}return m(n)}}function w(l){(!l.__d&&(l.__d=!0)&&u.push(l)&&!k.__r++||i!==n.debounceRendering)&&((i=n.debounceRendering)||t)(k)}function k(){for(var n;k.__r=u.length;)n=u.sort(function(n,l){return n.__v.__b-l.__v.__b}),u=[],n.some(function(n){var l,u,t,i,o,r,e;n.__d&&(r=(o=(l=n).__v).__e,(e=l.__P)&&(u=[],(t=s({},o)).__v=t,i=N(e,o,t,l.__n,void 0!==e.ownerSVGElement,null,u,null==r?_(o):r),z(u,o),i!=r&&m(o)))})}function g(n,l,u,t,i,o,r,e,a,s){var h,p,m,w,k,g,x,C=t&&t.__k||c,A=C.length;for(a==f&&(a=null!=r?r[0]:A?_(t,0):null),u.__k=[],h=0;h<l.length;h++)if(null!=(w=u.__k[h]=null==(w=l[h])||"boolean"==typeof w?null:"string"==typeof w||"number"==typeof w?y(null,w,null,null,w):Array.isArray(w)?y(d,{children:w},null,null,null):null!=w.__e||null!=w.__c?y(w.type,w.props,w.key,null,w.__v):w)){if(w.__=u,w.__b=u.__b+1,null===(m=C[h])||m&&w.key==m.key&&w.type===m.type)C[h]=void 0;else for(p=0;p<A;p++){if((m=C[p])&&w.key==m.key&&w.type===m.type){C[p]=void 0;break}m=null}k=N(n,w,m=m||f,i,o,r,e,a,s),(p=w.ref)&&m.ref!=p&&(x||(x=[]),m.ref&&x.push(m.ref,null,w),x.push(p,w.__c||k,w)),null!=k?(null==g&&(g=k),a=b(n,w,m,C,r,k,a),s||"option"!=u.type?"function"==typeof u.type&&(u.__d=a):n.value=""):a&&m.__e==a&&a.parentNode!=n&&(a=_(m))}if(u.__e=g,null!=r&&"function"!=typeof u.type)for(h=r.length;h--;)null!=r[h]&&v(r[h]);for(h=A;h--;)null!=C[h]&&j(C[h],C[h]);if(x)for(h=0;h<x.length;h++)$(x[h],x[++h],x[++h])}function b(n,l,u,t,i,o,r){var e,f,c;if(void 0!==l.__d)e=l.__d,l.__d=void 0;else if(i==u||o!=r||null==o.parentNode)n:if(null==r||r.parentNode!==n)n.appendChild(o),e=null;else{for(f=r,c=0;(f=f.nextSibling)&&c<t.length;c+=2)if(f==o)break n;n.insertBefore(o,r),e=r}return void 0!==e?e:o.nextSibling}function x(n,l,u,t,i){var o;for(o in u)"children"===o||"key"===o||o in l||A(n,o,null,u[o],t);for(o in l)i&&"function"!=typeof l[o]||"children"===o||"key"===o||"value"===o||"checked"===o||u[o]===l[o]||A(n,o,l[o],u[o],t)}function C(n,l,u){"-"===l[0]?n.setProperty(l,u):n[l]="number"==typeof u&&!1===a.test(l)?u+"px":null==u?"":u}function A(n,l,u,t,i){var o,r,e,f,c;if(i?"className"===l&&(l="class"):"class"===l&&(l="className"),"style"===l)if(o=n.style,"string"==typeof u)o.cssText=u;else{if("string"==typeof t&&(o.cssText="",t=null),t)for(f in t)u&&f in u||C(o,f,"");if(u)for(c in u)t&&u[c]===t[c]||C(o,c,u[c])}else"o"===l[0]&&"n"===l[1]?(r=l!==(l=l.replace(/Capture$/,"")),e=l.toLowerCase(),l=(e in n?e:l).slice(2),u?(t||n.addEventListener(l,P,r),(n.l||(n.l={}))[l]=u):n.removeEventListener(l,P,r)):"list"!==l&&"tagName"!==l&&"form"!==l&&"type"!==l&&"size"!==l&&"download"!==l&&!i&&l in n?n[l]=null==u?"":u:"function"!=typeof u&&"dangerouslySetInnerHTML"!==l&&(l!==(l=l.replace(/^xlink:?/,""))?null==u||!1===u?n.removeAttributeNS("http://www.w3.org/1999/xlink",l.toLowerCase()):n.setAttributeNS("http://www.w3.org/1999/xlink",l.toLowerCase(),u):null==u||!1===u&&!/^ar/.test(l)?n.removeAttribute(l):n.setAttribute(l,u))}function P(l){this.l[l.type](n.event?n.event(l):l)}function E(n,l,u){var t,i;for(t=0;t<n.__k.length;t++)(i=n.__k[t])&&(i.__=n,i.__e&&("function"==typeof i.type&&i.__k.length>1&&E(i,l,u),l=b(u,i,i,n.__k,null,i.__e,l),"function"==typeof n.type&&(n.__d=l)))}function N(l,u,t,i,o,r,e,f,c){var a,v,h,y,_,m,w,k,b,x,C,A=u.type;if(void 0!==u.constructor)return null;(a=n.__b)&&a(u);try{n:if("function"==typeof A){if(k=u.props,b=(a=A.contextType)&&i[a.__c],x=a?b?b.props.value:a.__:i,t.__c?w=(v=u.__c=t.__c).__=v.__E:("prototype"in A&&A.prototype.render?u.__c=v=new A(k,x):(u.__c=v=new p(k,x),v.constructor=A,v.render=F),b&&b.sub(v),v.props=k,v.state||(v.state={}),v.context=x,v.__n=i,h=v.__d=!0,v.__h=[]),null==v.__s&&(v.__s=v.state),null!=A.getDerivedStateFromProps&&(v.__s==v.state&&(v.__s=s({},v.__s)),s(v.__s,A.getDerivedStateFromProps(k,v.__s))),y=v.props,_=v.state,h)null==A.getDerivedStateFromProps&&null!=v.componentWillMount&&v.componentWillMount(),null!=v.componentDidMount&&v.__h.push(v.componentDidMount);else{if(null==A.getDerivedStateFromProps&&k!==y&&null!=v.componentWillReceiveProps&&v.componentWillReceiveProps(k,x),!v.__e&&null!=v.shouldComponentUpdate&&!1===v.shouldComponentUpdate(k,v.__s,x)||u.__v===t.__v){v.props=k,v.state=v.__s,u.__v!==t.__v&&(v.__d=!1),v.__v=u,u.__e=t.__e,u.__k=t.__k,v.__h.length&&e.push(v),E(u,f,l);break n}null!=v.componentWillUpdate&&v.componentWillUpdate(k,v.__s,x),null!=v.componentDidUpdate&&v.__h.push(function(){v.componentDidUpdate(y,_,m)})}v.context=x,v.props=k,v.state=v.__s,(a=n.__r)&&a(u),v.__d=!1,v.__v=u,v.__P=l,a=v.render(v.props,v.state,v.context),v.state=v.__s,null!=v.getChildContext&&(i=s(s({},i),v.getChildContext())),h||null==v.getSnapshotBeforeUpdate||(m=v.getSnapshotBeforeUpdate(y,_)),C=null!=a&&a.type==d&&null==a.key?a.props.children:a,g(l,Array.isArray(C)?C:[C],u,t,i,o,r,e,f,c),v.base=u.__e,v.__h.length&&e.push(v),w&&(v.__E=v.__=null),v.__e=!1}else null==r&&u.__v===t.__v?(u.__k=t.__k,u.__e=t.__e):u.__e=T(t.__e,u,t,i,o,r,e,c);(a=n.diffed)&&a(u)}catch(l){u.__v=null,n.__e(l,u,t)}return u.__e}function z(l,u){n.__c&&n.__c(u,l),l.some(function(u){try{l=u.__h,u.__h=[],l.some(function(n){n.call(u)})}catch(l){n.__e(l,u.__v)}})}function T(n,l,u,t,i,o,r,e){var a,s,v,h,y,d=u.props,p=l.props;if(i="svg"===l.type||i,null!=o)for(a=0;a<o.length;a++)if(null!=(s=o[a])&&((null===l.type?3===s.nodeType:s.localName===l.type)||n==s)){n=s,o[a]=null;break}if(null==n){if(null===l.type)return document.createTextNode(p);n=i?document.createElementNS("http://www.w3.org/2000/svg",l.type):document.createElement(l.type,p.is&&{is:p.is}),o=null,e=!1}if(null===l.type)d!==p&&n.data!==p&&(n.data=p);else{if(null!=o&&(o=c.slice.call(n.childNodes)),v=(d=u.props||f).dangerouslySetInnerHTML,h=p.dangerouslySetInnerHTML,!e){if(null!=o)for(d={},y=0;y<n.attributes.length;y++)d[n.attributes[y].name]=n.attributes[y].value;(h||v)&&(h&&v&&h.__html==v.__html||(n.innerHTML=h&&h.__html||""))}x(n,p,d,i,e),h?l.__k=[]:(a=l.props.children,g(n,Array.isArray(a)?a:[a],l,u,t,"foreignObject"!==l.type&&i,o,r,f,e)),e||("value"in p&&void 0!==(a=p.value)&&a!==n.value&&A(n,"value",a,d.value,!1),"checked"in p&&void 0!==(a=p.checked)&&a!==n.checked&&A(n,"checked",a,d.checked,!1))}return n}function $(l,u,t){try{"function"==typeof l?l(u):l.current=u}catch(l){n.__e(l,t)}}function j(l,u,t){var i,o,r;if(n.unmount&&n.unmount(l),(i=l.ref)&&(i.current&&i.current!==l.__e||$(i,null,u)),t||"function"==typeof l.type||(t=null!=(o=l.__e)),l.__e=l.__d=void 0,null!=(i=l.__c)){if(i.componentWillUnmount)try{i.componentWillUnmount()}catch(l){n.__e(l,u)}i.base=i.__P=null}if(i=l.__k)for(r=0;r<i.length;r++)i[r]&&j(i[r],u,t);null!=o&&v(o)}function F(n,l,u){return this.constructor(n,u)}function H(l,u,t){var i,r,e;n.__&&n.__(l,u),r=(i=t===o)?null:t&&t.__k||u.__k,l=h(d,null,[l]),e=[],N(u,(i?u:t||u).__k=l,r||f,f,void 0!==u.ownerSVGElement,t&&!i?[t]:r?null:u.childNodes.length?c.slice.call(u.childNodes):null,e,t||f,i),z(e,l)}n={__e:function(n,l){for(var u,t;l=l.__;)if((u=l.__c)&&!u.__)try{if(u.constructor&&null!=u.constructor.getDerivedStateFromError&&(t=!0,u.setState(u.constructor.getDerivedStateFromError(n))),null!=u.componentDidCatch&&(t=!0,u.componentDidCatch(n)),t)return w(u.__E=u)}catch(l){n=l}throw n}},l=function(n){return null!=n&&void 0===n.constructor},p.prototype.setState=function(n,l){var u;u=null!=this.__s&&this.__s!==this.state?this.__s:this.__s=s({},this.state),"function"==typeof n&&(n=n(u,this.props)),n&&s(u,n),null!=n&&this.__v&&(l&&this.__h.push(l),w(this))},p.prototype.forceUpdate=function(n){this.__v&&(this.__e=!0,n&&this.__h.push(n),w(this))},p.prototype.render=d,u=[],t="function"==typeof Promise?Promise.prototype.then.bind(Promise.resolve()):setTimeout,k.__r=0,o=f,r=0,e={render:H,hydrate:function(n,l){H(n,l,o)},createElement:h,h:h,Fragment:d,createRef:function(){return{current:null}},isValidElement:l,Component:p,cloneElement:function(n,l){var u,t;for(t in l=s(s({},n.props),l),arguments.length>2&&(l.children=c.slice.call(arguments,2)),u={},l)"key"!==t&&"ref"!==t&&(u[t]=l[t]);return y(n.type,u,l.key||n.key,l.ref||n.ref,null)},createContext:function(n){var l={},u={__c:"__cC"+r++,__:n,Consumer:function(n,l){return n.children(l)},Provider:function(n){var t,i=this;return this.getChildContext||(t=[],this.getChildContext=function(){return l[u.__c]=i,l},this.shouldComponentUpdate=function(n){i.props.value!==n.value&&t.some(function(l){l.context=n.value,w(l)})},this.sub=function(n){t.push(n);var l=n.componentWillUnmount;n.componentWillUnmount=function(){t.splice(t.indexOf(n),1),l&&l.call(n)}}),n.children}};return u.Consumer.contextType=u,u.Provider.__=u,u},toChildArray:function n(l){return null==l||"boolean"==typeof l?[]:Array.isArray(l)?c.concat.apply([],l.map(n)):[l]},__u:j,options:n},typeof module<"u"?module.exports=e:self.preact=e}();
+
+if(Object.keys(exports).length){window['preact']=exports;}
+exports={};
+
+//libraries/preact-10.4.6/hooks.js
+exports={};
+var n,t,r,u=window.preact,o=0,i=[],c=u.options.__r,e=u.options.diffed,f=u.options.__c,a=u.options.unmount;function p(n,r){u.options.__h&&u.options.__h(t,n,o||r),o=0;var i=t.__H||(t.__H={__:[],__h:[]});return n>=i.__.length&&i.__.push({}),i.__[n]}function v(n){return o=1,s(A,n)}function s(r,u,o){var i=p(n++,2);return i.t=r,i.__c||(i.__c=t,i.__=[o?o(u):A(void 0,u),function(n){var t=i.t(i.__[0],n);i.__[0]!==t&&(i.__=[t,i.__[1]],i.__c.setState({}))}]),i.__}function x(r,o){var i=p(n++,4);!u.options.__s&&q(i.__H,o)&&(i.__=r,i.__H=o,t.__h.push(i))}function m(t,r){var u=p(n++,7);return q(u.__H,r)?(u.__H=r,u.__h=t,u.__=t()):u.__}function y(){i.some(function(n){if(n.__P)try{n.__H.__h.forEach(h),n.__H.__h.forEach(_),n.__H.__h=[]}catch(t){return n.__H.__h=[],u.options.__e(t,n.__v),!0}}),i=[]}u.options.__r=function(r){c&&c(r),n=0;var u=(t=r.__c).__H;u&&(u.__h.forEach(h),u.__h.forEach(_),u.__h=[])},u.options.diffed=function(n){e&&e(n);var t=n.__c;t&&t.__H&&t.__H.__h.length&&(1!==i.push(t)&&r===u.options.requestAnimationFrame||((r=u.options.requestAnimationFrame)||function(n){var t,r=function(){clearTimeout(u),l&&cancelAnimationFrame(t),setTimeout(n)},u=setTimeout(r,100);l&&(t=requestAnimationFrame(r))})(y))},u.options.__c=function(n,t){t.some(function(n){try{n.__h.forEach(h),n.__h=n.__h.filter(function(n){return!n.__||_(n)})}catch(r){t.some(function(n){n.__h&&(n.__h=[])}),t=[],u.options.__e(r,n.__v)}}),f&&f(n,t)},u.options.unmount=function(n){a&&a(n);var t=n.__c;if(t&&t.__H)try{t.__H.__.forEach(h)}catch(n){u.options.__e(n,t.__v)}};var l="function"==typeof requestAnimationFrame;function h(n){"function"==typeof n.u&&n.u()}function _(n){n.u=n.__()}function q(n,t){return!n||t.some(function(t,r){return t!==n[r]})}function A(n,t){return"function"==typeof t?t(n):t}exports.useState=v,exports.useReducer=s,exports.useEffect=function(r,o){var i=p(n++,3);!u.options.__s&&q(i.__H,o)&&(i.__=r,i.__H=o,t.__H.__h.push(i))},exports.useLayoutEffect=x,exports.useRef=function(n){return o=5,m(function(){return{current:n}},[])},exports.useImperativeHandle=function(n,t,r){o=6,x(function(){"function"==typeof n?n(t()):n&&(n.current=t())},null==r?r:r.concat(n))},exports.useMemo=m,exports.useCallback=function(n,t){return o=8,m(function(){return n},t)},exports.useContext=function(r){var u=t.context[r.__c],o=p(n++,9);return o.__c=r,u?(null==o.__&&(o.__=!0,u.sub(t)),u.props.value):r.__},exports.useDebugValue=function(n,t){u.options.useDebugValue&&u.options.useDebugValue(t?t(n):n)},exports.useErrorBoundary=function(r){var u=p(n++,10),o=v();return u.__=r,t.componentDidCatch||(t.componentDidCatch=function(n){u.__&&u.__(n),o[1](n)}),[o[0],function(){o[1](void 0)}]};
+
+if(Object.keys(exports).length){window['hooks']=exports;}
+exports={};
+for(let key in hooks) preact[key]=hooks[key];
+delete window.hooks;
+
+//core/preact-parser.js
+exports={};
+//@ts-check
+/// <reference path="types.js" />
+/// <reference path="utils.js" />
+/// <reference path="parser.js" />
+/// <reference path="script-loader.js" />
+
+/* lzutf8, utils, preact, preact hook are injected above this comment*/
+
+
+__caph_definitions__.preactParser = new class {
+  
+  /** @type {'katex'|'mathjax'} */
+  mathParser = 'katex';
+  scriptLoader = __caph_definitions__.scriptLoader;
+
+  officialPlugins = [
+    'core-menu',
+    'core-about',
+    'katex',
+    'document',
+    'whiteboard',
+    'hyphenator',
+    // 'slides',
+    // 'fabric',
+    // 'figure-editor',
+    // 'mathjax-svg',
+  ];
+
+
+  constructor() {
+    
+    const { parseAst, parse } = __caph_definitions__.NewParser.parserFactory({
+      createElement: this.createElement.bind(this),
+      FragmentComponent: preact.Fragment,
+    });
+    const { parse: parseNoMarkup } = __caph_definitions__.BaseParser.parserFactory({
+      createElement: this.createElement.bind(this),
+      FragmentComponent: preact.Fragment,
+    });
+
+    this.parse = parse;
+    this.parseAst = parseAst;
+    this.parseNoMarkup = parseNoMarkup;
+
+    this.contexts = {};
+    this.contexts['core-menu'] = preact.createContext();
+  }
 
   createElement(type, props, ...children) {
     if (type == 'caph') {
       let pluginKey = props && props['plugin'];
-      if (pluginKey == 'caph-math') pluginKey = this.mathPlugin;
+      if (pluginKey == 'caph-math') pluginKey = this.mathParser;
       if (pluginKey) type = this.plugin(pluginKey);
       else console.warn('caph tag without plugin attribute');
     }
-    // children = children.map(x => is_string(x) ? this._html_safe_undo(x) : x);
     return preact.createElement(type, props, ...children);
   }
+
+  pluginDefs = {
+    'core-error': async () => ({ children, tooltip }) => {
+      const help = preact.useCallback(() => {
+        const win = window.open('', '_blank');
+        if (!win) throw new Error('Popup blocked');
+        win.document.write(`
+          <div>
+            1. In tex, use \\lt and \\gt instead of &lt; and &gt;.
+            <br/>
+            2. In html, use \\$ instead of $.
+            <br/>
+            This prevents any parsing misunderstanding.
+          </div>
+        `);
+      }, []);
+      return caph.parse`
+        <a href="./error-help" onclick=${(e) => {
+        e.preventDefault();
+          help();
+        }}>(help?)</a> 
+        <code class="caph-flashing caph-error" title=${tooltip}>
+          ${children || tooltip || 'Error'}
+        </code>
+      `;
+    }
+  };
+
+
+  _pluginComponents = {}
+  plugin(key) { // key is either a tag or a url
+    const cache = this._pluginComponents;
+    return cache[key] || (cache[key] = this.pluginLoader(key));
+  }
+
+  _pluginLoaders = {};
+  _randomSessionSuffix = ('' + Math.random()).slice(2);
+  pluginLoader(key) {
+    if (key.match(/[^#\?]*.js(#.*|\?.*|)$/)) key = this._URL_resolve(key);
+    const cache = this._pluginLoaders
+    return cache[key] || (cache[key] = this.newPluginLoader(key));
+  }
+
+  newPluginLoader(/** @type {string}*/ key){
+    const scriptLoader = this.scriptLoader;
+    const pluginDefs = this.pluginDefs;
+    const parent = this;
+  
+    //scriptLoader.load('caph-docs/core/plugin-loader.css');
+
+    const loadStatus = {
+      Component: null,
+      error: null,
+      renderReady: false,
+    }
+
+    const main = async ()=>{
+      // 1. Put the plugin script in the document head and wait for the browser to load the script
+      const pluginDef = await (async ()=> {
+        if (pluginDefs[key]) {
+          return pluginDefs[key]; // already loaded
+        }
+        if (parent.officialPlugins.includes(key)) {
+          const url = `${scriptLoader.dist}/plugin-${key}.js`;
+          return pluginDefs[key] = parent.pluginLoader(url);
+        }
+        else if (key.match(/[^#\?]+.js(#.*|\?.*|)$/)) {
+          let isOfficial = parent.officialPlugins.map(k => `${scriptLoader.dist}/plugin-${k}.js`).includes(key);
+          const url = isOfficial ? key : `${key}?${parent._randomSessionSuffix}`;
+          await scriptLoader.load(url);
+          pluginDefs[key] = pluginDefs[key] || pluginDefs[url];
+          assert(pluginDefs[key], 'Plugin not declared in file: ' + key);
+          if (key != url) delete pluginDefs[url];
+          return pluginDefs[key];
+        }
+        // User plugin
+        return await MyPromise.until(() => pluginDefs[key]);
+      })();
+
+      // 3. Start the plugin promise but don't wait for it
+      (async()=>{
+        try {
+          loadStatus.Component = await pluginDef();
+          loadStatus.renderReady = true;
+        } catch (err) {
+          loadStatus.error = err || true;
+          console.error(err);
+        }
+      })();
+    }    
+
+    function FinalComponent({ children, ...props }) {
+      try {
+        //@ts-ignore
+        return loadStatus.Component({ children, ...props });
+      } catch (err) {
+        console.error(`Rendering error in plugin ${key}:`, err);
+        return parent.parse`<code class="flashing">${children || '...'}</code>`;
+      }
+    }
+
+    function _loadingComponent({ children }) {
+      return parent.parse`
+      <code class="caph-flashing" title=${`${key} is loading...`}>
+        ${children || '...'}
+      </code>`;
+    }
+
+    function _loadErrorComponent({}) {
+      return parent.parse`<${parent.plugin('core-error')} tooltip=${loadStatus.error}/>`;
+    }
+
+    main();
+    return ({ children, ...props })=>{
+      const [_, setTrigger] = preact.useState(0);
+
+      preact.useEffect(async () => {
+        await MyPromise.until(() => loadStatus.renderReady || loadStatus.error);
+        setTrigger(Math.random() * 1e12); // refresh this component
+      }, []);
+
+      if (loadStatus.renderReady) return FinalComponent({ children, ...props });
+      else if (loadStatus.error) return _loadErrorComponent({ children });
+      else return _loadingComponent({ children });
+    };
+  }
+
+  /**
+   * @param {string} eventName 
+   * @param {(data:any)=>void} callback 
+   */
+  listenToEvent(eventName, callback) {
+    preact.useEffect(() => {
+      const actualCallback = (/** @type {Event|CustomEvent}*/ e) => {
+        //@ts-ignore: event.detail is not defined for non-custom events
+        try{callback(e.detail);}
+        catch(err){}
+      }
+      window.addEventListener(eventName, actualCallback);
+      return () => {
+        window.removeEventListener(eventName, actualCallback);
+      }
+    }, [eventName, callback]);
+  }
+
+  _globals = {};
+  dispatchGlobal(eventName, value) {
+    this._globals[eventName] = value;
+    let event = new CustomEvent(eventName, {detail:value});
+    window.dispatchEvent(event);
+    return;
+  }
+  async untilGlobal(eventName) {
+    await MyPromise.until(() => this._globals[eventName]);
+    await MyPromise.sleep(500);
+  }
+  listenToGlobal(eventName) {
+    const initial = preact.useMemo(()=>this._globals[eventName], [eventName]);
+    const [value, setValue] = preact.useState(initial);
+    this.listenToEvent(eventName, setValue);
+    return value;
+  }
+
+  _URL_resolve(url) {
+    return new URL(url, document.baseURI).href;
+  }
+  // _URL_is_absolute(url) {
+  //   //https://stackoverflow.com/q/10687099
+  //   return new URL(document.baseURI).origin !== new URL(url, document.baseURI).origin;
+  // }
 
   _html_safe(str) {
     // e.g. converts < into &lt;
@@ -1555,30 +1266,209 @@ const caph = new class {
 
 }
 
-caph.pluginDefs['core-error'] = new class extends caph.Plugin {
+__caph_definitions__.preactParser.scriptLoader.injectStyle(`
+.caph-error{
+  color: #ce1111;
+}
+.caph-flashing{
+  -webkit-animation: caphFlashingAnimation 1s linear infinite;
+  animation: caphFlashingAnimation 1s linear infinite;
+}
+@keyframes caphFlashingAnimation {
+  0% { opacity: 0.3; }
+  100% { opacity: 1; }
+}
 
-  Component({ children, tooltip }) {
-    const help = preact.useCallback(() => {
-      const win = window.open('', '_blank');
-      if (!win) throw new Error('Popup blocked');
-      win.document.write(`
-        <div>
-          1. In tex, use \\lt and \\gt instead of &lt; and &gt;.
-          <br/>
-          2. In html, use \\$ instead of $.
-          <br/>
-          This prevents any parsing misunderstanding.
-        </div>
+.caph-hidden{
+  display: none;
+}
+
+.caph-box-shadow{
+  box-shadow: 0px 0px 0.3rem 0.05rem var(--box-shadow);
+}
+.caph-box-shadow:hover{
+  box-shadow: 0px 0px 0.3rem 0.2rem var(--box-shadow);
+}
+.caph-fullscreen-layer{
+  width: 100%;
+  height: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 100;
+}
+.caph-hbox{ display: flex; }
+.caph-vbox{ display: flex; flex-direction: column; }
+.caph-boxcenter{ justify-content: center; }
+.caph-space-around{ justify-content: space-around; }
+.caph-space-between{ justify-content: space-between; }
+.caph-flex{ flex: 1; }
+.caph-hidden{ display:none; }
+.caph-plugin-hidden{ display:none; }
+.caph-border{
+  border: solid 2px var(--text-strong);
+}`)
+
+if(Object.keys(exports).length){window['preact-parser']=exports;}
+exports={};
+
+//core/preact-globals.js
+exports={};
+//@ts-check
+/// <reference path="types.js" />
+/// <reference path="utils.js" />
+/// <reference path="preact-parser.js" />
+
+
+__caph_definitions__.preactGlobals = new class {
+
+  parser = __caph_definitions__.preactParser;
+  contexts = {};
+
+  constructor(){
+    this.contexts['core-menu'] = preact.createContext();
+    const parent = this;
+    this.menu = new class {
+      constructor() {
+        this.addOption('Default', { hold: true });
+        this.latest = this.option = 'Default';
+      }
+      options = [];
+      onEnter = {};
+      onExit = {};
+      hold = {};
+
+      /**
+       * @param {string} option
+       * @param {{
+       *  onEnter?:()=>void,
+       *  onExit?:()=>void,
+       *  hold?:boolean,
+       * }} [options]
+      */
+      addOption(option, { onEnter, onExit, hold } = {}) {
+        this.onEnter[option] = onEnter;
+        this.onExit[option] = onExit;
+        this.hold[option] = hold;
+        if (this.options[option]) return;
+        this.options.push(option);
+        this.options[option] = 1;
+        parent.dispatchGlobal('caph-menu-options', Math.random());
+      }
+      setOption(option) {
+        parent.dispatchGlobal('caph-menu-option', Math.random());
+        if (this.hold[option]) {
+          this.onExit[this.latest] && this.onExit[this.latest]();
+          this.latest = this.option;
+          this.option = option;
+        }
+        this.onEnter[option] && this.onEnter[option]();
+      }
+    };
+
+    async function inject(vDom) {
+      // const node = MyDocument.createElement('div', {
+      //   parent: document.body,
+      //   where: 'afterbegin',
+      //   id: 'core-body',
+      // })
+      const node = document.body;
+      preact.render(vDom, node);
+    }
+
+    MyPromise.until(() => document.body).then(()=>{
+      inject(this.parser.parse`
+        <${this.parser.plugin('core-menu')}/>
+        <${this.parser.plugin('core-about')}/>
       `);
-    }, []);
-    return caph.parse`
-      <a href="./error-help" onclick=${(e) => {
-      e.preventDefault();
-        help();
-      }}>(help?)</a> 
-      <code class="caph-flashing caph-error" title=${tooltip}>
-        ${children || tooltip || 'Error'}
-      </code>
-    `;
+    });
   }
+
+  /**
+   * @param {string} eventName 
+   * @param {(data:any)=>void} callback 
+   */
+  listenToEvent(eventName, callback) {
+    preact.useEffect(() => {
+      const actualCallback = (/** @type {Event|CustomEvent}*/ e) => {
+        //@ts-ignore: event.detail is not defined for non-custom events
+        try{callback(e.detail);}
+        catch(err){}
+      }
+      window.addEventListener(eventName, actualCallback);
+      return () => {
+        window.removeEventListener(eventName, actualCallback);
+      }
+    }, [eventName, callback]);
+  }
+
+  _globals = {};
+  dispatchGlobal(eventName, value) {
+    this._globals[eventName] = value;
+    let event = new CustomEvent(eventName, {detail:value});
+    window.dispatchEvent(event);
+    return;
+  }
+  async untilGlobal(eventName) {
+    await MyPromise.until(() => this._globals[eventName]);
+    await MyPromise.sleep(500);
+  }
+  listenToGlobal(eventName) {
+    const initial = preact.useMemo(()=>this._globals[eventName], [eventName]);
+    const [value, setValue] = preact.useState(initial);
+    this.listenToEvent(eventName, setValue);
+    return value;
+  }
+}
+if(Object.keys(exports).length){window['preact-globals']=exports;}
+exports={};
+
+
+
+
+window.caph_requirements = JSON.parse(LZUTF8.decompress("W3sicmVmIjoiY2FwaC1kb2NzL2NvcmUvcGx1Z2luLWxvYWRlci5jc3MiLCJjb250ZW50IjoiLsUuZXJyb3J7XG4gIGNvbG9yOiAjY2UxMTExO1xufVxuxiRmbGFzaGluZ8UnLXdlYmtpdC1hbmltYXRpb246IMQlRsckQcgXIDFzIGxpbmVhciBpbmZpbml0ZTvEQN841zh9XG5Aa2V5ZnJhbWVz1znlAJ8wJSB7IG9wYWNpdHk6IDAuMzsgfcQYMTDOGjHFGH1cbugA5WhpZGRlbsVEZGlzcGxheTogbm9ux33IJmJveC1zaGFkb3fFKsoPOiAwcHjGBC4zcmVtIDAuMDXECHZhcigtyzgp7AFay0Bob3Zl5gGJ3VUy31RoLWZ1bGxzY3JlZW4tbGF5x1R3aWR0aDrlAQblAYZoZWlnaHTLEXBvc2nmAZZmaXhlZMUUdG9wOiAwxQtsZWZ0yAx6LWluZGV4xT3MeWhib3h76gE9ZmxleOUBZcYedtQexAYtZGlyZWPGfGNvbHVtbss2Ym94Y2VudGVyeyBqdXN0aWZ5LecCwjogxhnLLXNwYWNlLWFyb3VuZNMwzB/RNmJldHdlZW7ZN8cgyzjkALx75QDC6AJO7QJJ6QDr5QJFyh/nA5XfJmJvcmTpAg/ECzogc29saWQgMnB45wH/dGV4dC1zdHJvbmfnAgAifV0=", {inputEncoding: 'Base64'}));
+
+
+//@ts-check
+/// <reference path="types.js" />
+/// <reference path="utils.js" />
+/// <reference path="preact-globals.js" />
+
+/* lzutf8, utils, preact, preact hook are injected above this comment*/
+
+const caph = new class {
+
+  _parser = __caph_definitions__.preactParser;
+  pluginDefs = this._parser.pluginDefs;
+  parse = this._parser.parse.bind(this._parser);
+  parseAst = this._parser.parseAst.bind(this._parser);
+  parseNoMarkup = this._parser.parseNoMarkup.bind(this._parser);
+  plugin = this._parser.plugin.bind(this._parser);
+  
+  _scriptLoader = this._parser.scriptLoader;
+  load = this._scriptLoader.load.bind(this._scriptLoader);
+  loadFont = this._scriptLoader.loadFont.bind(this._scriptLoader);
+  injectStyle = this._scriptLoader.injectStyle.bind(this._scriptLoader);
+
+  _preactGlobals = __caph_definitions__.preactGlobals;
+  contexts = this._preactGlobals.contexts;
+  menu = this._preactGlobals.menu;
+  listenToEvent = this._preactGlobals.listenToEvent.bind(this._preactGlobals);
+
+  
+  constructor() {}
+
+  mathMacros = {};
+
+  set mathParser(/** @type {'katex'|'mathjax'} */value) {
+    this._parser.mathParser = value;
+  }
+  get mathParser(){ return this._parser.mathParser; }
+
+
+  get currentSrc() {
+    //@ts-ignore
+    return /** @type {string}*/(document.currentScript.src);
+  }
+
 }

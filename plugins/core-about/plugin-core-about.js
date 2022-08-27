@@ -1,11 +1,9 @@
-caph.pluginDefs[caph.currentSrc] = new class extends caph.Plugin {
+caph.pluginDefs[caph.currentSrc] = async ()=>{
 
-  async loader() {
-    caph.menu.addOption('About', { hold: true });
-    await caph.load('caph-docs/plugins/core-about/core-about.css');
-  }
+  caph.menu.addOption('About', { hold: true });
+  await caph.load('caph-docs/plugins/core-about/core-about.css');
 
-  Component() {
+  return ({})=>{
     const [_, setTrigger] = preact.useState(null);
     caph.listenToEvent('caph-menu-option', setTrigger);
     const _class = caph.menu.option == 'About' ? 'caph-fullscreen-layer caph-about-outer' : 'caph-hidden';
@@ -23,5 +21,4 @@ caph.pluginDefs[caph.currentSrc] = new class extends caph.Plugin {
         </div>
       </div>`;
   }
-
 }

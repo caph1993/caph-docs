@@ -1,5 +1,5 @@
 
-caph.attach(...JSON.parse(LZUTF8.decompress("W10=", {inputEncoding: 'Base64'})));
+caph._scriptLoader.attach(...JSON.parse(LZUTF8.decompress("W10=", {inputEncoding: 'Base64'})));
 
 caph.pluginDefs[caph.currentSrc] = new class extends caph.Plugin {
 

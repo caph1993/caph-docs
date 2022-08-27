@@ -8,6 +8,33 @@ function is_string(obj) {
   return Object.prototype.toString.call(obj) === "[object String]";
 }
 
+// utils = {
+//   unindent: (text) => {
+//     let lines = text.split('\n');
+//     let n = lines.filter(l => l.trim().length)
+//       .map(l => l.length - l.trimStart().length)
+//       .reduce((p, c) => Math.min(c, p), 1000);
+//     return lines.map(l => l.slice(n)).join('\n');
+//   }
+// };
+// _URL_resolve(url) {
+//   return new URL(url, document.baseURI).href;
+// }
+// // _URL_is_absolute(url) {
+// //   //https://stackoverflow.com/q/10687099
+// //   return new URL(document.baseURI).origin !== new URL(url, document.baseURI).origin;
+// // }
+
+// _html_safe(str) {
+//   // e.g. converts < into &lt;
+//   return new Option(str).innerHTML;
+// }
+// _html_safe_undo(str) {
+//   // e.g. converts &lt; into <
+//   const doc = new DOMParser().parseFromString(str, "text/html");
+//   const text = doc.documentElement.textContent;
+//   return text;
+// }
 function assert(condition, ...messages) {
   if (condition) return;
   throw new Error(...messages);

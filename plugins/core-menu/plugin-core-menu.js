@@ -1,10 +1,6 @@
-caph.pluginDefs[caph.currentSrc] = new class extends caph.Plugin {
-
-  async loader() {
-    await caph.load('caph-docs/plugins/core-menu/core-menu.css');
-  }
-
-  Component({ }) {
+caph.pluginDefs[caph.currentSrc] = async()=>{
+  await caph.load('caph-docs/plugins/core-menu/core-menu.css');
+  return ({ })=>{
     const [_, setTrigger] = preact.useState(null);
     caph.listenToGlobal('caph-menu-option', setTrigger);
     caph.listenToGlobal('caph-menu-options', setTrigger);
@@ -17,13 +13,11 @@ caph.pluginDefs[caph.currentSrc] = new class extends caph.Plugin {
         `)}
       </select>`;
   }
-
-  // async menuLoader({ addOption }) {
-  //   const { setItem, getItem } = caph.preact.useContext(caph.contexts.storage);
-  //   addOption('Day / Night', {
-  //     onEnter: () => setItem('darkTheme', !getItem('darkTheme')),
-  //     hold: false,
-  //   });
-  // }
-
 }
+// async menuLoader({ addOption }) {
+//   const { setItem, getItem } = caph.preact.useContext(caph.contexts.storage);
+//   addOption('Day / Night', {
+//     onEnter: () => setItem('darkTheme', !getItem('darkTheme')),
+//     hold: false,
+//   });
+// }

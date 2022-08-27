@@ -34,7 +34,7 @@ async function main() {
       }
     }
     fs.writeFileSync(`dist/${key}.js`, utils.unindent(`
-      caph.attach(...${utils.lzString(dynamic)});
+      caph._scriptLoader.attach(...${utils.lzString(dynamic)});
     `) + content);
   }
 }
