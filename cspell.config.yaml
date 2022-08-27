@@ -5,6 +5,7 @@ words:
   - submatrix
   - subproblems
   - preceeding
+  - overriden
 ignoreWords:
   - elems
   - xhtm

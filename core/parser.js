@@ -18,19 +18,14 @@
 
 __caph_definitions__.ConsoleProxy = class{
   log(...args){ console.log(...args);}
-  warn(...args){ console.warn(...args);}
-  error(...args){ console.error(...args);}
+  warn(...args){ this.warn(...args);}
+  error(...args){ this.error(...args);}
 }
 
 
+//https://stackoverflow.com/a/70329711
 
-__caph_definitions__.BaseParser = class {
-
-  // constructor(newAstNode=null) {
-  //   this.newAstNode = newAstNode? newAstNode:((tag, props, ...children) => [tag, props, children]);
-  // }
-
-  //console = new __caph_definitions__.ConsoleProxy();
+__caph_definitions__.BaseParser = (class {
 
   ESC = '\ue000';
   SPEC = `https://html.spec.whatwg.org/multipage/syntax.html`;
@@ -85,6 +80,10 @@ __caph_definitions__.BaseParser = class {
   /** @type {CustomRule[]} */
   static customRules = [];
 
+
+  warn(...args){console.warn(...args)}; // Overriden during tests
+  error(...args){console.error(...args)}; // Overriden during tests
+
   constructor(/** @type {string[]}*/ strings, values, debug=0){
     let str = strings.join(this.ESC);
     let escaped = {};
@@ -102,9 +101,8 @@ __caph_definitions__.BaseParser = class {
     debug && console.log('PARSING', this.str);
     this.DEBUG = debug==2;
 
-    const cls = this.constructor;
     /** @type {CustomRule[]} */ //@ts-ignore
-    this.customRules = cls.customRules;
+    this.customRules = this.constructor.customRules;
     /** @type {(tag:TagType)=>(null|string[])} */ //@ts-ignore
     this.optionalClose = cls.optionalClose.bind(cls);
 
@@ -132,7 +130,7 @@ __caph_definitions__.BaseParser = class {
 
   // https://html.spec.whatwg.org/multipage/syntax.html#optional-tags
   /** @type {{[key:string]:string[]}}*/
-  static _optionalClose = {
+  _optionalClose = {
     'li': ['li'],
     'dt': ['dt', 'dd'],
     'dd': ['dd', 'dt'],
@@ -151,7 +149,7 @@ __caph_definitions__.BaseParser = class {
     'th': ['th', 'td'],
   };
 
-  static optionalClose(/** @type {TagType}*/ tag){
+  optionalClose(/** @type {TagType}*/ tag){
     if(!tag || !is_string(tag)) return null;
     return this._optionalClose[/** @type {string} tag */(tag)];
   }
@@ -179,7 +177,7 @@ __caph_definitions__.BaseParser = class {
     finally{ this.pos = pos; }
   }
 
-  _currentPos() { // Just for printing debug info
+  _currentPos(){ // Just for printing debug info
     const {pos, str} = this;
     const short = str.slice(pos, pos+50).replace('\n', '(\\n)');
     return `${pos}...${short}...${pos+50}`;
@@ -213,7 +211,7 @@ __caph_definitions__.BaseParser = class {
     let endReached = this.pos==this.str.length;
     if(endReached){
       if(parentTag && !this.optionalClose(parentTag)){
-        console.warn(`Expected closing tag </${parentTag}> or </> after ${text}. Ignoring what follows`);
+        this.warn(`Expected closing tag </${parentTag}> or </> after ${text}. Ignoring what follows`);
         this.errorStop = true;
       }
       return siblings;
@@ -236,12 +234,12 @@ __caph_definitions__.BaseParser = class {
         `<!DOCTYPE\\s*.*?>`,
       ].join('|'), 'iys'));
       if(!result){
-        console.error(`Unexpected <! at ${this._currentPos()}\nIgnoring what follows.`);
+        this.error(`Unexpected <! at ${this._currentPos()}\nIgnoring what follows.`);
         this.errorStop = true;
         return siblings;
       }
       let [text] = result;
-      if(text.endsWith('/>')) console.warn(`Non compliant tag found.\n${this.SPEC}`);
+      if(text.endsWith('/>')) this.warn(`Non compliant tag found.\n${this.SPEC}`);
       this.replaceText(text, this.pos-text.length); // Consume the fields inside, if any
       return this.parseSiblings(parentTag, siblings);
     }
@@ -251,7 +249,7 @@ __caph_definitions__.BaseParser = class {
     if(this.try_run(/<\//ys)){
       let result = this.try_run(new RegExp(`([^>\\s]+)\\s*>`, 'ys'));
       if(!result){
-        console.error(`Expected close tag for parent ${parentTag||'fragment'} at ${this._currentPos()}\nIgnoring what follows.`);
+        this.error(`Expected close tag for parent ${parentTag||'fragment'} at ${this._currentPos()}\nIgnoring what follows.`);
         this.errorStop = true;
         return siblings;
       }
@@ -259,7 +257,7 @@ __caph_definitions__.BaseParser = class {
       if (_tag==this.ESC) tag = this.values[this.valueIndex++];
       else tag = _tag;
       if(tag!==parentTag){
-        console.error(`Unmatched close tag ${tag}!=${parentTag} at ${this._currentPos()}\nIgnoring what follows.`);
+        this.error(`Unmatched close tag ${tag}!=${parentTag} at ${this._currentPos()}\nIgnoring what follows.`);
         this.errorStop = true;
       }
       return siblings;
@@ -276,12 +274,12 @@ __caph_definitions__.BaseParser = class {
     if (_tag==this.ESC) tag = this.values[this.valueIndex++];
     else if(!_tag.length) tag = null; //null means fragment
     else if(_tag.match(/[^a-z0-9._-]/i)){
-      console.error(`Error with tag ${_tag} before ${this._currentPos()}\nIgnoring what follows.`);
+      this.error(`Error with tag ${_tag} before ${this._currentPos()}\nIgnoring what follows.`);
       this.errorStop = true;
       return siblings;
     }
     else tag = _tag;
-    if (tag === undefined) tag = null, console.error(`Undefined component at ${this._currentPos()}`);
+    if (tag === undefined) tag = null, this.error(`Undefined component at ${this._currentPos()}`);
     const newSibling = this.parseParent(tag, null, []);
     if(tag) siblings.push(newSibling);
     else siblings.push(... newSibling[2]); // shortcut fragment nieces as siblings
@@ -304,7 +302,7 @@ __caph_definitions__.BaseParser = class {
     if(tag===undefined) throw '';
     this.run(/\s*/ys); // Consume whitespace
     if(this.pos==this.str.length){
-      console.warn(`Expected closing end ...> or .../> for tag ${tag}`);
+      this.warn(`Expected closing end ...> or .../> for tag ${tag}`);
       this.errorStop = true;
       return [tag, props, children];
     }
@@ -375,7 +373,7 @@ __caph_definitions__.BaseParser = class {
     return out;
   }
 
-}
+});
 
 /**
  * TO DO:
@@ -388,7 +386,7 @@ __caph_definitions__.BaseParser = class {
  __caph_definitions__.NewParser = class extends __caph_definitions__.BaseParser {
 
   static customRules = [
-    ...__caph_definitions__.BaseParser.customRules,
+    ...super.customRules,
     {
       regStart: `(?<!\\\\)\\$\\$`,
       regEnd: `(?<!\\\\)\\$\\$`,
@@ -401,230 +399,4 @@ __caph_definitions__.BaseParser = class {
     },
   ];
 
-}
-
-//------------------------------------------------------------------------------
-
-__caph_definitions__.Parser = class {
-  // /**
-  //  * @template T
-  //  * @param {string} str
-  //  * @param {(type: string, props: (Object|null), ...children: T[])=>string} post
-  //  * @returns {T|string}
-  //  * */
-  // main(str, post){
-  //   const root = this._main(str);
-  //   function rec(/** @type {AstNode}*/root){
-  //     if(is_string(root)) return root;
-
-  //   }
-  //   return post(ast);
-  // }
-
-  constructor(newAstNode=null) {
-    if(newAstNode===null){
-      this.newAstNode = (tag, props, ...children) => [tag, props, children];
-    } else {
-      this.newAstNode = newAstNode;
-    }
-    // based on xhtm, which is based on htm. Differences:
-    // 1. Replaces html entities
-    // 2. Parses math markup.
-    // 3. Renders errors instead of blocking.
-
-    const empty = {};
-    const FIELD = '\ue000';
-    const QUOTES = '\ue001';
-    const ESCAPED_DOLLAR = '\ue002';
-    const SPACE = '\ue003';
-    const each_FIELD = new RegExp(FIELD, 'g');
-    const each_QUOTES = new RegExp(QUOTES, 'g');
-    const each_ESCAPED_DOLLAR = new RegExp(ESCAPED_DOLLAR, 'g');
-    const each_SPACE = new RegExp(SPACE, 'g');
-
-    'area base br col command embed hr img input keygen link meta param source track wbr ! !doctype ? ?xml'.split(' ').map(v => empty[v] = empty[v.toUpperCase()] = true)
-    // https://html.spec.whatwg.org/multipage/syntax.html#optional-tags
-    // closed by the corresponding tag or end of parent content
-    const close = {
-      'li': ['li'],
-      'dt': ['dt', 'dd'],
-      'dd': ['dd', 'dt'],
-      'p': ['p', 'address', 'article', 'aside', 'blockquote', 'details', 'div', 'dl', 'fieldset', 'figcaption', 'figure', 'footer', 'form', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'header', 'hgroup', 'hr', 'main', 'menu', 'nav', 'ol', 'pre', 'section', 'table'],
-      'rt': ['rt', 'rp'],
-      'rp': ['rp', 'rt'],
-      'optgroup': ['optgroup'],
-      'option': ['option', 'optgroup'],
-      //'caption': [], // Disabled rule
-      //'colgroup': [], // Disabled rule
-      'thead': ['tbody','tfoot'],
-      'tbody': ['tbody', 'tfoot'],
-      'tfoot': [],
-      'tr': ['tr'],
-      'td': ['td', 'th'],
-      'th': ['th', 'td'],
-    };
-    for (let tag in close) {
-      [...close[tag].split(' '), tag].map(closer => {
-        close[tag] =
-          close[tag.toUpperCase()] =
-          close[tag + closer] =
-          close[tag.toUpperCase() + closer] =
-          close[tag + closer.toUpperCase()] =
-          close[tag.toUpperCase() + closer.toUpperCase()] =
-          true;
-      })
-    }
-    this._parseEnv = { empty, close, FIELD, QUOTES, ESCAPED_DOLLAR, each_FIELD, each_QUOTES, each_ESCAPED_DOLLAR, SPACE, each_SPACE };
-  }
-
-  html_is_valid_attr_key(key) {
-    return /^[a-zA-Z_:][a-zA-Z0-9_:.-]*$/.test(key);
-  }
-
-  _parse(parse_math, strings, ...values) {
-    const { empty, close, SPACE, each_SPACE, FIELD, QUOTES, ESCAPED_DOLLAR, each_FIELD, each_QUOTES, each_ESCAPED_DOLLAR } = this._parseEnv;
-
-    const fields = new __caph_definitions__.Dequeue(values);
-    let prev = 0, args, name, value, quotes = [], quote = 0, last;
-    let /** @type {any}*/current = [];
-
-    current.root = true;
-
-    const evaluate = (str, parts = [], raw) => {
-      let i = 0;
-      str = !raw && str === QUOTES ?
-        quotes[quote++].slice(1, -1) :
-        str.replace(each_QUOTES, m => quotes[quote++]);
-      if (!str) return str;
-      str.replace(each_FIELD, (match, idx) => {
-        if (idx) parts.push(str.slice(i, idx));
-        i = idx + 1;
-        return parts.push(fields.popLeft());
-      })
-      if (i < str.length) parts.push(str.slice(i));
-      return parts.length > 1 ? parts : parts[0];
-    }
-    // close level
-    const up = () => {
-      [current, last, ...args] = current;
-      const elem = this.newAstNode(last, ...args);
-      current.push(elem);
-      depth -= 1;
-    }
-    const setAttr = (props, key, value) => {
-      if (key == 'style' && Array.isArray(value)) value = value.join(' ');
-      if (this.html_is_valid_attr_key(key))
-        return props[key] = value;
-      console.log(props);
-      // Fix the error to avoid blocking the whole render process
-      const tag = current[1];
-      console.error(`Parsing error near <${tag} ... ${key}.`)
-      if (key[0] == '<') {
-        const newTag = key.slice(1);
-        console.warn(`Ignoring <${tag}. Assuming <${newTag}...`);
-        current[1] = newTag;
-      }
-    }
-    let s = strings.join(FIELD);
-    s = s.replace(/<!--[^]*-->/g, '');
-    s = s.replace(/<!\[CDATA\[[^]*?\]\]>/g, '');
-    s = s.replace(/\s+/g, ' ');
-    if(parse_math){
-      s = s.replace(/\\\$/g, ESCAPED_DOLLAR);
-      // s = s.replace(/([^\\]|^)\$\$(.*?[^\\])\$\$(.|$)/sg,
-      //   (match, before, tex, after) =>
-      //     `${before}${parseMath(tex, true, match)}${after}`,
-      // );
-      // s = s.replace(
-      //   /([^\\]|^)\$(.*?[^\\])\$(.|$)/sg,
-      //   (match, before, tex, after) =>
-      //     `${before}${parseMath(tex, false, match)}${after}`,
-      // );
-      //
-      s = s.replace(/(\$\$|\$)([^\1]*?)\1( ?)/sg, (match, mark, tex, space) => {
-        // if (match.search(/\/\>/) != -1) {
-        //   match = match.replace(each_ESCAPED_DOLLAR, '\\\$');
-        //   console.error('Math parsing error:', match);
-        //   const safe = this._html_safe(match);
-        //   return `<caph plugin="core-error">${safe}</>`;
-        // }
-        tex = tex.replace(/\</g, '\\lt ');
-        tex = tex.replace(/\>/g, '\\gt ');
-        tex = tex.replace(each_ESCAPED_DOLLAR, '\\\$');
-        const mode = mark == '$$' ? ' displayMode' : '';
-        const end = space.length ? `<span children=" "/>` : '';
-        return `<caph plugin="caph-math" ${mode}>${tex}</>${end}`;
-      });
-      s = s.replace(each_ESCAPED_DOLLAR, '$'); // \$ in html becomes $
-    }
-    // There is a deep error here: they assume arg="..." will never occur in the html unless it
-    // is being part of a <tag arg="...">.
-    s = s.replace(/= *('|")([^\1]*?)\1/g, (match, quote, content) => {
-      quotes.push(`${quote}${content}${quote}`);
-      return `=${QUOTES}`;
-    });
-    // ...>text<... sequence
-    let depth = -1;
-    s = s.replace(/(?:^|>)([^<]*)(?:$|<)/g, (match, text, idx, str) => {
-      depth += 1;
-      let closeTag, tag;
-      if (idx) {
-        let ss = str.slice(prev, idx);
-        // <abc/> → <abc />
-        // console.log(`${'|'.repeat(depth)}${ss}. ${text}`);
-        ss = ss.replace(/(\S)\/$/, '$1 /');
-        ss.split(' ').map((part, i) => {
-          // console.log(' '.repeat(depth), i, part);
-          if (part[0] === '/') {
-            closeTag = tag || part.slice(1) || 1;
-            depth -= 1;
-          }
-          else if (!i) {
-            tag = evaluate(part);
-            // <p>abc<p>def, <tr><td>x<tr>
-            while (close[current[1] + tag]) up();
-            current = [current, tag, null];
-            if (empty[tag]) closeTag = tag;
-          }
-          else if (part) {
-            let props = current[2] || (current[2] = {});
-            if (part.slice(0, 3) === '...') {
-              const newProps = fields.popLeft();
-              for (let key in newProps) {
-                setAttr(props, key, newProps[key]);
-              }
-            }
-            else {
-              [name, value] = part.split('=');
-              setAttr(props, evaluate(name), value ? evaluate(value) : true);
-            }
-          }
-        })
-      }
-      if (closeTag) {
-        up();
-        // if last child is closable - closeTag it too
-        while (last !== closeTag && close[last]) up();
-      }
-      prev = idx + match.length;
-      if (text && (text !== ' ' || tag == 'span')) evaluate((last = 0, text), current, true);
-    });
-    if (!current.root) up();
-    return current.length > 1 ? current : current[0];
-  }
-
-
-  parse({ raw: strings }, ...values) {
-    return this._parse(true, strings, ...values);
-  }
-  parseNoMarkup({ raw: strings }, ...values) {
-    return this._parse(false, strings, ...values);
-  }
-
-  parseEsc(strings, ...values) {
-    return this._parse(true, strings, ...values);
-  }
-  parseNoMarkupEsc(strings, ...values) {
-    return this._parse(false, strings, ...values);
-  }
 }
