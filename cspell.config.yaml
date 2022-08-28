@@ -6,9 +6,12 @@ words:
   - subproblems
   - preceeding
   - overriden
+  - Pinzón
 ignoreWords:
+  - IIFE # https://developer.mozilla.org/en-US/docs/Glossary/IIFE
   - katex
   - mathjax
   - lzutf8
-  - elems
+  - hyphenator
   - xhtm
+  - elems

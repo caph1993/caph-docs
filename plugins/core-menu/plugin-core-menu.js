@@ -1,4 +1,4 @@
-caph.pluginDefs[caph.currentSrc] = async()=>{
+caph.pluginDefs[caph.currentSrc] = (async () => {
   await caph.load('caph-docs/plugins/core-menu/core-menu.css');
   return ({ })=>{
     const [_, setTrigger] = preact.useState(null);
@@ -13,7 +13,7 @@ caph.pluginDefs[caph.currentSrc] = async()=>{
         `)}
       </select>`;
   }
-}
+})();
 // async menuLoader({ addOption }) {
 //   const { setItem, getItem } = caph.preact.useContext(caph.contexts.storage);
 //   addOption('Day / Night', {

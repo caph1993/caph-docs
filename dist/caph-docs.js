@@ -5,6 +5,38 @@ exports={};
 var __caph_definitions__ = window.__caph_definitions__ || {};
 
 
+/** 
+ * JSDoc types lack a non-undefined assertion.
+ * https://github.com/Microsoft/TypeScript/issues/23405#issuecomment-873331031
+ *
+ * Throws if the supplied value is _undefined_ (_null_ is allowed).\
+ * Returns (via casting) the supplied value as a T with _undefined_ removed from its type space.
+ * This informs the compiler that the value cannot be _undefined_.
+ * @template T
+ * @param {T} value
+ * @param {string} [valueName]
+ * @returns {T extends undefined ? never : T}
+ */
+function assertDefined(value, valueName) {
+  if (value === undefined) {
+    throw new Error(`Encountered unexpected undefined value${valueName? ` for '${valueName}'` : ""}`);
+  }
+  return /** @type {*} */ (value);
+}
+
+/**
+ * @template T
+ * @param {T} value
+ * @returns {T extends null ? never : T}
+ */
+function assertNonNull(value) {
+  if (!value && (value===null||value === undefined)) throw new Error(`Encountered unexpected undefined value`);
+  return value;
+}
+
+
+
+
 /** @type {((obj:string)=>true)|(obj:any)=>false} */
 function is_string(obj) {
   return Object.prototype.toString.call(obj) === "[object String]";
@@ -603,10 +635,11 @@ __caph_definitions__.BaseParser = (class {
     finally{ this.pos = pos; }
   }
 
-  _currentPos(){ // Just for printing debug info
+  _currentPos(delta=0, length=50){ // Just for printing debug info
     const {pos, str} = this;
-    const short = str.slice(pos, pos+50).replace('\n', '(\\n)');
-    return `${pos}...${short}...${pos+50}`;
+    const at = Math.max(0, pos+delta)
+    const short = str.slice(at, at+length).replace('\n', '(\\n)');
+    return `${at}...${short}...${at+length}`;
   }
 
   /**
@@ -660,7 +693,7 @@ __caph_definitions__.BaseParser = (class {
         `<!DOCTYPE\\s*.*?>`,
       ].join('|'), 'iys'));
       if(!result){
-        this.error(`Unexpected <! at ${this._currentPos()}\nIgnoring what follows.`);
+        this.error(`Unexpected <! around ${this._currentPos(-5)}\nIgnoring what follows.`);
         this.errorStop = true;
         return siblings;
       }
@@ -697,15 +730,22 @@ __caph_definitions__.BaseParser = (class {
     // Parse the first sibling
     let reg = new RegExp(`<([^\\s>\\/\\.]*)`, 'ys');
     let _tag = this.run(reg)[1];
-    if (_tag==this.ESC) tag = this.values[this.valueIndex++];
+    if (_tag==this.ESC){
+      tag = this.values[this.valueIndex++];
+      if(is_string(tag)){
+        this.error(`Tag must be a component, not a string. Error around ${this._currentPos(-5)}\nIgnoring what follows.`);
+        this.errorStop = true;
+        return siblings;
+      }
+    }
     else if(!_tag.length) tag = null; //null means fragment
     else if(_tag.match(/[^a-z0-9._-]/i)){
-      this.error(`Error with tag ${_tag} before ${this._currentPos()}\nIgnoring what follows.`);
+      this.error(`Error with tag ${_tag} around ${this._currentPos(-_tag.length-5)}\nIgnoring what follows.`);
       this.errorStop = true;
       return siblings;
     }
     else tag = _tag;
-    if (tag === undefined) tag = null, this.error(`Undefined component at ${this._currentPos()}`);
+    if (tag === undefined) tag = null, this.error(`Undefined component around ${this._currentPos(-5)}`);
     const newSibling = this.parseParent(tag, null, []);
     if(tag) siblings.push(newSibling);
     else siblings.push(... newSibling[2]); // shortcut fragment nieces as siblings
@@ -1034,6 +1074,10 @@ exports={};
 /* lzutf8, utils, preact, preact hook are injected above this comment*/
 
 
+/**
+ * @typedef {({children, ...props})=>T_PreactVDomElement} Component
+*/
+
 __caph_definitions__.preactParser = new class {
   
   /** @type {'katex'|'mathjax'} */
@@ -1065,6 +1109,7 @@ __caph_definitions__.preactParser = new class {
       FragmentComponent: preact.Fragment,
     });
 
+    /** @type {(literals:TemplateStringsArray, ...values)=>T_PreactVDomElement}*/
     this.parse = parse;
     this.parseAst = parseAst;
     this.parseNoMarkup = parseNoMarkup;
@@ -1083,8 +1128,9 @@ __caph_definitions__.preactParser = new class {
     return preact.createElement(type, props, ...children);
   }
 
+  /** @type {{[key:string]: Promise<Component>}} */
   pluginDefs = {
-    'core-error': async () => ({ children, tooltip }) => {
+    'core-error': (async () => ({ children, tooltip }) => {
       const help = preact.useCallback(() => {
         const win = window.open('', '_blank');
         if (!win) throw new Error('Popup blocked');
@@ -1098,7 +1144,7 @@ __caph_definitions__.preactParser = new class {
           </div>
         `);
       }, []);
-      return caph.parse`
+      return this.parse`
         <a href="./error-help" onclick=${(e) => {
         e.preventDefault();
           help();
@@ -1107,24 +1153,27 @@ __caph_definitions__.preactParser = new class {
           ${children || tooltip || 'Error'}
         </code>
       `;
-    }
+    })(),
   };
 
 
+  /** @type {{[key:string]: Component}} */
   _pluginComponents = {}
   plugin(key) { // key is either a tag or a url
     const cache = this._pluginComponents;
-    return cache[key] || (cache[key] = this.pluginLoader(key));
+    return cache[key] || (cache[key] = this.componentWrapper(key));
   }
 
-  _pluginLoaders = {};
+  /** @type {{[key:string]: Component}} */
+  _componentWrappers = {};
   _randomSessionSuffix = ('' + Math.random()).slice(2);
-  pluginLoader(key) {
+  componentWrapper(key) {
     if (key.match(/[^#\?]*.js(#.*|\?.*|)$/)) key = this._URL_resolve(key);
-    const cache = this._pluginLoaders
+    const cache = this._componentWrappers;
     return cache[key] || (cache[key] = this.newPluginLoader(key));
   }
 
+  /** @returns {Component} */
   newPluginLoader(/** @type {string}*/ key){
     const scriptLoader = this.scriptLoader;
     const pluginDefs = this.pluginDefs;
@@ -1133,79 +1182,79 @@ __caph_definitions__.preactParser = new class {
     //scriptLoader.load('caph-docs/core/plugin-loader.css');
 
     const loadStatus = {
-      Component: null,
+      Component: /** @type {null|Component}*/(null),
       error: null,
       renderReady: false,
     }
 
-    const main = async ()=>{
-      // 1. Put the plugin script in the document head and wait for the browser to load the script
-      const pluginDef = await (async ()=> {
-        if (pluginDefs[key]) {
-          return pluginDefs[key]; // already loaded
-        }
-        if (parent.officialPlugins.includes(key)) {
-          const url = `${scriptLoader.dist}/plugin-${key}.js`;
-          return pluginDefs[key] = parent.pluginLoader(url);
-        }
-        else if (key.match(/[^#\?]+.js(#.*|\?.*|)$/)) {
-          let isOfficial = parent.officialPlugins.map(k => `${scriptLoader.dist}/plugin-${k}.js`).includes(key);
-          const url = isOfficial ? key : `${key}?${parent._randomSessionSuffix}`;
-          await scriptLoader.load(url);
-          pluginDefs[key] = pluginDefs[key] || pluginDefs[url];
-          assert(pluginDefs[key], 'Plugin not declared in file: ' + key);
-          if (key != url) delete pluginDefs[url];
-          return pluginDefs[key];
-        }
-        // User plugin
-        return await MyPromise.until(() => pluginDefs[key]);
-      })();
-
-      // 3. Start the plugin promise but don't wait for it
-      (async()=>{
-        try {
-          loadStatus.Component = await pluginDef();
-          loadStatus.renderReady = true;
-        } catch (err) {
-          loadStatus.error = err || true;
-          console.error(err);
-        }
-      })();
-    }    
-
     function FinalComponent({ children, ...props }) {
       try {
-        //@ts-ignore
-        return loadStatus.Component({ children, ...props });
+        const Component = assertNonNull(loadStatus.Component);
+        const out = Component({ children, ...props });
+        assert(!out.then, `Your component can not be a promise itself (${key}).
+        Maybe you defined pluginDefs[...] = (async ()=>{...}) instead of pluginDefs[...] = (async ()=>{...})()?
+        Please follow the IIFE pattern for async promises.`);
+        return out;
       } catch (err) {
         console.error(`Rendering error in plugin ${key}:`, err);
-        return parent.parse`<code class="flashing">${children || '...'}</code>`;
+        return parent.parse`<code class="caph-flashing">${children || '...error...'}</code>`;
       }
     }
 
-    function _loadingComponent({ children }) {
+    function LoadingComponent({ children }) {
       return parent.parse`
       <code class="caph-flashing" title=${`${key} is loading...`}>
         ${children || '...'}
       </code>`;
     }
 
-    function _loadErrorComponent({}) {
+    function LoadErrorComponent({}) {
       return parent.parse`<${parent.plugin('core-error')} tooltip=${loadStatus.error}/>`;
     }
 
+    const main = async ()=>{
+      // 1. Put the plugin script in the document head and wait for the browser to load the script
+      if (pluginDefs.hasOwnProperty(key)){} // already loaded
+      else if (parent.officialPlugins.includes(key)) {
+        const url = `${scriptLoader.dist}/plugin-${key}.js`;
+        //@ts-ignore (Component instead of Promise<Component>)
+        pluginDefs[key] = parent.componentWrapper(url);
+      } else if (key.match(/[^#\?]+.js(#.*|\?.*|)$/)) {
+        let isOfficial = parent.officialPlugins.map(k => `${scriptLoader.dist}/plugin-${k}.js`).includes(key);
+        const url = isOfficial ? key : `${key}?${parent._randomSessionSuffix}`;
+        await scriptLoader.load(url);
+        pluginDefs[key] = pluginDefs[key] || pluginDefs[url];
+        assert(pluginDefs[key], 'Plugin not declared in file: ' + key);
+        if (key != url) delete pluginDefs[url];
+      }else { await MyPromise.until(() => pluginDefs[key]); } // User plugin
+
+      // 3. Start the plugin promise but don't wait for it
+      (async()=>{
+        try {
+          loadStatus.Component = await pluginDefs[key];
+          loadStatus.renderReady = true;
+        } catch (err) {
+          loadStatus.error = err || true;
+          console.log(pluginDefs[key])
+          console.error(`Error while awaiting pluginDefs["${key}"]`, err);
+        }
+      })();
+    }
     main();
     return ({ children, ...props })=>{
-      const [_, setTrigger] = preact.useState(0);
+      const [trigger, setTrigger] = preact.useState(0);
 
       preact.useEffect(async () => {
         await MyPromise.until(() => loadStatus.renderReady || loadStatus.error);
         setTrigger(Math.random() * 1e12); // refresh this component
       }, []);
-
-      if (loadStatus.renderReady) return FinalComponent({ children, ...props });
-      else if (loadStatus.error) return _loadErrorComponent({ children });
-      else return _loadingComponent({ children });
+      const Component = preact.useMemo(()=>{
+        if (loadStatus.renderReady) return FinalComponent;
+        else if (loadStatus.error) return LoadErrorComponent;
+        else return LoadingComponent;
+      }, [trigger]);
+      
+      return Component({ children, ...props })
     };
   }
 
@@ -1441,8 +1490,19 @@ const caph = new class {
   _parser = __caph_definitions__.preactParser;
   pluginDefs = this._parser.pluginDefs;
   parse = this._parser.parse.bind(this._parser);
-  parseAst = this._parser.parseAst.bind(this._parser);
   parseNoMarkup = this._parser.parseNoMarkup.bind(this._parser);
+  parseAst = this._parser.parseAst.bind(this._parser);
+  parseString = (/** @type {string}*/str, {markUp, htmlSafe} = {
+    markUp: true,
+    htmlSafe: false,
+  })=>{
+    if(htmlSafe){ // e.g. converts &lt; into <
+      const doc = new DOMParser().parseFromString(str, "text/html");
+      str = doc.documentElement.textContent||'';
+    }
+    if(!markUp) return this.parseNoMarkup({raw:[str]})
+    return this.parse({raw:[str]});
+  }
   plugin = this._parser.plugin.bind(this._parser);
   
   _scriptLoader = this._parser.scriptLoader;
@@ -1454,6 +1514,7 @@ const caph = new class {
   contexts = this._preactGlobals.contexts;
   menu = this._preactGlobals.menu;
   listenToEvent = this._preactGlobals.listenToEvent.bind(this._preactGlobals);
+  listenToGlobal = this._preactGlobals.listenToGlobal.bind(this._preactGlobals);
 
   
   constructor() {}

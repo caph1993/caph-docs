@@ -10,8 +10,19 @@ const caph = new class {
   _parser = __caph_definitions__.preactParser;
   pluginDefs = this._parser.pluginDefs;
   parse = this._parser.parse.bind(this._parser);
-  parseAst = this._parser.parseAst.bind(this._parser);
   parseNoMarkup = this._parser.parseNoMarkup.bind(this._parser);
+  parseAst = this._parser.parseAst.bind(this._parser);
+  parseString = (/** @type {string}*/str, {markUp, htmlSafe} = {
+    markUp: true,
+    htmlSafe: false,
+  })=>{
+    if(htmlSafe){ // e.g. converts &lt; into <
+      const doc = new DOMParser().parseFromString(str, "text/html");
+      str = doc.documentElement.textContent||'';
+    }
+    if(!markUp) return this.parseNoMarkup({raw:[str]})
+    return this.parse({raw:[str]});
+  }
   plugin = this._parser.plugin.bind(this._parser);
   
   _scriptLoader = this._parser.scriptLoader;
@@ -23,6 +34,7 @@ const caph = new class {
   contexts = this._preactGlobals.contexts;
   menu = this._preactGlobals.menu;
   listenToEvent = this._preactGlobals.listenToEvent.bind(this._preactGlobals);
+  listenToGlobal = this._preactGlobals.listenToGlobal.bind(this._preactGlobals);
 
   
   constructor() {}

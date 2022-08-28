@@ -177,10 +177,11 @@ __caph_definitions__.BaseParser = (class {
     finally{ this.pos = pos; }
   }
 
-  _currentPos(){ // Just for printing debug info
+  _currentPos(delta=0, length=50){ // Just for printing debug info
     const {pos, str} = this;
-    const short = str.slice(pos, pos+50).replace('\n', '(\\n)');
-    return `${pos}...${short}...${pos+50}`;
+    const at = Math.max(0, pos+delta)
+    const short = str.slice(at, at+length).replace('\n', '(\\n)');
+    return `${at}...${short}...${at+length}`;
   }
 
   /**
@@ -234,7 +235,7 @@ __caph_definitions__.BaseParser = (class {
         `<!DOCTYPE\\s*.*?>`,
       ].join('|'), 'iys'));
       if(!result){
-        this.error(`Unexpected <! at ${this._currentPos()}\nIgnoring what follows.`);
+        this.error(`Unexpected <! around ${this._currentPos(-5)}\nIgnoring what follows.`);
         this.errorStop = true;
         return siblings;
       }
@@ -271,15 +272,22 @@ __caph_definitions__.BaseParser = (class {
     // Parse the first sibling
     let reg = new RegExp(`<([^\\s>\\/\\.]*)`, 'ys');
     let _tag = this.run(reg)[1];
-    if (_tag==this.ESC) tag = this.values[this.valueIndex++];
+    if (_tag==this.ESC){
+      tag = this.values[this.valueIndex++];
+      if(is_string(tag)){
+        this.error(`Tag must be a component, not a string. Error around ${this._currentPos(-5)}\nIgnoring what follows.`);
+        this.errorStop = true;
+        return siblings;
+      }
+    }
     else if(!_tag.length) tag = null; //null means fragment
     else if(_tag.match(/[^a-z0-9._-]/i)){
-      this.error(`Error with tag ${_tag} before ${this._currentPos()}\nIgnoring what follows.`);
+      this.error(`Error with tag ${_tag} around ${this._currentPos(-_tag.length-5)}\nIgnoring what follows.`);
       this.errorStop = true;
       return siblings;
     }
     else tag = _tag;
-    if (tag === undefined) tag = null, this.error(`Undefined component at ${this._currentPos()}`);
+    if (tag === undefined) tag = null, this.error(`Undefined component around ${this._currentPos(-5)}`);
     const newSibling = this.parseParent(tag, null, []);
     if(tag) siblings.push(newSibling);
     else siblings.push(... newSibling[2]); // shortcut fragment nieces as siblings
