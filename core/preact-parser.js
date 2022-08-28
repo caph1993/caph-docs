@@ -30,34 +30,31 @@ __caph_definitions__.preactParser = new class {
     // 'mathjax-svg',
   ];
 
+  parseAst = __caph_definitions__.NewParser.parseAst;
+
+  _evalAst = __caph_definitions__.NewParser.evalAstFactory({
+    createElement: this.createElement.bind(this),
+    FragmentComponent: preact.Fragment,
+  })
+  /** @type {(literals:TemplateStringsArray, ...values)=>T_PreactVDomElement}*/
+  parse = __caph_definitions__.NewParser.parserFactory(this._evalAst);
+  parseNoMarkup = __caph_definitions__.BaseParser.parserFactory(this._evalAst);
 
   constructor() {
-    
-    const { parseAst, parse } = __caph_definitions__.NewParser.parserFactory({
-      createElement: this.createElement.bind(this),
-      FragmentComponent: preact.Fragment,
-    });
-    const { parse: parseNoMarkup } = __caph_definitions__.BaseParser.parserFactory({
-      createElement: this.createElement.bind(this),
-      FragmentComponent: preact.Fragment,
-    });
-
-    /** @type {(literals:TemplateStringsArray, ...values)=>T_PreactVDomElement}*/
-    this.parse = parse;
-    this.parseAst = parseAst;
-    this.parseNoMarkup = parseNoMarkup;
-
     this.contexts = {};
     this.contexts['core-menu'] = preact.createContext();
   }
 
   createElement(type, props, ...children) {
-    if (type == 'caph') {
-      let pluginKey = props && props['plugin'];
-      if (pluginKey == 'caph-math') pluginKey = this.mathParser;
+    if (props && props.hasOwnProperty('data-caph')) {
+      let pluginKey = props['data-caph'];
+      if (pluginKey == '@math') pluginKey = this.mathParser;
       if (pluginKey) type = this.plugin(pluginKey);
       else console.warn('caph tag without plugin attribute');
     }
+    // if(type=='span' && children.length && is_string(children[0]) && children[0].startsWith('\\Prob')){
+    //   console.log(type, props, children);
+    // }
     return preact.createElement(type, props, ...children);
   }
 

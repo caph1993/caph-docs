@@ -466,6 +466,8 @@ exports={};
 /** @typedef {(type:any, props:any, ...children)=>any} CreateElementType*/
 /** @typedef {(text:string) => AstNode} RuleParser*/
 /** @typedef {{regStart:string, regEnd:string, parser:RuleParser}} CustomRule*/
+
+/** @typedef {'pre'|'jsx'|'tex'|'tex-shallow'|'jsx-shallow'|'pre-shallow'} SpacingMode*/
 /**
  * @typedef {string|
  * [string|ComponentType, AttributesType|null, AstNodeArray]|
@@ -489,12 +491,15 @@ __caph_definitions__.BaseParser = (class {
   SPEC = `https://html.spec.whatwg.org/multipage/syntax.html`;
   DEBUG = false;
 
+  static parseAst(/** @type {TemplateStringsArray} */{raw:strings}, ...values){
+    const cls = this;
+    return new cls(strings, values).root
+  }
+
   /**
    * @param {null|{createElement:CreateElementType, FragmentComponent:ComponentType}} post
   */
-  static parserFactory(post=null){
-    const cls = this;
-
+  static evalAstFactory(post=null){
     const {createElement, FragmentComponent} = post||{
       createElement: (type, props, ...children)=> (!type||is_string(type))?
         [type, props, children] : type({children, ...props}),
@@ -515,11 +520,14 @@ __caph_definitions__.BaseParser = (class {
       }
       return createElement(tag, props, ...children);
     }
+    return evalAst;
+  }
 
-    const parse = ({raw:strings}, ...values)=>evalAst(new cls(strings, values).root);
-    const parseAst = ({raw:strings}, ...values)=> new cls(strings, values).root;
-
-    return {parse, parseAst, evalAst};
+   static parserFactory(evalAst){
+    const cls = this;
+    return (/** @type {TemplateStringsArray} */ strings, ...values)=>(
+      evalAst(cls.parseAst(strings, ...values))
+    );
   }
 
   /**
@@ -527,31 +535,34 @@ __caph_definitions__.BaseParser = (class {
   */
   static debugParserFactory(post=null){
     const cls = this;
-    const {evalAst, parse, parseAst} = this.parserFactory(post);
+    const evalAst = cls.evalAstFactory(post);
+    const parse = cls.parserFactory(evalAst);
     const parse1 = ({raw:strings}, ...values)=>evalAst(new cls(strings, values, 1).root);
     const parse2 = ({raw:strings}, ...values)=>evalAst(new cls(strings, values, 2).root);
     const parseAst1 = ({raw:strings}, ...values)=> new cls(strings, values, 1).root;
     const parseAst2 = ({raw:strings}, ...values)=> new cls(strings, values, 2).root;
-    return {parse, parse1, parse2, parseAst, parseAst1, parseAst2, evalAst};
+    return {parse, parse1, parse2, parseAst1, parseAst2, evalAst};
   }
 
   /** @type {CustomRule[]} */
   static customRules = [];
 
-
   warn(...args){console.warn(...args)}; // Overriden during tests
   error(...args){console.error(...args)}; // Overriden during tests
 
-  constructor(/** @type {string[]}*/ strings, values, debug=0){
+  constructor(/** @type {readonly string[]}*/ strings, values, debug=0){
     let str = strings.join(this.ESC);
     let escaped = {};
-    str = str.replace(new RegExp(String.raw`${this.ESC}|\\"|\\'|\\\`|\\$\\$|\\$(?=[^\\$])`), (match, index)=>{
+    let regEscaped = new RegExp(`${this.ESC}|\\\\"|\\\\'|\\\\$\\\\$|\\\\$(?=[^\\\\$])`);
+    str = str.replace(regEscaped, (match, index)=>{
       //console.log(`Escaping ${match} at ${index}`);
       escaped[index] = match;
       return this.ESC;
     });
     this.pos = 0;
     this.str = str;
+    /** @type {SpacingMode}*/
+    this.spacing = 'jsx';
     this.values = values;
     this.valueIndex = 0;
     this.escaped = escaped;
@@ -624,18 +635,18 @@ __caph_definitions__.BaseParser = (class {
     return out;
   }
 
-  try_run(/** @type {RegExp}*/regExp){
+  tryRun(/** @type {RegExp}*/regExp){
     try{ return this.run(regExp); }
     catch(e){ return null; }
   }
-  try_run_undo(/** @type {RegExp}*/regExp){
+  tryRunUndo(/** @type {RegExp}*/regExp){
     const pos = this.pos;
     try{ return this.run(regExp); }
     catch(e){ return null; }
     finally{ this.pos = pos; }
   }
 
-  _currentPos(delta=0, length=50){ // Just for printing debug info
+  debugPosition(delta=0, length=50){ // Just for printing debug info
     const {pos, str} = this;
     const at = Math.max(0, pos+delta)
     const short = str.slice(at, at+length).replace('\n', '(\\n)');
@@ -653,14 +664,14 @@ __caph_definitions__.BaseParser = (class {
       or (ii) after a parent "head" (`<div ...>`) has been consumed,
       or (iii) after a sibling has been consumed entirely.
      */
-    this.DEBUG && console.log('parseSibling', parentTag, siblings, this._currentPos());
+    this.DEBUG && console.log('parseSibling', parentTag, siblings, this.debugPosition());
     assert(parentTag!==undefined);
     // Parse text preceeding the first sibling
     let [text] = this.run(this.REG_EXP_TEXT);
     if(text.length) text = this.trimText(text);
     if(text.length) siblings.push(text);
 
-    if(this.try_run(new RegExp(`${this.ESC}`, 'ys'))){
+    if(this.tryRun(new RegExp(`${this.ESC}`, 'ys'))){
       let value = this.values[this.valueIndex++];
       if (Array.isArray(value)) siblings.push(...value);
       else siblings.push(value);
@@ -677,23 +688,22 @@ __caph_definitions__.BaseParser = (class {
     }
     if(this.customRules.length){
       for(let {regStart, regEnd, parser} of this.customRules){
-        let m = this.try_run(new RegExp(`${regStart}(.*?)${regEnd}`, 'ys'));
+        let m = this.tryRun(new RegExp(`${regStart}(.*?)${regEnd}`, 'ys'));
         if(m){
-          siblings.push(parser(m[1]));
+          siblings.push(parser(this.replaceText(m[1], this.pos-regEnd.length-m[1].length)));
           return this.parseSiblings(parentTag, siblings);
         }
       }
     }
-
     // Comment, DOCTYPE, or CDATA
     if(this.str.startsWith('<!', this.pos)){
-      let result = this.try_run(new RegExp([
-        `<!--.*?-->`,
-        `<!\\[CDATA\\[.*?\\]\\]>`,
-        `<!DOCTYPE\\s*.*?>`,
-      ].join('|'), 'iys'));
+      const regComment = new RegExp(
+        [`<!--.*?-->`, `<!\\[CDATA\\[.*?\\]\\]>`, `<!DOCTYPE\\s*.*?>`,].join('|'),
+        'iys',
+      );
+      let result = this.tryRun(regComment);
       if(!result){
-        this.error(`Unexpected <! around ${this._currentPos(-5)}\nIgnoring what follows.`);
+        this.error(`Unexpected <! around ${this.debugPosition(-5)}\nIgnoring what follows.`);
         this.errorStop = true;
         return siblings;
       }
@@ -704,11 +714,11 @@ __caph_definitions__.BaseParser = (class {
     }
     // Parent close
     let /** @type {TagType} */ tag;
-    if(this.try_run(/<\/\s*>/ys)) return siblings;
-    if(this.try_run(/<\//ys)){
-      let result = this.try_run(new RegExp(`([^>\\s]+)\\s*>`, 'ys'));
+    if(this.tryRun(/<\/\s*>/ys)) return siblings;
+    if(this.tryRun(/<\//ys)){
+      let result = this.tryRun(new RegExp(`([^>\\s]+)\\s*>`, 'ys'));
       if(!result){
-        this.error(`Expected close tag for parent ${parentTag||'fragment'} at ${this._currentPos()}\nIgnoring what follows.`);
+        this.error(`Expected close tag for parent ${parentTag||'fragment'} at ${this.debugPosition()}\nIgnoring what follows.`);
         this.errorStop = true;
         return siblings;
       }
@@ -716,14 +726,14 @@ __caph_definitions__.BaseParser = (class {
       if (_tag==this.ESC) tag = this.values[this.valueIndex++];
       else tag = _tag;
       if(tag!==parentTag){
-        this.error(`Unmatched close tag ${tag}!=${parentTag} at ${this._currentPos()}\nIgnoring what follows.`);
+        this.error(`Unmatched close tag ${tag}!=${parentTag} at ${this.debugPosition()}\nIgnoring what follows.`);
         this.errorStop = true;
       }
       return siblings;
     }
     const optionalClose = this.optionalClose(parentTag);
     if(optionalClose) for(let tag of optionalClose){
-      if(this.try_run_undo(new RegExp(`<${tag}(>|\\s)`, 'ys'),)){
+      if(this.tryRunUndo(new RegExp(`<${tag}(>|\\s)`, 'ys'),)){
         return siblings;
       }
     }
@@ -733,19 +743,19 @@ __caph_definitions__.BaseParser = (class {
     if (_tag==this.ESC){
       tag = this.values[this.valueIndex++];
       if(is_string(tag)){
-        this.error(`Tag must be a component, not a string. Error around ${this._currentPos(-5)}\nIgnoring what follows.`);
+        this.error(`Tag must be a component, not a string. Error around ${this.debugPosition(-5)}\nIgnoring what follows.`);
         this.errorStop = true;
         return siblings;
       }
     }
     else if(!_tag.length) tag = null; //null means fragment
     else if(_tag.match(/[^a-z0-9._-]/i)){
-      this.error(`Error with tag ${_tag} around ${this._currentPos(-_tag.length-5)}\nIgnoring what follows.`);
+      this.error(`Error with tag ${_tag} around ${this.debugPosition(-_tag.length-5)}\nIgnoring what follows.`);
       this.errorStop = true;
       return siblings;
     }
     else tag = _tag;
-    if (tag === undefined) tag = null, this.error(`Undefined component around ${this._currentPos(-5)}`);
+    if (tag === undefined) tag = null, this.error(`Undefined component around ${this.debugPosition(-5)}`);
     const newSibling = this.parseParent(tag, null, []);
     if(tag) siblings.push(newSibling);
     else siblings.push(... newSibling[2]); // shortcut fragment nieces as siblings
@@ -764,29 +774,44 @@ __caph_definitions__.BaseParser = (class {
       or after `<div attr1 attr2="value" ` has been consumed
       Thus, it just checks for more attributes or `>` or `/>`
     */
-    this.DEBUG && console.log('parseParent ', tag, props, children, this._currentPos());
-    if(tag===undefined) throw '';
+    this.DEBUG && console.log('parseParent ', tag, props, children, this.debugPosition());
+    //assertDefined(tag);
     this.run(/\s*/ys); // Consume whitespace
     if(this.pos==this.str.length){
       this.warn(`Expected closing end ...> or .../> for tag ${tag}`);
       this.errorStop = true;
       return [tag, props, children];
     }
-    let headClosed = !!this.try_run(/>/ys);
+    let headClosed = !!this.tryRun(/>/ys);
     let fullyClosed = (headClosed && !!this.childlessTags[(''+tag)?.toLowerCase()]) ||
-      !!this.try_run(/\/>/ys);
+      !!this.tryRun(/\/>/ys);
     if(fullyClosed) return [tag, props, children];
     if(headClosed){
+      if(tag=='script'){ // Script is closed differently
+        let m = this.tryRun(/(.*?)<\/script\s*>/ys);
+        if(!m){
+          this.error(`Script tag not closed properly. Ignoring what follows.`);
+          this.errorStop = true;
+          return [tag, props, children];
+        }
+        let code = m[1];
+        m = code.match(/^\s*\`(.*)\`\s*$/ys)
+        if(m){
+          code = m[1];
+          return ['div', {'data-caph':'@code', ...props}, [code]]
+        }
+        return [tag, props, children];
+      }
       children = this.parseSiblings(tag, children);
       return [tag, props, children];
     }
     if(!props) props = {};
-    if(this.try_run(new RegExp(`\\.\\.\\.${this.ESC}`, 'ys'))){
+    if(this.tryRun(new RegExp(`\\.\\.\\.${this.ESC}`, 'ys'))){
       props = {...props, ...this.values[this.valueIndex++]};
     }
     else{
       let [key] = this.run(/.*?(?=\s|>|=)/ys);
-      let _value = this.try_run(/=/ys) && this.run(new RegExp(`\\".*?\\"|\\'.*?\\'|${this.ESC}`, 'ys'))[0];
+      let _value = this.tryRun(/=/ys) && this.run(new RegExp(`\\".*?\\"|\\'.*?\\'|${this.ESC}`, 'ys'))[0];
       let value;
       if(!_value) value = true;
       else if(_value==this.ESC) value=this.values[this.valueIndex++];
@@ -800,7 +825,7 @@ __caph_definitions__.BaseParser = (class {
    * @param {string} text
    * @returns {string}*/
   trimText(text){
-    // End spaces are preserved only if they are exclusively inline
+    // End spaces are preserved only if they are inline
     // https://reactjs.org/blog/2014/02/20/react-v0.9.html#jsx-whitespace
     // https://www.w3.org/TR/REC-html40/struct/text.html#h-9.1
     // https://stackoverflow.com/q/433493
@@ -856,12 +881,26 @@ __caph_definitions__.NewParser = class extends __caph_definitions__.BaseParser {
     {
       regStart: `(?<!\\\\)\\$\\$`,
       regEnd: `(?<!\\\\)\\$\\$`,
-      parser: /**@type {RuleParser}*/ ((text)=>['caph', {plugin: 'caph-math', displayMode:true}, [text]]),
+      parser: /**@type {RuleParser}*/ ((text)=>['div', {'data-caph': '@math', displayMode:true}, [text]]),
     },
     {
       regStart: `(?<!\\\\)\\$`,
       regEnd: `(?<!\\\\)\\$`,
-      parser: /**@type {RuleParser}*/ ((text)=>['caph', {plugin: 'caph-math'}, [text]]),
+      parser: /**@type {RuleParser}*/ ((text)=>['div', {'data-caph': '@math', displayMode:false}, [text]]),
+      inline: true,
+    },
+    {
+      regStart: `(?<!\\\\)\`\`\``,
+      regEnd: `(?<!\\\\)\`\`\``,
+      parser: /**@type {RuleParser}*/ ((text)=>['div', {'data-caph': '@code'}, [text]]),
+    },
+    {
+      regStart: `(?<!\\\\)\``,
+      regEnd: `(?<!\\\\)\``,
+      parser: /**@type {RuleParser}*/ ((text)=>{
+        return ['div', {'data-caph': '@code'}, [text.replace(/\\\`/g, '`')]]
+      }),
+      inline: true,
     },
   ];
 
@@ -1097,34 +1136,31 @@ __caph_definitions__.preactParser = new class {
     // 'mathjax-svg',
   ];
 
+  parseAst = __caph_definitions__.NewParser.parseAst;
+
+  _evalAst = __caph_definitions__.NewParser.evalAstFactory({
+    createElement: this.createElement.bind(this),
+    FragmentComponent: preact.Fragment,
+  })
+  /** @type {(literals:TemplateStringsArray, ...values)=>T_PreactVDomElement}*/
+  parse = __caph_definitions__.NewParser.parserFactory(this._evalAst);
+  parseNoMarkup = __caph_definitions__.BaseParser.parserFactory(this._evalAst);
 
   constructor() {
-    
-    const { parseAst, parse } = __caph_definitions__.NewParser.parserFactory({
-      createElement: this.createElement.bind(this),
-      FragmentComponent: preact.Fragment,
-    });
-    const { parse: parseNoMarkup } = __caph_definitions__.BaseParser.parserFactory({
-      createElement: this.createElement.bind(this),
-      FragmentComponent: preact.Fragment,
-    });
-
-    /** @type {(literals:TemplateStringsArray, ...values)=>T_PreactVDomElement}*/
-    this.parse = parse;
-    this.parseAst = parseAst;
-    this.parseNoMarkup = parseNoMarkup;
-
     this.contexts = {};
     this.contexts['core-menu'] = preact.createContext();
   }
 
   createElement(type, props, ...children) {
-    if (type == 'caph') {
-      let pluginKey = props && props['plugin'];
-      if (pluginKey == 'caph-math') pluginKey = this.mathParser;
+    if (props && props.hasOwnProperty('data-caph')) {
+      let pluginKey = props['data-caph'];
+      if (pluginKey == '@math') pluginKey = this.mathParser;
       if (pluginKey) type = this.plugin(pluginKey);
       else console.warn('caph tag without plugin attribute');
     }
+    // if(type=='span' && children.length && is_string(children[0]) && children[0].startsWith('\\Prob')){
+    //   console.log(type, props, children);
+    // }
     return preact.createElement(type, props, ...children);
   }
 
@@ -1487,22 +1523,36 @@ window.caph_requirements = JSON.parse(LZUTF8.decompress("W3sicmVmIjoiY2FwaC1kb2N
 
 const caph = new class {
 
+  parseAst = __caph_definitions__.NewParser.parseAst.bind(__caph_definitions__.NewParser);
   _parser = __caph_definitions__.preactParser;
   pluginDefs = this._parser.pluginDefs;
   parse = this._parser.parse.bind(this._parser);
   parseNoMarkup = this._parser.parseNoMarkup.bind(this._parser);
-  parseAst = this._parser.parseAst.bind(this._parser);
-  parseString = (/** @type {string}*/str, {markUp, htmlSafe} = {
-    markUp: true,
-    htmlSafe: false,
-  })=>{
-    if(htmlSafe){ // e.g. converts &lt; into <
+  
+  parseHtmlAst(/** @type {string}*/str){
+    const undoHtml = (str)=>{
+      // e.g. converts &lt; into <
       const doc = new DOMParser().parseFromString(str, "text/html");
-      str = doc.documentElement.textContent||'';
+      const text = doc.documentElement.textContent;
+      //if(str!=text) console.log(`Converted ${str} into ${text}`)
+      return text;
     }
-    if(!markUp) return this.parseNoMarkup({raw:[str]})
-    return this.parse({raw:[str]});
+    const astUndoHtml = (/** @type {AstNode}*/ root) => {
+      if (is_string(root)) return undoHtml(root);
+      if (!Array.isArray(root)) return root;
+      //@ts-ignore
+      root[2] = root[2].map(child => astUndoHtml(child));
+      return root;
+    }
+    // Parse html, undoing html safe conversions, and then create element
+    let root = caph.parseAst({raw:[str]});
+    return astUndoHtml(root);
   }
+  parseHtml(/** @type {string}*/str){
+    //@ts-ignore
+    return this._parser._evalAst(this.parseHtmlAst(str));
+  }
+
   plugin = this._parser.plugin.bind(this._parser);
   
   _scriptLoader = this._parser.scriptLoader;

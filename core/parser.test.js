@@ -223,11 +223,11 @@ function main(){
   );
   assertTest(
     parse1`$e^2$`,
-    ['caph', {plugin:'caph-math'}, ['e^2']],
+    ['div', {'data-caph':'@math', displayMode:false}, ['e^2']],
   );
   assertTest(
     parse1`$$e^2$$`,
-    ['caph', {plugin:'caph-math', displayMode:true}, ['e^2']],
+    ['div', {'data-caph':'@math', displayMode:true}, ['e^2']],
   );
   assertTest(
     parse1`<ul><li>testing<div/><li>auto<li>close</>`,
