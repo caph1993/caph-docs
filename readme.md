@@ -88,13 +88,23 @@ The crucial fonts are `katex`, `lmroman` and `lmsans`, although some icon and em
 
 # Spacing
 
-We use the new JSX spacing rules because they are simple and clear: inline spaces are preserved unless one or more newlines are present, in which case no space is preserved at all.
+The new JSX spacing rules are simple and clear: inline spaces are preserved unless one or more newlines are present, in which case no space is preserved at all.
 In other words, for a space string `\s+` occurring between two nodes (tag-tag or text-tag), if it matches `\s*?\n\s*`, it is removed, otherwise, it is replaced with a single space.
 In order to force a space or new lines, one can simply inject the desired string, e.g. `...${' '}...${'\n\n'}...`.
 
 However, these rules are not designed for the use pattern of parsing an html node with id, in which string injection is unavailable.
 More importantly, in this pattern, it makes more sense to have a tex-like spacing mode in which text chunks are automatically set to `<p>`, converting `\s*?\n\n\s+` into paragraph break and shorter jumps into single space.
-This use case makes it mandatory to handle inline elements and inline plugins specially.
+This handling inline and display elements separately is complicated, because there is no standard way of inspecting whether an already rendered element is inline or display.
+For instance if we run ```caph.parse`hello ${caph.parse`<span>my</span>`} world`;```, the outer parser has to figure out that the inner output is inline, even though the inner element is a `vDom` and not a `AstNode` because it was already parsed by, say, `preact`.
+
+
+---
+
+I need to make the parser iterative and constructive if I want to simplify the stop-on-error feature.
+The constructor will just catch and return the tree constructed so far. 
+
+---
+
 
 
 ```html
@@ -104,7 +114,7 @@ Here comes some multi-paragraph text with inline and display formulas such as $2
 $$
 This line is a new paragraph because of the display mode of the preceding formula.
 
-This is a new paragraph.
+This is also a new paragraph.
 It has several phrases in new lines.
 These lines are separated by at most one newline character (`\n`) and
   as many
@@ -127,17 +137,29 @@ The rule will be to use `&lt;script ...&gt;\`...\`&lt;/script&gt;`, possibly wit
 This simplifies the inclusion of <script>`pre-formatted code with < and > symbols`</script>, be it inline or in display mode:
 <div><script>`single line pre-formatted code with < and > symbols`</script></div>
 or
-<script>`
-pre-formatted multiline code with < and > symbols
+<div><script>`
+pre-formatted multiline
+code with < and > symbols
 `</script></div>
 
-The script can be made
+We could even have <script data-caph-parse>`<!-- JSX code here -->
+  <div>Hello <i>JSX</> syntax!</>
+`</script>
+
 
 </div>
 ```
-To avoid cluttering the plugin API with inline/display, 
 
+The proper way to handle the "paragraphs maker" is by means of an attribute.
+To avoid cluttering the rules with reserved attribute keywords for ad-hoc purposes, the best is to define it as a plugin `data-caph="@paragraphs"`, whose scope will be local to avoid ambiguity and surprises in deeper levels.
+This means that the plugin API will have support for children space parsing before running the component.
 
+Let us summarize what a plugin supports and the use patterns:
+ - A component or component promise, with signature `({children, ...props}) => VNode`.
+ - In case the component is a promise, a loading component `({children, ...props}) => VNode`.
+ - A loading error component, used when the component promise is rejected.
+ - An error-handler component, used when the component or the loading component throw an error. This one is always decorated with a default never-failing component that is defaulted when the error-handler component throws an error itself.
+ - A space parser that determines how `caph.parse` should proceed when the component is the current `parentTag`.
 
 
 ---

@@ -30,15 +30,22 @@ __caph_definitions__.preactParser = new class {
     // 'mathjax-svg',
   ];
 
-  parseAst = __caph_definitions__.NewParser.parseAst;
+  _parser = __caph_definitions__.NewParser;
 
-  _evalAst = __caph_definitions__.NewParser.evalAstFactory({
+  parseAst = this._parser.parseAst;
+
+  _evalAst = this._parser.evalAstFactory({
     createElement: this.createElement.bind(this),
     FragmentComponent: preact.Fragment,
   })
   /** @type {(literals:TemplateStringsArray, ...values)=>T_PreactVDomElement}*/
-  parse = __caph_definitions__.NewParser.parserFactory(this._evalAst);
+  parse = this._parser.parserFactory(this._evalAst);
   parseNoMarkup = __caph_definitions__.BaseParser.parserFactory(this._evalAst);
+
+  parseHtml(/** @type {string}*/str){
+    //@ts-ignore
+    return this._evalAst(this._parser.parseAstHtml(str));
+  }
 
   constructor() {
     this.contexts = {};
@@ -98,7 +105,7 @@ __caph_definitions__.preactParser = new class {
   _componentWrappers = {};
   _randomSessionSuffix = ('' + Math.random()).slice(2);
   componentWrapper(key) {
-    if (key.match(/[^#\?]*.js(#.*|\?.*|)$/)) key = this._URL_resolve(key);
+    if (key.match(/[^#\?]*.js(#.*|\?.*|)$/)) key = this.resolveURL(key);
     const cache = this._componentWrappers;
     return cache[key] || (cache[key] = this.newPluginLoader(key));
   }
@@ -224,24 +231,13 @@ __caph_definitions__.preactParser = new class {
     return value;
   }
 
-  _URL_resolve(url) {
+  resolveURL(url) {
     return new URL(url, document.baseURI).href;
   }
   // _URL_is_absolute(url) {
   //   //https://stackoverflow.com/q/10687099
   //   return new URL(document.baseURI).origin !== new URL(url, document.baseURI).origin;
   // }
-
-  _html_safe(str) {
-    // e.g. converts < into &lt;
-    return new Option(str).innerHTML;
-  }
-  _html_safe_undo(str) {
-    // e.g. converts &lt; into <
-    const doc = new DOMParser().parseFromString(str, "text/html");
-    const text = doc.documentElement.textContent;
-    return text;
-  }
 
 }
 

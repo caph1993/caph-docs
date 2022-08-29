@@ -14,23 +14,7 @@ const caph = new class {
   parseNoMarkup = this._parser.parseNoMarkup.bind(this._parser);
   
   parseHtmlAst(/** @type {string}*/str){
-    const undoHtml = (str)=>{
-      // e.g. converts &lt; into <
-      const doc = new DOMParser().parseFromString(str, "text/html");
-      const text = doc.documentElement.textContent;
-      //if(str!=text) console.log(`Converted ${str} into ${text}`)
-      return text;
-    }
-    const astUndoHtml = (/** @type {AstNode}*/ root) => {
-      if (is_string(root)) return undoHtml(root);
-      if (!Array.isArray(root)) return root;
-      //@ts-ignore
-      root[2] = root[2].map(child => astUndoHtml(child));
-      return root;
-    }
-    // Parse html, undoing html safe conversions, and then create element
-    let root = caph.parseAst({raw:[str]});
-    return astUndoHtml(root);
+    return __caph_definitions__.NewParser.parseAstHtml(str);
   }
   parseHtml(/** @type {string}*/str){
     //@ts-ignore

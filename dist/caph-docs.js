@@ -467,7 +467,7 @@ exports={};
 /** @typedef {(text:string) => AstNode} RuleParser*/
 /** @typedef {{regStart:string, regEnd:string, parser:RuleParser}} CustomRule*/
 
-/** @typedef {'pre'|'jsx'|'tex'|'tex-shallow'|'jsx-shallow'|'pre-shallow'} SpacingMode*/
+///** @typedef {'pre'|'jsx'|'tex'|'tex-shallow'|'jsx-shallow'|'pre-shallow'} SpacingMode*/
 /**
  * @typedef {string|
  * [string|ComponentType, AttributesType|null, AstNodeArray]|
@@ -494,6 +494,32 @@ __caph_definitions__.BaseParser = (class {
   static parseAst(/** @type {TemplateStringsArray} */{raw:strings}, ...values){
     const cls = this;
     return new cls(strings, values).root
+  }
+
+  static htmlSafe(str) {
+    // e.g. converts < into &lt;
+    return new Option(str).innerHTML;
+  }
+
+  static htmlSafeUndo = (str)=>{
+    // e.g. converts &lt; into <, etc. Prevents left trim caused by DOMParser
+    const [, l, content] = assertNonNull(str.match(/^(\s*)(.*)$/s));
+    const doc = new DOMParser().parseFromString(content, "text/html");
+    const text = l+(doc.documentElement.textContent || '');
+    //if(str!=text) console.log(`Converted ${str} into ${text}`)
+    return text;
+  }
+  static parseAstHtml(/** @type {string}*/str){
+    const astUndoHtml = (/** @type {AstNode}*/ root) => {
+      if (is_string(root)) return this.htmlSafeUndo(root);
+      if (!Array.isArray(root)) return root;
+      //@ts-ignore
+      root[2] = root[2].map(child => astUndoHtml(child));
+      return root;
+    }
+    // Parse html, undoing html safe conversions, and then create element
+    let root = caph.parseAst({raw:[str]});
+    return astUndoHtml(root);
   }
 
   /**
@@ -551,6 +577,8 @@ __caph_definitions__.BaseParser = (class {
   error(...args){console.error(...args)}; // Overriden during tests
 
   constructor(/** @type {readonly string[]}*/ strings, values, debug=0){
+    /** @type {typeof __caph_definitions__.BaseParser} */ //@ts-ignore
+    this.cls = this.constructor;
     let str = strings.join(this.ESC);
     let escaped = {};
     let regEscaped = new RegExp(`${this.ESC}|\\\\"|\\\\'|\\\\$\\\\$|\\\\$(?=[^\\\\$])`);
@@ -561,8 +589,8 @@ __caph_definitions__.BaseParser = (class {
     });
     this.pos = 0;
     this.str = str;
-    /** @type {SpacingMode}*/
-    this.spacing = 'jsx';
+    // /** @type {SpacingMode}*/
+    // this.spacing = 'jsx';
     this.values = values;
     this.valueIndex = 0;
     this.escaped = escaped;
@@ -570,10 +598,10 @@ __caph_definitions__.BaseParser = (class {
     debug && console.log('PARSING', this.str);
     this.DEBUG = debug==2;
 
-    /** @type {CustomRule[]} */ //@ts-ignore
-    this.customRules = this.constructor.customRules;
-    /** @type {(tag:TagType)=>(null|string[])} */ //@ts-ignore
-    this.optionalClose = this.constructor.optionalClose.bind(this.constructor);
+    /** @type {CustomRule[]} */
+    this.customRules = this.cls.customRules;
+    /** @type {(tag:TagType)=>(null|string[])} */
+    this.optionalClose = this.cls.optionalClose.bind(this.constructor);
 
     this.REG_EXP_TEXT = new RegExp(`.*?(?=${[
       '$', '<', this.ESC,
@@ -673,8 +701,8 @@ __caph_definitions__.BaseParser = (class {
 
     if(this.tryRun(new RegExp(`${this.ESC}`, 'ys'))){
       let value = this.values[this.valueIndex++];
-      if (Array.isArray(value)) siblings.push(...value);
-      else siblings.push(value);
+      if (Array.isArray(value)) siblings.push([null, null, value]);
+      else siblings.push([null, null, [value]]);
       return this.parseSiblings(parentTag, siblings);
     }
 
@@ -795,14 +823,28 @@ __caph_definitions__.BaseParser = (class {
           return [tag, props, children];
         }
         let code = m[1];
-        m = code.match(/^\s*\`(.*)\`\s*$/ys)
-        if(m){
-          code = m[1];
+        if(code.match(/^\s*\`(.*)\`\s*$/ys)){
+          code = eval(code);
+          code = this.cls.htmlSafe(code);
           return ['div', {'data-caph':'@code', ...props}, [code]]
         }
         return [tag, props, children];
       }
       children = this.parseSiblings(tag, children);
+      if(tag=='paragraphs'){
+        const stack = children.filter(x=>!is_string(x)).reverse();
+        const texts = children.filter(x=>is_string(x)).join(this.ESC);
+        children = texts.split(/\s*?\n\s*?\n\s*/s).map(text=>{
+          const elems = [];
+          text.split(this.ESC).forEach((str, i)=>{
+            if(i) elems.push(stack.pop());
+            if(str.length) elems.push(str);
+          })
+          console.log(text);
+          console.log(elems);
+          return ['div', {'class': 'caph-paragraph'}, elems];
+        })
+      }
       return [tag, props, children];
     }
     if(!props) props = {};
@@ -848,21 +890,21 @@ __caph_definitions__.BaseParser = (class {
     });
   }
 
-  asString(obj) {
-    let out = `${obj}`;
-    if (out == "[object Object]") {
-      // let seen = [];
-      // out = JSON.stringify(obj, function (key, val) {
-      //   if (val != null && typeof val == "object") {
-      //     if (seen.indexOf(val) >= 0) return;
-      //     seen.push(val);
-      //   }
-      //   return val; // https://stackoverflow.com/q/9382167
-      // });
-      out = obj; //PROBLEM
-    }
-    return out;
-  }
+  // asString(obj) {
+  //   let out = `${obj}`;
+  //   if (out == "[object Object]") {
+  //     // let seen = [];
+  //     // out = JSON.stringify(obj, function (key, val) {
+  //     //   if (val != null && typeof val == "object") {
+  //     //     if (seen.indexOf(val) >= 0) return;
+  //     //     seen.push(val);
+  //     //   }
+  //     //   return val; // https://stackoverflow.com/q/9382167
+  //     // });
+  //     out = obj; //PROBLEM
+  //   }
+  //   return out;
+  // }
 
 });
 
@@ -892,13 +934,18 @@ __caph_definitions__.NewParser = class extends __caph_definitions__.BaseParser {
     {
       regStart: `(?<!\\\\)\`\`\``,
       regEnd: `(?<!\\\\)\`\`\``,
-      parser: /**@type {RuleParser}*/ ((text)=>['div', {'data-caph': '@code'}, [text]]),
+      parser: /**@type {RuleParser}*/ ((text)=>{
+        text = text.replace(/\\\`\`\`/g, '```');
+        let progLang = assertNonNull(text.match(/^[^\n]*/));
+        return ['div', {'data-caph': '@code', ...(!progLang.length?{}:{progLang})}, [text]];
+      }),
     },
     {
       regStart: `(?<!\\\\)\``,
       regEnd: `(?<!\\\\)\``,
       parser: /**@type {RuleParser}*/ ((text)=>{
-        return ['div', {'data-caph': '@code'}, [text.replace(/\\\`/g, '`')]]
+        text = text.replace(/\\\`/g, '`');
+        return ['div', {'data-caph': '@code'}, [text]]
       }),
       inline: true,
     },
@@ -1136,15 +1183,22 @@ __caph_definitions__.preactParser = new class {
     // 'mathjax-svg',
   ];
 
-  parseAst = __caph_definitions__.NewParser.parseAst;
+  _parser = __caph_definitions__.NewParser;
 
-  _evalAst = __caph_definitions__.NewParser.evalAstFactory({
+  parseAst = this._parser.parseAst;
+
+  _evalAst = this._parser.evalAstFactory({
     createElement: this.createElement.bind(this),
     FragmentComponent: preact.Fragment,
   })
   /** @type {(literals:TemplateStringsArray, ...values)=>T_PreactVDomElement}*/
-  parse = __caph_definitions__.NewParser.parserFactory(this._evalAst);
+  parse = this._parser.parserFactory(this._evalAst);
   parseNoMarkup = __caph_definitions__.BaseParser.parserFactory(this._evalAst);
+
+  parseHtml(/** @type {string}*/str){
+    //@ts-ignore
+    return this._evalAst(this._parser.parseAstHtml(str));
+  }
 
   constructor() {
     this.contexts = {};
@@ -1338,17 +1392,6 @@ __caph_definitions__.preactParser = new class {
   //   return new URL(document.baseURI).origin !== new URL(url, document.baseURI).origin;
   // }
 
-  _html_safe(str) {
-    // e.g. converts < into &lt;
-    return new Option(str).innerHTML;
-  }
-  _html_safe_undo(str) {
-    // e.g. converts &lt; into <
-    const doc = new DOMParser().parseFromString(str, "text/html");
-    const text = doc.documentElement.textContent;
-    return text;
-  }
-
 }
 
 __caph_definitions__.preactParser.scriptLoader.injectStyle(`
@@ -1530,23 +1573,7 @@ const caph = new class {
   parseNoMarkup = this._parser.parseNoMarkup.bind(this._parser);
   
   parseHtmlAst(/** @type {string}*/str){
-    const undoHtml = (str)=>{
-      // e.g. converts &lt; into <
-      const doc = new DOMParser().parseFromString(str, "text/html");
-      const text = doc.documentElement.textContent;
-      //if(str!=text) console.log(`Converted ${str} into ${text}`)
-      return text;
-    }
-    const astUndoHtml = (/** @type {AstNode}*/ root) => {
-      if (is_string(root)) return undoHtml(root);
-      if (!Array.isArray(root)) return root;
-      //@ts-ignore
-      root[2] = root[2].map(child => astUndoHtml(child));
-      return root;
-    }
-    // Parse html, undoing html safe conversions, and then create element
-    let root = caph.parseAst({raw:[str]});
-    return astUndoHtml(root);
+    return __caph_definitions__.NewParser.parseAstHtml(str);
   }
   parseHtml(/** @type {string}*/str){
     //@ts-ignore
