@@ -1,4 +1,4 @@
-
+// NO //@ts-check
 
 var __caph_definitions__ = window.__caph_definitions__ || {};
 
@@ -31,8 +31,6 @@ function assertNonNull(value) {
   if (!value && (value===null||value === undefined)) throw new Error(`Encountered unexpected undefined value`);
   return value;
 }
-
-
 
 
 /** @type {((obj:string)=>true)|(obj:any)=>false} */

@@ -98,10 +98,14 @@ This handling inline and display elements separately is complicated, because the
 For instance if we run ```caph.parse`hello ${caph.parse`<span>my</span>`} world`;```, the outer parser has to figure out that the inner output is inline, even though the inner element is a `vDom` and not a `AstNode` because it was already parsed by, say, `preact`.
 
 
+
+
 ---
 
 I need to make the parser iterative and constructive if I want to simplify the stop-on-error feature.
-The constructor will just catch and return the tree constructed so far. 
+The constructor will just catch and return the tree constructed so far.
+
+DONE!
 
 ---
 
@@ -153,6 +157,22 @@ We could even have <script data-caph-parse>`<!-- JSX code here -->
 The proper way to handle the "paragraphs maker" is by means of an attribute.
 To avoid cluttering the rules with reserved attribute keywords for ad-hoc purposes, the best is to define it as a plugin `data-caph="@paragraphs"`, whose scope will be local to avoid ambiguity and surprises in deeper levels.
 This means that the plugin API will have support for children space parsing before running the component.
+Moreover a mechanism for registering the space rules is needed.
+It is not sufficient to just declare a plugin as "pre", because it is the `parseRoot` (ast) function and not the `parse` (preact) function that will encounter the string tags.
+
+We also want the rules to be extensible.
+
+(ignore) My conclusion is that we only need a mechanism for telling which tags will be jsx-trimmed.
+Extensions can be added by simply asking the parser not to trim a tag, and then handling children in a useMemo.
+
+My conclusion is that `parseRoot` should not use spacing rules.
+Instead, the parser may expose both `parseAst` and `parseAstPre`, and preact may build `parse` and `parsePre` on top of them.
+This solves the problem for the jsx use case, as one may switch between the two parsing modes by calling `caph.parse` and `caph.parsePre`.
+For HTML, we can simply use the `pre` tag instead of `div` to mark the difference.
+
+
+This affects the structure of the project, because the parser would need to ask information to the preact parser.
+
 
 Let us summarize what a plugin supports and the use patterns:
  - A component or component promise, with signature `({children, ...props}) => VNode`.
@@ -160,6 +180,8 @@ Let us summarize what a plugin supports and the use patterns:
  - A loading error component, used when the component promise is rejected.
  - An error-handler component, used when the component or the loading component throw an error. This one is always decorated with a default never-failing component that is defaulted when the error-handler component throws an error itself.
  - A space parser that determines how `caph.parse` should proceed when the component is the current `parentTag`.
+
+The simplest way of allowing all these, is by letting plugin definitions accept optional parameters: `setLoadingComponent`, `setJsxTrimming`
 
 
 ---

@@ -15,6 +15,7 @@ __caph_definitions__.preactParser = new class {
   
   /** @type {'katex'|'mathjax'} */
   mathParser = 'katex';
+  codeParser = '@codeFallback';
   scriptLoader = __caph_definitions__.scriptLoader;
 
   officialPlugins = [
@@ -56,6 +57,7 @@ __caph_definitions__.preactParser = new class {
     if (props && props.hasOwnProperty('data-caph')) {
       let pluginKey = props['data-caph'];
       if (pluginKey == '@math') pluginKey = this.mathParser;
+      if (pluginKey == '@code') pluginKey = this.codeParser;
       if (pluginKey) type = this.plugin(pluginKey);
       else console.warn('caph tag without plugin attribute');
     }
@@ -86,11 +88,21 @@ __caph_definitions__.preactParser = new class {
         e.preventDefault();
           help();
         }}>(help?)</a> 
-        <code class="caph-flashing caph-error" title=${tooltip}>
-          ${children || tooltip || 'Error'}
-        </code>
+        <code class="caph-flashing caph-error" title=${tooltip}>${children || tooltip || 'Error'}</code>
       `;
     })(),
+    '@paragraphs': (async () => {
+      //setJsxTrimming(false);
+      const Component = ({ children }) => preact.useMemo(
+        ()=>this._evalAst([null, null, this._parser.spacingRulesParagraphs(children)]),
+        [children],
+      );
+      return Component;
+    })(),
+    '@codeFallback': (async () => ({ children, progLang }) => preact.useMemo(
+      ()=>this.parse`<code>${children}</code>`,
+      [children],
+    ))(),
   };
 
 
@@ -140,9 +152,7 @@ __caph_definitions__.preactParser = new class {
 
     function LoadingComponent({ children }) {
       return parent.parse`
-      <code class="caph-flashing" title=${`${key} is loading...`}>
-        ${children || '...'}
-      </code>`;
+      <code class="caph-flashing" title=${`${key} is loading...`}>${children || '...'}</code>`;
     }
 
     function LoadErrorComponent({}) {
