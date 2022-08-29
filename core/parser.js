@@ -33,8 +33,6 @@ __caph_definitions__.BaseParser = (class {
   SPEC = `https://html.spec.whatwg.org/multipage/syntax.html`;
   DEBUG = false;
 
-  _ERROR = new Error();
-
   static parseAst(/** @type {TemplateStringsArray} */{raw:strings}, ...values){
     const cls = this;
     return new cls(strings, values).root
@@ -269,7 +267,19 @@ __caph_definitions__.BaseParser = (class {
     }
     // Comment, DOCTYPE, or CDATA
     if(this.str.startsWith('<!', this.pos)){
-      this.consumeComment();
+      const regComment = new RegExp(
+        [`<!--.*?-->`, `<!\\[CDATA\\[.*?\\]\\]>`, `<!DOCTYPE\\s*.*?>`,].join('|'),
+        'iys',
+      );
+      let result = this.tryRun(regComment);
+      if(!result){
+        this.error(`Unexpected <! around ${this.debugPosition(-5)}\nIgnoring what follows.`);
+        this.errorStop = true;
+        return siblings;
+      }
+      let [text] = result;
+      if(text.endsWith('/>')) this.warn(`Non compliant tag found.\n${this.SPEC}`);
+      this.replaceText(text, this.pos-text.length); // Consume the fields inside, if any
       return this.parseSiblings(parentTag, siblings);
     }
     // Parent close
@@ -321,28 +331,6 @@ __caph_definitions__.BaseParser = (class {
     else siblings.push(... newSibling[2]); // shortcut fragment nieces as siblings
     if(this.errorStop) return siblings;
     return this.parseSiblings(parentTag, siblings);
-  }
-
-  throw(reason){
-    const error = new Error(`${reason}
-      Ignoring what follows.
-      Error occurred here:
-      ${this.debugPosition(-5)}
-    `);
-    error.name = 'caph-parser-error';
-    throw error;
-  }
-
-  consumeComment(){
-    const regComment = new RegExp(
-      [`<!--.*?-->`, `<!\\[CDATA\\[.*?\\]\\]>`, `<!DOCTYPE\\s*.*?>`,].join('|'),
-      'iys',
-    );
-    let result = this.tryRun(regComment);
-    if(!result) this.throw(`Unexpected <!`);
-    let [text] = result;
-    if(text.endsWith('/>')) this.warn(`Non compliant tag found.\n${this.SPEC}`);
-    this.replaceText(text, this.pos-text.length); // Consume the fields inside, if any
   }
 
   /**
