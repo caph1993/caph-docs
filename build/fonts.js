@@ -1,6 +1,25 @@
 let fs = require('fs');
 
 let fonts = {
+  'font-cmu-serif': [
+    {
+      'path': 'fonts/computer-modern/cmunrm.ttf',
+      'font-family': 'CMU Serif',
+    }, {
+      'path': 'fonts/computer-modern/cmunbx.ttf',
+      'font-family': 'CMU Serif',
+      'font-weight': 'bold',
+    }, {
+      'path': 'fonts/computer-modern/cmunti.ttf',
+      'font-family': 'CMU Serif',
+      'font-style': 'italic',
+    }, {
+      'path': 'fonts/computer-modern/cmunbi.ttf',
+      'font-family': 'CMU Serif',
+      'font-weight': 'bold',
+      'font-style': 'italic',
+    },
+  ],
   'font-lmroman': [
     {
       'path': 'fonts/latin-modern-roman/lmroman10-regular.otf',
