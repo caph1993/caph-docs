@@ -319,6 +319,8 @@ __caph_definitions__.BaseParser = (class {
         this.parent[0] = 'div';
         this.parent[1] = {'data-caph':'@code', ...this.parentProps};
         this.parent[2] = [code];
+      } else{
+        this.parent[2] = [code];
       }
     }
     else if(admitsChildren){

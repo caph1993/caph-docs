@@ -1,5 +1,5 @@
 class CaphFabric{}
-caph.plugins.fabricDiagram = CaphFabric;
+//caph.plugins.fabricDiagram = CaphFabric;
 
 CaphFabric._Base = class{
   container = null;
@@ -7,7 +7,7 @@ CaphFabric._Base = class{
     assert(width&&height);
     canvas.setHeight(height);
     canvas.setWidth(width);
-    //2 pixels padding for seing borders
+    //2 pixels padding for seeing borders
     height = Math.max(height-2, 0);
     width = Math.max(width-2, 0);
     this._draw_on(canvas, {width, height, top, left, borders});

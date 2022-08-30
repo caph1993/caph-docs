@@ -18,9 +18,15 @@
  * @property {()=>T_PreactContext} createContext
  * @property {T_PreactFragment} Fragment
 */
+/**
+ * @typedef {Object} FabricLibrary
+*/
 
 //@ts-ignore
 var /**@type {Preact}*/preact = window.preact;
 
 //@ts-ignore
 var /**@type {Window}*/ window = window || {};
+
+//@ts-ignore
+var /**@type {FabricLibrary}*/fabric = window.fabric;

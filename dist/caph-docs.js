@@ -775,6 +775,8 @@ __caph_definitions__.BaseParser = (class {
         this.parent[0] = 'div';
         this.parent[1] = {'data-caph':'@code', ...this.parentProps};
         this.parent[2] = [code];
+      } else{
+        this.parent[2] = [code];
       }
     }
     else if(admitsChildren){
@@ -1231,9 +1233,9 @@ __caph_definitions__.preactParser = new class {
     'whiteboard',
     'hyphenator',
     // 'slides',
-    // 'fabric',
+    'mathjax-svg',
+    'fabric',
     // 'figure-editor',
-    // 'mathjax-svg',
   ];
 
   _parser = __caph_definitions__.NewParser;
@@ -1296,14 +1298,10 @@ __caph_definitions__.preactParser = new class {
         <code class="caph-flashing caph-error" title=${tooltip}>${children || tooltip || 'Error'}</code>
       `;
     })(),
-    '@paragraphs': (async () => {
-      //setJsxTrimming(false);
-      const Component = ({ children }) => preact.useMemo(
+    '@paragraphs': (async () => ({ children }) => preact.useMemo(
         ()=>this._evalAst([null, null, this._parser.spacingRulesParagraphs(children)]),
         [children],
-      );
-      return Component;
-    })(),
+    ))(),
     '@codeFallback': (async () => ({ children, progLang }) => preact.useMemo(
       ()=>this.parse`<code>${children}</code>`,
       [children],
