@@ -28,6 +28,7 @@ __caph_definitions__.preactParser = new class {
     // 'slides',
     'mathjax-svg',
     'fabric',
+    'codemirror',
     // 'figure-editor',
   ];
 
@@ -64,7 +65,9 @@ __caph_definitions__.preactParser = new class {
     // if(type=='span' && children.length && is_string(children[0]) && children[0].startsWith('\\Prob')){
     //   console.log(type, props, children);
     // }
-    return preact.createElement(type, props, ...children);
+    const vDom = preact.createElement(type, props, ...children);
+    vDom.pre = true;
+    return vDom;
   }
 
   /** @type {{[key:string]: Promise<Component>}} */
@@ -91,8 +94,8 @@ __caph_definitions__.preactParser = new class {
         <code class="caph-flashing caph-error" title=${tooltip}>${children || tooltip || 'Error'}</code>
       `;
     })(),
-    '@paragraphs': (async () => ({ children }) => preact.useMemo(
-        ()=>this._evalAst([null, null, this._parser.spacingRulesParagraphs(children)]),
+    '@paragraphs': (async () =>({ children }) => preact.useMemo(
+        ()=>this._evalAst([null, null, this._parser.spacingRulesParagraphs(preact.toChildArray(children))]),
         [children],
     ))(),
     '@codeFallback': (async () => ({ children, progLang }) => preact.useMemo(

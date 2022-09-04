@@ -33,7 +33,7 @@ function assertNonNull(value) {
 }
 
 
-/** @type {((obj:string)=>true)|(obj:any)=>false} */
+/** @type {(obj: any) => obj is String} */
 function is_string(obj) {
   return Object.prototype.toString.call(obj) === "[object String]";
 }

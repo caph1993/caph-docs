@@ -17,3 +17,8 @@ ignoreWords:
   - elems
   - lmroman
   - lmsans
+  - monokai
+  - searchcursor
+  - scrollpastend
+  - keymap
+  - autorefresh

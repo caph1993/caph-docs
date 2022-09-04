@@ -35,7 +35,7 @@ function assertNonNull(value) {
 }
 
 
-/** @type {((obj:string)=>true)|(obj:any)=>false} */
+/** @type {(obj: any) => obj is String} */
 function is_string(obj) {
   return Object.prototype.toString.call(obj) === "[object String]";
 }
@@ -512,7 +512,7 @@ __caph_definitions__.BaseParser = (class {
     this.cls = this.constructor;
     let str = strings.join(this.ESC);
     let escaped = {};
-    let regEscaped = new RegExp(`${this.ESC}|\\\\"|\\\\'|\\\\$\\\\$|\\\\$(?=[^\\\\$])`);
+    let regEscaped = new RegExp(`${this.ESC}|\\\\"|\\\\'|\\\\$\\\\$|\\\\$(?=[^\\\\$])`, 'g');
     str = str.replace(regEscaped, (match, index)=>{
       //console.log(`Escaping ${match} at ${index}`);
       escaped[index] = match;
@@ -520,8 +520,6 @@ __caph_definitions__.BaseParser = (class {
     });
     this.pos = 0;
     this.str = str;
-    // /** @type {SpacingMode}*/
-    // this.spacing = 'jsx';
     this.values = values;
     this.valueIndex = 0;
     this.escaped = escaped;
@@ -608,9 +606,8 @@ __caph_definitions__.BaseParser = (class {
     const match = regExp.exec(str);
     if(!match) this.throw(`No match for ${regExp}`);
     if(match.index<pos) throw `Regexp must use 'ys' flag. Match for at ${match.index} is before previous match at ${pos}`;
-    const out = [...match];
-    this.pos += out[0].length;
-    return out;
+    this.pos += match[0].length;
+    return match;
   }
 
   tryRun(/** @type {RegExp}*/regExp){
@@ -626,7 +623,7 @@ __caph_definitions__.BaseParser = (class {
 
   debugPosition(delta=0, length=50){ // Just for printing debug info
     const {pos, str} = this;
-    const at = Math.max(0, pos+delta)
+    const at = Math.max(0, pos+delta);
     const short = str.slice(at, at+length).replace('\n', '(\\n)');
     return `${at}...${short}...${at+length}`;
   }
@@ -666,8 +663,8 @@ __caph_definitions__.BaseParser = (class {
       if(this.customRules.length){
         const parsedRule = (()=>{
           for(let {regStart, regEnd, parser} of this.customRules){
-            let m = this.tryRun(new RegExp(`${regStart}(.*?)${regEnd}`, 'ys'));
-            if(m) return parser(this.replaceText(m[1], this.pos-regEnd.length-m[1].length));
+            let m = this.tryRun(new RegExp(`${regStart}(.*?)(${regEnd})`, 'ys'));
+            if(m) return parser(this.replaceText(m[1], this.pos-m[2].length-m[1].length));
           }
           return null;
         })();
@@ -706,23 +703,23 @@ __caph_definitions__.BaseParser = (class {
 
       const grandParent = this.parent;
       this.parent = newParent; // change parent temporarily
-      this.parseParent2(grandParent); // this restores parent
+      this.parseParent(grandParent); // this restores parent
       
       if(newParent[0] == null){ // shortcut fragment nieces as siblings
         assert(this.children.pop() === newParent);
-        console.log('SHORTCUT')
         this.children.push(...newParent[2]);
       }
     }
   }
 
-  parseParent2(grandParent){
+  parseParent(grandParent){
     /*
-
+      Parses an element from the "head" opening (`<div ...>`)
+      until the "tail" close  (`</div>` or `</>`). 
+      Called just at the beginning of the head opening.
     */
     this.DEBUG && console.log('parseParent ', this.parent, this.debugPosition());
 
-    // Parse the first sibling
     let reg = new RegExp(`<([^\\s>\\/\\.]*)`, 'ys');
     let _tag = this.run(reg)[1];
     let /** @type {TagType} */ tag;
@@ -737,7 +734,8 @@ __caph_definitions__.BaseParser = (class {
     
     this.parent[0] = tag;
     let admitsChildren = !this.childlessTags[(''+tag)?.toLowerCase()];
-
+    let /** @type {'jsx'|'tex'|'raw'|'pre'|null}*/ spacing=null;
+    
     while(true){ // While attributes
 
       this.run(/\s*/ys); // Consume whitespace after `<div` or after attribute value
@@ -761,39 +759,63 @@ __caph_definitions__.BaseParser = (class {
         if(!_value || _value=="''"||_value=='""') value = true; 
         else if(_value==this.ESC) value = this.values[this.valueIndex++];
         else value = this.replaceText(_value.slice(1,-1), this.pos-_value.length+1); // slice for quotes
+        if(key.endsWith('-eval')){
+          key = key.slice(0,-5);
+          value = eval(value);
+        }
+        const prevValue = this.parentProps[key];
+        if(key=='class') value = !prevValue?value:prevValue+' '+value;
+        else if(key=='style') value = !prevValue?value:prevValue+' '+value;
+        else if(prevValue!==undefined) this.warn(`Replacing attribute ${key}.\nPrevious and new values:`, prevValue, value);
+        
+        if(key.startsWith('(')){
+          if(key=='(component)') key = 'data-caph'; // ?? temporary code
+          else if(key=='(spacing)'){
+            if(!['jsx', 'pre', 'tex', 'raw'].includes(value)) this.throw(`Invalid spacing mode: ${value}`);
+            spacing = value;
+            continue;
+          } else this.throw(`Invalid attribute: ${key}`);
+        }
         this.parentProps[key] = value;
       }
     }
 
-    if(admitsChildren && tag=='script'){ // Script is closed differently
-      let m = this.tryRun(/(.*?)<\/script\s*>/ys);
-      if(!m)this.throw(`Script tag not closed properly. Ignoring what follows.`);
-      let code = m[1];
-      if(code.match(/^\s*\`(String\.raw)?(.*)\`\s*$/ys)){
-        code = eval(code);
-        code = this.cls.htmlSafe(code);
-        this.parent[0] = 'div';
-        this.parent[1] = {'data-caph':'@code', ...this.parentProps};
-        this.parent[2] = [code];
+    if(admitsChildren){
+      if(tag=='style'){ // Style is closed differently
+        let m = this.tryRun(/(.*?)<\/style\s*>/ys);
+        if(!m) this.throw(`Style tag not closed properly.`);
+        this.parent[2] = [m[1]];
+      } else if(tag=='script'){ // Script is closed differently
+        let m = this.tryRun(/(.*?)<\/script\s*>/ys);
+        if(!m) this.throw(`Script tag not closed properly.`);
+        let code = m[1];
+        if(code.match(/^\s*(String\.raw)?\`(.*)\`\s*$/ys)){
+          code = eval(code);
+          code = this.cls.htmlSafe(code);
+          this.parent[0] = 'div';
+          this.parent[1] = {'data-caph':'@code', ...this.parentProps};
+          this.parent[2] = [code];
+        } else{
+          this.parent[2] = [code];
+        }
       } else{
-        this.parent[2] = [code];
+        this.parseChildrenAndParentClose(); // (Huge step)
+        if(!spacing){
+          if(!is_string(tag)) spacing = 'jsx';
+          else if(tag=='pre' || tag=='textarea') spacing = 'pre';
+          else spacing = 'jsx';
+        }
+        if(spacing=='jsx') this.parent[2] = this.cls.spacingRulesJsx(this.children);
+        else if(spacing=='tex') this.parent[2] = this.cls.spacingRulesParagraphs(this.children);
       }
-    }
-    else if(admitsChildren){
-      this.parseChildrenAndParentClose();
-      this.parent[2] = this.cls.spacingRulesJsx(this.children, this.parentTag);
     }
     this.parent = grandParent;
   }
 
-  static spacingRulesJsx(children, tag){ // JSX spacing
+  static spacingRulesJsx(children){ // JSX spacing
     // https://reactjs.org/blog/2014/02/20/react-v0.9.html#jsx-whitespace
     // https://www.w3.org/TR/REC-html40/struct/text.html#h-9.1
     // https://stackoverflow.com/q/433493
-    
-    // Unique rule that differs with JSX. Leave untouched!
-    // It's the only way to disable trimming from HTML, e.g. `<pre data-caph="@paragraphs">`
-    if(tag&&is_string(tag)&&(tag==='pre'||tag=='code')) return children;
     
     function trimText(text){
       // End spaces are preserved only if they are inline
@@ -816,7 +838,14 @@ __caph_definitions__.BaseParser = (class {
     return newChildren;
   }
 
-  static spacingRulesParagraphs(children){ // Paragraph spacing. Exported. 
+  // https://html.spec.whatwg.org/multipage/syntax.html#element-restrictions
+  static spacingRulesPre(children){
+    const first = children[0];
+    if(is_string(first) && first.startsWith('\n')) children[0] = children[0].slice(1);
+    return children;
+  }
+
+  static spacingRulesParagraphs(children){
     const ESC = '\ue000';
     const stack = children.filter(x=>!is_string(x)).reverse();
     const text = children.map(x=>is_string(x)?x:ESC).join('');
@@ -862,6 +891,7 @@ __caph_definitions__.BaseParser = (class {
    * @returns {string}*/
   replaceText(text, posOfText){
     return text.replace(new RegExp(this.ESC, 'g'), (_, index)=>{
+      assert(this.str[posOfText+index] === this.ESC);
       const original = this.escaped[posOfText+index];
       if (original != this.ESC) return original;
       return this.values[this.valueIndex++];
@@ -879,7 +909,7 @@ __caph_definitions__.BaseParser = (class {
     const [, l, content] = assertNonNull(str.match(/^(\s*)(.*)$/s));
     const doc = new DOMParser().parseFromString(content, "text/html");
     const text = l+(doc.documentElement.textContent || '');
-    //if(str!=text) console.log(`Converted ${str} into ${text}`)
+    // if(str!=text) console.log(`Converted ${str} into ${text}`)
     return text;
   }
   static parseAstHtml(/** @type {string}*/str){
@@ -961,14 +991,6 @@ __caph_definitions__.BaseParser = (class {
   // }
 
 });
-
-/**
- * TO DO:
- * 1. Implement "close with sibling"
- * 2. Make a new class that inherits from this one and adds math support. It must be extensible.
- * 3. Make a new class that inherits from math and adds code support. It must be extensible.
- * 4. Make a new class that inherits from math and adds paragraphs support. It must be extensible.
-*/
 
 __caph_definitions__.NewParser = class extends __caph_definitions__.BaseParser {
 
@@ -1235,6 +1257,7 @@ __caph_definitions__.preactParser = new class {
     // 'slides',
     'mathjax-svg',
     'fabric',
+    'codemirror',
     // 'figure-editor',
   ];
 
@@ -1271,7 +1294,9 @@ __caph_definitions__.preactParser = new class {
     // if(type=='span' && children.length && is_string(children[0]) && children[0].startsWith('\\Prob')){
     //   console.log(type, props, children);
     // }
-    return preact.createElement(type, props, ...children);
+    const vDom = preact.createElement(type, props, ...children);
+    vDom.pre = true;
+    return vDom;
   }
 
   /** @type {{[key:string]: Promise<Component>}} */
@@ -1298,8 +1323,8 @@ __caph_definitions__.preactParser = new class {
         <code class="caph-flashing caph-error" title=${tooltip}>${children || tooltip || 'Error'}</code>
       `;
     })(),
-    '@paragraphs': (async () => ({ children }) => preact.useMemo(
-        ()=>this._evalAst([null, null, this._parser.spacingRulesParagraphs(children)]),
+    '@paragraphs': (async () =>({ children }) => preact.useMemo(
+        ()=>this._evalAst([null, null, this._parser.spacingRulesParagraphs(preact.toChildArray(children))]),
         [children],
     ))(),
     '@codeFallback': (async () => ({ children, progLang }) => preact.useMemo(
@@ -1639,6 +1664,14 @@ const caph = new class {
     //@ts-ignore
     return this._parser._evalAst(this.parseHtmlAst(str));
   }
+  parseElem(/** @type {HTMLElement}*/elem, /** @type {('clear'|'hide'|'remove')?}*/action){
+    const html = elem.innerHTML;
+    if(!action){} // Do nothing
+    else if(action=='clear') elem.innerHTML = '';
+    else if(action=='remove') elem.remove();
+    else if (action=='hide') elem.classList.add('caph-hidden');
+    return this.parseHtml(html);
+  }
 
   plugin = this._parser.plugin.bind(this._parser);
   
@@ -1663,10 +1696,87 @@ const caph = new class {
   }
   get mathParser(){ return this._parser.mathParser; }
 
-
   get currentSrc() {
     //@ts-ignore
     return /** @type {string}*/(document.currentScript.src);
   }
+}
 
+caph.injectStyle(`
+div.caph-paragraph + div.caph-paragraph { margin-top: 1em; }
+.caph-paragraph h1,h2,h3,h4,h5,h6,ul,ol{ margin:0; }
+`);
+
+
+
+
+
+// tab effects: https://alvarotrigo.com/blog/html-css-tabs/
+caph.injectStyle(`
+.tabs-header>label>input { display: none; }
+.tabs-parent { width: 100%; }
+.tabs-header {
+  margin-top: 0.1em;
+  border-bottom: 1px solid;
+}
+.tab-label:hover {
+  top: -0.25rem;
+  transition: top 0.25s;
+}
+.tabs{
+  border: solid 1px;
+  border-top: none;
+}
+.tab-label {
+  padding-left: 1em;
+  padding-right: 1em;
+  border-radius: 0.3em 0.3em 0 0;
+  background: unset;
+  border: solid 1px;
+  white-space:nowrap;
+}
+/* https://stackoverflow.com/a/10148189/3671939 */
+.tab-label { white-space:nowrap; }
+.tab-label > span{ white-space: normal; }
+
+.tab-label-true {
+  font-weight: bold;
+  border-bottom: solid 2px white;
+}
+.tab-content-false { display:none; }
+.tab-content-true {
+  display: true;
+  opacity: 1;
+	animation-name: fadeInOpacity;
+	animation-iteration-count: 1;
+	animation-timing-function: ease-in;
+	animation-duration: 0.15s;
+}
+@keyframes fadeInOpacity {
+	0% { opacity: 0; }
+	100% { opacity: 1;}
+}
+.tab-content-true { padding: 1vw; }
+`);
+caph.pluginDefs['@tabs'] = ({/** @type {string[]} */ labels, defaultLabel, children})=>{
+  const zipped = preact.useMemo(()=>preact.toChildArray(children).map(
+    (child,i) => ({label:labels[i]||`Tab ${i+1}`, child})
+  ), [labels, children]);
+  const [option, setOption] = preact.useState(defaultLabel || zipped[0]?.label);
+  return caph.parse`
+  <div class="tabs-parent">
+    <div class="tabs-header">
+      ${labels.map((label)=>caph.parse`
+        <label class="tab-label" class=${'tab-label-'+(option==label)}>
+          <input type="radio" checked=${option==label} onClick=${()=>setOption(label)}/>
+          <span>${label}</>
+        </label>`
+      )}
+    </div>
+    <div class="tabs">
+      ${zipped.map(({label, child})=>caph.parse`
+        <div class=${'tab-content-'+(option==label)}>${child}</>`
+      )}
+    </div>
+  </>`;
 }

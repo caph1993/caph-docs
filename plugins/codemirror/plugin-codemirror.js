@@ -1,57 +1,59 @@
+//@ts-check
+/// <reference path="../../core/main.js" />
+/// <reference path="../../libraries/codemirror-5.55.0/lib/codemirror.js" />
 
-caph.pluginDefs[caph.currentSrc] = new class extends caph.Plugin {
+caph.pluginDefs[caph.currentSrc] = (async ()=>{
+  await caph.load('caph-docs/libraries/codemirror-5.55.0/lib/codemirror.js');
 
-  cm = null;
+  await caph.load('caph-docs/libraries/codemirror-5.55.0/mode/javascript/javascript.js');
+  await caph.load('caph-docs/libraries/codemirror-5.55.0/mode/python/python.js');
 
-  Component({ children, autoId, id, options = {}, unindent = true, class: _class }) {
+  await caph.load('caph-docs/libraries/codemirror-5.55.0/mode/xml/xml.js');
+  await caph.load('caph-docs/libraries/codemirror-5.55.0/mode/css/css.js');
+  await caph.load('caph-docs/libraries/codemirror-5.55.0/mode/htmlmixed/htmlmixed.js');
+
+  await caph.load('caph-docs/libraries/codemirror-5.55.0/addon/search/searchcursor.js');
+  await caph.load('caph-docs/libraries/codemirror-5.55.0/addon/search/search.js');
+  await caph.load('caph-docs/libraries/codemirror-5.55.0/addon/scroll/scrollpastend.js');
+  await caph.load('caph-docs/libraries/codemirror-5.55.0/keymap/sublime.js');
+  await caph.load('caph-docs/libraries/codemirror-5.55.0/addon/display/autorefresh.js');
+  await caph.load('caph-docs/libraries/codemirror-5.55.0/lib/codemirror.css');
+  await caph.load('caph-docs/libraries/codemirror-5.55.0/theme/monokai.css');
+  await caph.load('caph-docs/plugins/codemirror/codemirror.css');
+
+  /** @type {{cm:null|CodeMirror.Editor}}*/
+  const thisThis = {cm:null}
+
+  return ({
+    unindent=true,
+    children,
+    keyMap='sublime',
+    theme='default',
+    indentUnit=2,
+    tabSize=2,
+    lineWrapping=true,
+    lineNumbers=true,
+    scrollPastEnd=false,
+    autoRefresh=true, // necessary for Reveal.js
+     ...props }) => {
     let code = (x => (Array.isArray(x) ? x.join('') : x))(children);
-    if (unindent) code = caph.utils.unindent(code);
-    id = id || autoId;
+    let options = {keyMap, theme, indentUnit, tabSize, lineWrapping, lineNumbers, scrollPastEnd, autoRefresh, ...props };
+    // if (unindent) code = caph.unindent(code);
+    const id = preact.useMemo(()=>'codemirror-'+(''+Math.random()).slice(2), []);
 
-    const { getItem } = preact.useContext(caph.contexts.storage);
-    const darkTheme = getItem('darkTheme');
-
-    const cmOptions = MyObject.deep_assign({
-      theme: darkTheme ? 'monokai' : 'default',
-      indentUnit: 2,
-      tabSize: 2,
-      lineWrapping: true,
-      lineNumbers: true,
-      keyMap: 'sublime',
-      scrollPastEnd: false,
-      autoRefresh: true, // necessary for Reveal.js
-    }, options);
+    // const { getItem } = preact.useContext(caph.contexts.storage);
+    // const darkTheme = getItem('darkTheme');
+    // const darkTheme = true;
+    // preact.useEffect(async () => {
+    //   const cm = await MyPromise.until(() => thisThis.cm);
+    //   cm.setOption('theme', darkTheme ? 'monokai' : 'default');
+    // }, [darkTheme]);
 
     preact.useEffect(async () => {
       const div = await MyPromise.until(() => document.querySelector(`#${id}`));
-      this.cm = CodeMirror(div, { value: code, ...cmOptions });
+      thisThis.cm = CodeMirror(div, { value: code, ...options });
     }, []);
 
-    preact.useEffect(async () => {
-      const cm = await MyPromise.until(() => this.cm);
-      cm.setOption('theme', darkTheme ? 'monokai' : 'default');
-    }, [darkTheme]);
-
-    return html`
-    <div id=${id} class=${_class + ' codemirror-container'}/>`;
+    return caph.parse`<div id=${id}/>`;
   }
-
-  async loader() {
-    await caph.load('caph-docs/libraries/codemirror-5.55.0/lib/codemirror.js');
-    await caph.load('caph-docs/libraries/codemirror-5.55.0/mode/javascript/javascript.js');
-    await caph.load('caph-docs/libraries/codemirror-5.55.0/mode/python/python.js');
-    await caph.load('caph-docs/libraries/codemirror-5.55.0/addon/search/searchcursor.js');
-    await caph.load('caph-docs/libraries/codemirror-5.55.0/addon/search/search.js');
-    await caph.load('caph-docs/libraries/codemirror-5.55.0/addon/scroll/scrollpastend.js');
-    await caph.load('caph-docs/libraries/codemirror-5.55.0/keymap/sublime.js');
-    await caph.load('caph-docs/libraries/codemirror-5.55.0/addon/display/autorefresh.js');
-    await caph.load('caph-docs/libraries/codemirror-5.55.0/lib/codemirror.css');
-    await caph.load('caph-docs/libraries/codemirror-5.55.0/theme/monokai.css');
-    await caph.load('caph-docs/plugins/codemirror/codemirror.css');
-    return;
-  }
-
-  cmRender({ div, code, cmOptions, darkTheme = false }) {
-
-  }
-};
+})();
