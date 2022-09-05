@@ -213,7 +213,8 @@ class MyPromise {
     }
     return outs;
   }
-  static async until(/** @type {()=>any}*/ func, { ms = 200, timeout = null } = {}) {
+
+  static async until(/** @type {()=>any}*/ func, { ms = 200, timeout = 0 } = {}) {
     if (timeout && ms > timeout) ms = timeout / 10;
     let t0 = (new Date()).getTime();
     let value;
@@ -1103,6 +1104,8 @@ const ScriptLoader = class {
   }
 
   _attachments = [];
+  /**@param {string} ref */
+  /**@returns {string|null} */
   getAttachment(ref) {
     for (let e of this._attachments) if (e.ref == ref) return e.content;
     return null;
@@ -1124,10 +1127,12 @@ const ScriptLoader = class {
    * where?: 'beforebegin' | 'afterbegin' | 'beforeend' | 'afterend',
    * attrs?: {[key:string]:string},
    * auto_attrs?: boolean,
-   * }} param1
+   * msTimeout?: number,
+   * }} options
    */
   async load(ref, {
     attrs = {}, parent = null, where = 'beforeend', auto_attrs = true,
+    msTimeout=3800,
   } = {}) {
     if (parent == null) parent = this.div;
     const ext = ref.split('#')[0].split('?')[0].split('.').pop();
@@ -1147,7 +1152,7 @@ const ScriptLoader = class {
       if (tag == 'link') attrs.href = ref;
     }
     try {
-      await this._load_elem(ref, tag, attrs, parent, where, content);
+      await this._load_elem(ref, tag, attrs, parent, where, content, msTimeout);
     } catch (err) {
       console.error(err, ref);
       throw err;
@@ -1162,12 +1167,12 @@ const ScriptLoader = class {
   }
 
   _loadStatus = {};
-  async _load_elem(ref, tag, attrs, parent, where, content) {
+  async _load_elem(ref, tag, attrs, parent, where, content, msTimeout) {
     // Handle concurrent calls to load_elem(...) about the same ref
     if (!this._loadStatus[ref]) {
       this._loadStatus[ref] = 1;
       try {
-        await this.__load_elem(ref, tag, attrs, parent, where, content);
+        await this.__load_elem(ref, tag, attrs, parent, where, content, msTimeout);
         this._loadStatus[ref] = 2;
       } catch (err) {
         this._loadStatus[ref] = 0;
@@ -1179,7 +1184,7 @@ const ScriptLoader = class {
     }
   }
 
-  __load_elem(ref, tag, attrs, parent, where, content) {
+  __load_elem(ref, tag, attrs, parent, where, content, msTimeout) {
     return new Promise((_ok, _err) => {
       let e = document.createElement(tag);
       let done = false;
@@ -1205,7 +1210,7 @@ const ScriptLoader = class {
         }
       }
       parent.insertAdjacentElement(where, e);
-      setTimeout(() => done || _err(['Timeout (12s) loading source:', e]), 12000);
+      setTimeout(() => done || _err(['Timeout (12s) loading source:', e]), msTimeout);
     });
   };
 
@@ -1390,20 +1395,27 @@ const preactParser = new class {
 
     const main = async ()=>{
       // 1. Put the plugin script in the document head and wait for the browser to load the script
-      if (pluginDefs.hasOwnProperty(key)){} // already loaded
-      else if (parent.officialPlugins.includes(key)) {
-        const url = `${scriptLoader.dist}/plugin-${key}.js`;
-        //@ts-ignore (Component instead of Promise<Component>)
-        pluginDefs[key] = parent.componentWrapper(url);
-      } else if (key.match(/[^#\?]+.js(#.*|\?.*|)$/)) {
-        let isOfficial = parent.officialPlugins.map(k => `${scriptLoader.dist}/plugin-${k}.js`).includes(key);
-        const url = isOfficial ? key : `${key}?${parent._randomSessionSuffix}`;
-        await scriptLoader.load(url);
-        pluginDefs[key] = pluginDefs[key] || pluginDefs[url];
-        assert(pluginDefs[key], 'Plugin not declared in file: ' + key);
-        if (key != url) delete pluginDefs[url];
-      }else { await MyPromise.until(() => pluginDefs[key]); } // User plugin
-
+      try{
+        if (pluginDefs.hasOwnProperty(key)){} // already loaded
+        else if (parent.officialPlugins.includes(key)) {
+          const url = `${scriptLoader.dist}/plugin-${key}.js`;
+          //@ts-ignore (Component instead of Promise<Component>)
+          pluginDefs[key] = parent.componentWrapper(url);
+        } else if (key.match(/[^#\?]+.js(#.*|\?.*|)$/)) {
+          let isOfficial = parent.officialPlugins.map(k => `${scriptLoader.dist}/plugin-${k}.js`).includes(key);
+          const url = isOfficial ? key : `${key}?${parent._randomSessionSuffix}`;
+          await scriptLoader.load(url);
+          pluginDefs[key] = pluginDefs[key] || pluginDefs[url];
+          assert(pluginDefs[key], 'Plugin not declared in file: ' + key);
+          if (key != url) delete pluginDefs[url];
+        }else {
+          await MyPromise.until(() => pluginDefs[key], {timeout: 3800});
+        } // User plugin
+      } catch(err){
+        loadStatus.error = err || true;
+        console.error(`Could not load plugin ${key}`, err);
+        return;
+      }
       // 3. Start the plugin promise but don't wait for it
       (async()=>{
         try {

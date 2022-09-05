@@ -26,6 +26,8 @@ const ScriptLoader = class {
   }
 
   _attachments = [];
+  /**@param {string} ref */
+  /**@returns {string|null} */
   getAttachment(ref) {
     for (let e of this._attachments) if (e.ref == ref) return e.content;
     return null;
@@ -47,10 +49,12 @@ const ScriptLoader = class {
    * where?: 'beforebegin' | 'afterbegin' | 'beforeend' | 'afterend',
    * attrs?: {[key:string]:string},
    * auto_attrs?: boolean,
-   * }} param1
+   * msTimeout?: number,
+   * }} options
    */
   async load(ref, {
     attrs = {}, parent = null, where = 'beforeend', auto_attrs = true,
+    msTimeout=3800,
   } = {}) {
     if (parent == null) parent = this.div;
     const ext = ref.split('#')[0].split('?')[0].split('.').pop();
@@ -70,7 +74,7 @@ const ScriptLoader = class {
       if (tag == 'link') attrs.href = ref;
     }
     try {
-      await this._load_elem(ref, tag, attrs, parent, where, content);
+      await this._load_elem(ref, tag, attrs, parent, where, content, msTimeout);
     } catch (err) {
       console.error(err, ref);
       throw err;
@@ -85,12 +89,12 @@ const ScriptLoader = class {
   }
 
   _loadStatus = {};
-  async _load_elem(ref, tag, attrs, parent, where, content) {
+  async _load_elem(ref, tag, attrs, parent, where, content, msTimeout) {
     // Handle concurrent calls to load_elem(...) about the same ref
     if (!this._loadStatus[ref]) {
       this._loadStatus[ref] = 1;
       try {
-        await this.__load_elem(ref, tag, attrs, parent, where, content);
+        await this.__load_elem(ref, tag, attrs, parent, where, content, msTimeout);
         this._loadStatus[ref] = 2;
       } catch (err) {
         this._loadStatus[ref] = 0;
@@ -102,7 +106,7 @@ const ScriptLoader = class {
     }
   }
 
-  __load_elem(ref, tag, attrs, parent, where, content) {
+  __load_elem(ref, tag, attrs, parent, where, content, msTimeout) {
     return new Promise((_ok, _err) => {
       let e = document.createElement(tag);
       let done = false;
@@ -128,7 +132,7 @@ const ScriptLoader = class {
         }
       }
       parent.insertAdjacentElement(where, e);
-      setTimeout(() => done || _err(['Timeout (12s) loading source:', e]), 12000);
+      setTimeout(() => done || _err(['Timeout (12s) loading source:', e]), msTimeout);
     });
   };
 

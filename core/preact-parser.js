@@ -159,20 +159,27 @@ const preactParser = new class {
 
     const main = async ()=>{
       // 1. Put the plugin script in the document head and wait for the browser to load the script
-      if (pluginDefs.hasOwnProperty(key)){} // already loaded
-      else if (parent.officialPlugins.includes(key)) {
-        const url = `${scriptLoader.dist}/plugin-${key}.js`;
-        //@ts-ignore (Component instead of Promise<Component>)
-        pluginDefs[key] = parent.componentWrapper(url);
-      } else if (key.match(/[^#\?]+.js(#.*|\?.*|)$/)) {
-        let isOfficial = parent.officialPlugins.map(k => `${scriptLoader.dist}/plugin-${k}.js`).includes(key);
-        const url = isOfficial ? key : `${key}?${parent._randomSessionSuffix}`;
-        await scriptLoader.load(url);
-        pluginDefs[key] = pluginDefs[key] || pluginDefs[url];
-        assert(pluginDefs[key], 'Plugin not declared in file: ' + key);
-        if (key != url) delete pluginDefs[url];
-      }else { await MyPromise.until(() => pluginDefs[key]); } // User plugin
-
+      try{
+        if (pluginDefs.hasOwnProperty(key)){} // already loaded
+        else if (parent.officialPlugins.includes(key)) {
+          const url = `${scriptLoader.dist}/plugin-${key}.js`;
+          //@ts-ignore (Component instead of Promise<Component>)
+          pluginDefs[key] = parent.componentWrapper(url);
+        } else if (key.match(/[^#\?]+.js(#.*|\?.*|)$/)) {
+          let isOfficial = parent.officialPlugins.map(k => `${scriptLoader.dist}/plugin-${k}.js`).includes(key);
+          const url = isOfficial ? key : `${key}?${parent._randomSessionSuffix}`;
+          await scriptLoader.load(url);
+          pluginDefs[key] = pluginDefs[key] || pluginDefs[url];
+          assert(pluginDefs[key], 'Plugin not declared in file: ' + key);
+          if (key != url) delete pluginDefs[url];
+        }else {
+          await MyPromise.until(() => pluginDefs[key], {timeout: 3800});
+        } // User plugin
+      } catch(err){
+        loadStatus.error = err || true;
+        console.error(`Could not load plugin ${key}`, err);
+        return;
+      }
       // 3. Start the plugin promise but don't wait for it
       (async()=>{
         try {

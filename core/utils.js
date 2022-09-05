@@ -169,7 +169,8 @@ class MyPromise {
     }
     return outs;
   }
-  static async until(/** @type {()=>any}*/ func, { ms = 200, timeout = null } = {}) {
+
+  static async until(/** @type {()=>any}*/ func, { ms = 200, timeout = 0 } = {}) {
     if (timeout && ms > timeout) ms = timeout / 10;
     let t0 = (new Date()).getTime();
     let value;
