@@ -16,17 +16,21 @@ const bind = (func, obj)=>func.bind(obj);
 
 
 const caph = new class {
+  
+  // Exported utils:
   until = MyPromise.until;
   assert = assert;
+  sleep = sleep;
 
-  parseAst = bind(__caph_definitions__.NewParser.parseAst, __caph_definitions__.NewParser);
-  _parser = __caph_definitions__.preactParser;
+
+  parseAst = bind(NewParser.parseAst, NewParser);
+  _parser = preactParser;
   pluginDefs = this._parser.pluginDefs;
   parse = bind(this._parser.parse, this._parser);
   parseNoMarkup = bind(this._parser.parseNoMarkup, this._parser);
   
   parseHtmlAst(/** @type {string}*/str){
-    return __caph_definitions__.NewParser.parseAstHtml(str);
+    return NewParser.parseAstHtml(str);
   }
   parseHtml(/** @type {string}*/str){
     //@ts-ignore
@@ -48,12 +52,11 @@ const caph = new class {
   loadFont = bind(this._scriptLoader.loadFont, this._scriptLoader);
   injectStyle = bind(this._scriptLoader.injectStyle, this._scriptLoader);
 
-  _preactGlobals = __caph_definitions__.preactGlobals;
+  _preactGlobals = preactGlobals;
   contexts = this._preactGlobals.contexts;
   menu = this._preactGlobals.menu;
   listenToEvent = bind(this._preactGlobals.listenToEvent, this._preactGlobals);
   listenToGlobal = bind(this._preactGlobals.listenToGlobal, this._preactGlobals);
-
   
   constructor() {}
 

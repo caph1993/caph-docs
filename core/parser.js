@@ -20,7 +20,7 @@
 /** @typedef {AstNode[]} AstNodeArray*/
 
 
-__caph_definitions__.ConsoleProxy = class{
+const ConsoleProxy = class{
   log(...args){ console.log(...args);}
   warn(...args){ this.warn(...args);}
   error(...args){ this.error(...args);}
@@ -29,7 +29,7 @@ __caph_definitions__.ConsoleProxy = class{
 
 //https://stackoverflow.com/a/70329711
 
-__caph_definitions__.BaseParser = (class {
+const BaseParser = (class {
 
   ESC = '\ue000';
   SPEC = `https://html.spec.whatwg.org/multipage/syntax.html`;
@@ -40,6 +40,7 @@ __caph_definitions__.BaseParser = (class {
     const cls = this;
     return new cls(strings, values).root
   }
+
   /** @type {CustomRule[]} */
   static customRules = [];
 
@@ -52,7 +53,7 @@ __caph_definitions__.BaseParser = (class {
    * @param {0|1|2} debug
   */
   constructor(strings, values, debug=0){
-    /** @type {typeof __caph_definitions__.BaseParser} */ //@ts-ignore
+    /** @type {typeof BaseParser} */ //@ts-ignore
     this.cls = this.constructor;
     let str = strings.join(this.ESC);
     let escaped = {};
@@ -536,7 +537,7 @@ __caph_definitions__.BaseParser = (class {
 
 });
 
-__caph_definitions__.NewParser = class extends __caph_definitions__.BaseParser {
+const NewParser = class extends BaseParser {
 
   static customRules = [
     ...super.customRules,

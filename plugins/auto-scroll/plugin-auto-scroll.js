@@ -18,7 +18,7 @@ caph.pluginDefs[caph.currentSrc] = new class extends caph.Plugin {
     do {
       prevh = initialh = document.body.scrollHeight;
       for (let t = 0; t < ms_stable; t += ms) {
-        await sleep(ms);
+        await caph.sleep(ms);
         h = document.body.scrollHeight;
         if (h != prevh) { prevh = h; this.loadPosition(); }
       }
@@ -28,7 +28,7 @@ caph.pluginDefs[caph.currentSrc] = new class extends caph.Plugin {
   async daemon(ms = 5000) {
     while (1) {
       this.savePosition();
-      await sleep(ms);
+      await caph.sleep(ms);
     }
   }
 

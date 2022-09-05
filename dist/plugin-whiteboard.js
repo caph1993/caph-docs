@@ -69,7 +69,7 @@ caph.pluginDefs[caph.currentSrc] = new class extends caph.Plugin {
   }
 
   async initComponent({tool, setTool, setCanvas, setEvent}){
-    const domCanvas = await MyPromise.until(() =>
+    const domCanvas = await caph.until(() =>
       document.querySelector('#whiteboard-canvas'));
     const canvas = new fabric.Canvas(domCanvas, { isDrawingMode: true });
     canvas.freeDrawingBrush = new fabric['PencilBrush'](canvas);
@@ -92,7 +92,7 @@ caph.pluginDefs[caph.currentSrc] = new class extends caph.Plugin {
   }
 
   async menuSettings() {
-    let main = await MyPromise.until(() =>
+    let main = await caph.until(() =>
       document.querySelector('#whiteboard-main')
     );
     caph.menu.addOption('Whiteboard', { hold: true });

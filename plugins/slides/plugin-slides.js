@@ -2,7 +2,7 @@ caph.pluginDefs[caph.currentSrc] = new class extends caph.Plugin {
 
   Component({ children, class: _class, plugins = "" }) {
     preact.useEffect(async () => {
-      const menu = await MyPromise.until(() => preact.useContext(caph.contexts['core-menu']));
+      const menu = await caph.until(() => preact.useContext(caph.contexts['core-menu']));
       menu.addOption('PDF print', {
         onEnter: () => {
           const loc = window.location;
@@ -58,13 +58,13 @@ caph.pluginDefs[caph.currentSrc] = new class extends caph.Plugin {
       center = true;
     }
 
-    await MyPromise.until(() =>
+    await caph.until(() =>
       document.querySelector('.reveal')
       && document.querySelector('.slides')
     );
 
     Reveal.initialize(options);
-    await MyPromise.until(() => Reveal.isReady());
+    await caph.until(() => Reveal.isReady());
 
     if (print) pdfPrint();
     return;
@@ -73,10 +73,10 @@ caph.pluginDefs[caph.currentSrc] = new class extends caph.Plugin {
   async pdfPrint() {
     await caph.ready();
 
-    await sleep(1500); // all plugins
+    await caph.sleep(1500); // all plugins
 
     // Force pages to max height
-    await MyPromise.until(() => document.querySelector('.pdf-page'));
+    await caph.until(() => document.querySelector('.pdf-page'));
     let pageHeight = 1e5, pageWidth = 1e5;
     for (const elem of document.querySelectorAll('.pdf-page')) {
       pageHeight = Math.min(pageHeight, elem.clientHeight);
@@ -85,7 +85,7 @@ caph.pluginDefs[caph.currentSrc] = new class extends caph.Plugin {
     for (const elem of document.querySelectorAll('.pdf-page')) {
       if (elem.clientHeight == pageHeight) continue;
       elem.style.cssText = `height: ${pageHeight}px;`;
-      await MyPromise.until(() => elem.clientHeight == pageHeight);
+      await caph.until(() => elem.clientHeight == pageHeight);
     }
 
     const maxHeight = pageHeight * 0.9;
@@ -111,7 +111,7 @@ caph.pluginDefs[caph.currentSrc] = new class extends caph.Plugin {
       }
       i++;
     }
-    await sleep(100);
+    await caph.sleep(100);
     if (confirm('Export as PDF?')) window.print();
   }
 };

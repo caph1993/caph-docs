@@ -10,12 +10,12 @@
  * @typedef {(props:Object)=>T_PreactVDomElement} Component
 */
 
-__caph_definitions__.preactParser = new class {
+const preactParser = new class {
   
   /** @type {'katex'|'mathjax'} */
   mathParser = 'katex';
   codeParser = '@codeFallback';
-  scriptLoader = __caph_definitions__.scriptLoader;
+  scriptLoader = scriptLoader;
 
   officialPlugins = [
     'core-menu',
@@ -31,7 +31,7 @@ __caph_definitions__.preactParser = new class {
     // 'figure-editor',
   ];
 
-  _parser = __caph_definitions__.NewParser;
+  _parser = NewParser;
 
   parseAst = this._parser.parseAst;
 
@@ -41,7 +41,7 @@ __caph_definitions__.preactParser = new class {
   })
   /** @type {(literals:TemplateStringsArray, ...values)=>T_PreactVDomElement}*/
   parse = this._parser.parserFactory(this._evalAst);
-  parseNoMarkup = __caph_definitions__.BaseParser.parserFactory(this._evalAst);
+  parseNoMarkup = BaseParser.parserFactory(this._evalAst);
 
   parseHtml(/** @type {string}*/str){
     //@ts-ignore
@@ -249,7 +249,7 @@ __caph_definitions__.preactParser = new class {
 
 }
 
-__caph_definitions__.preactParser.scriptLoader.injectStyle(`
+preactParser.scriptLoader.injectStyle(`
 .caph-error{
   color: #ce1111;
 }

@@ -4,7 +4,7 @@
 /// <reference path="parser.js" />
 /// <reference path="preact-globals.js" />
 
-__caph_definitions__.ScriptLoader = class {
+const ScriptLoader = class {
 
   constructor(/** @type {string[]}*/requirements=[]) {
     for (let a of requirements) this.attach(a);
@@ -145,4 +145,4 @@ __caph_definitions__.ScriptLoader = class {
 
 const requirements = [];
 // Special comment: inject-requirements (do not delete)
-__caph_definitions__.scriptLoader = new __caph_definitions__.ScriptLoader(requirements);
+const scriptLoader = new ScriptLoader(requirements);

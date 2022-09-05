@@ -1,7 +1,4 @@
-// NO //@ts-check
-
-var __caph_definitions__ = window.__caph_definitions__ || {};
-
+//@ts-check
 
 /** 
  * JSDoc types lack a non-undefined assertion.
@@ -29,6 +26,7 @@ function assertDefined(value, valueName) {
  */
 function assertNonNull(value) {
   if (!value && (value===null||value === undefined)) throw new Error(`Encountered unexpected undefined value`);
+  //@ts-ignore
   return value;
 }
 
@@ -65,12 +63,14 @@ function is_string(obj) {
 //   const text = doc.documentElement.textContent;
 //   return text;
 // }
-function assert(condition, ...messages) {
+
+
+function assert(/** @type {boolean|any}*/condition, ...messages) {
   if (condition) return;
   throw new Error(...messages);
 }
 
-function sleep(ms) {
+function sleep(/** @type {number}*/ms) {
   return new Promise((ok, err) => setTimeout(ok, ms));
 }
 
@@ -87,8 +87,8 @@ class MyBoolean {
     for (let x of arr) if (x) return true;
     return false;
   }
-  static assert_all(arr, ...messages) { assert(all(arr), ...messages); }
-  static assert_any(arr, ...messages) { assert(any(arr), ...messages); }
+  static assert_all(arr, ...messages) { assert(this.all(arr), ...messages); }
+  static assert_any(arr, ...messages) { assert(this.any(arr), ...messages); }
 }
 
 
@@ -114,11 +114,11 @@ class MyArray {
   }
   static zeros(n) {
     const l = [];
-    for (const i = 0; i < n; i++)l.push(0);
+    for (let i = 0; i < n; i++)l.push(0);
     return l;
   }
   static arange(n) {
-    return MyArray.zeros.map((z, i) => i);
+    return MyArray.zeros(n).map((z, i) => i);
   }
   static sEquality(a, b) {
     if (a === b) return true;
@@ -205,17 +205,18 @@ class MyDocument {
    * eventListeners?: {[key: string]: (e: Event) => void},
    * parent?: HTMLElement,
    * where?: 'beforebegin' | 'afterbegin' | 'beforeend' | 'afterend',
-   * }} 
+   * }} options
    * @returns {HTMLElement}
    */
   static createElement(tag, {
-    style = {}, id = null, classList = [], text = null, html = null,
-    eventListeners = {}, parent = null, where = null, ...attrs } = {}) {
-    let e = document.createElement(tag, id ? { id: id } : null);
+    style = {}, id, classList = [], text, html,
+    eventListeners = {}, parent, where, ...attrs } = {}) {
+    let e = document.createElement(tag);
+    if(id!==undefined) e.setAttribute("id", id);
     classList.forEach(s => e.classList.add(s));
-    if (text != null) e.innerText = text;
-    if (html != null) e.innerHTML = html;
-    if (id != null) e.id = id;
+    if (text !==undefined) e.innerText = text;
+    if (html !==undefined) e.innerHTML = html;
+    if (id !==undefined) e.id = id;
     MyObject.forEach(attrs, (value, key) => e.setAttribute(key, value));
     MyObject.forEach(style, (value, key) => e.style[key] = value);
     MyObject.forEach(eventListeners, (value, key) =>
@@ -259,40 +260,39 @@ class MyObject {
     return M;
   }
 
-  /**
-  @param {((value:any, key?:any, obj?:any)=>(any))} func
-  */
+  /** @param {Object} obj */
+  /** @param {((value:any, key?:any, obj?:any)=>(any))} func */
   static map(obj, func) {
     return MyObject._object_op('map', obj, func);
   }
 
-  /**
-  @param {((value:any, key?:any, obj?:any)=>(bool|any))} func
-  */
+  /** @param {Object} obj */
+  /** @param {((value:any, key?:any, obj?:any)=>(boolean|any))} func */
+  /** @returns {Object} */
   static filter(obj, func) {
     return MyObject._object_op('filter', obj, func);
   }
 
-  /**
-  @param {((value:any, key?:any, obj?:any)=>(any))} func
-  */
+  /** @param {Object} obj */
+  /** @param {((value:any, key?:any, obj?:any)=>(any))} func */
   static apply(obj, func) {
     return MyObject._object_op('apply', obj, func);
   }
 
-  /**
-  @param {((value:any, key?:any, obj?:any)=>(any))} func
-  */
+  /** @param {Object} obj */
+  /** @param {((value:any, key?:any, obj?:any)=>(any))} func */
   static forEach(obj, func) {
     return MyObject._object_op('forEach', obj, func);
   }
 
+  /** @param {Object} src */
+  /** @param {'apply'|'filter'|'forEach'|'map'} op*/
   static _object_op(op, src, func) {
     assert(1 <= func.length && func.length <= 3);
     let dest = {};
     for (let key of Object.keys(src)) {
       let value = src[key]
-      let result = MyObject._func(func, value, key);
+      let result = MyObject._func(func, value, key, src);
       if (op == 'map') dest[key] = result;
       else if (op == 'filter') { if (result) dest[key] = value; }
       else if (op == 'apply') src[key] = result;
@@ -301,7 +301,7 @@ class MyObject {
     return (op == 'map' || op == 'filter') ? dest : null;
   }
 
-  static _func(func, value, key) {
+  static _func(func, value, key, src) {
     return (
       func.length == 1 ? func(value)
         : func.length == 2 ? func(value, key)
@@ -311,10 +311,10 @@ class MyObject {
 
   static reduce_dots(obj) {
     // converts {'a.b':1, 'a.c':2, b:3} into {a:{b:1,c:2}, 'b':3}. Returns copy (shallow or deep)
-    let dotted = MyObject.object_filter(obj, (v, k) => k.indexOf('.') >= 0);
-    let no_dots = MyObject.object_filter(obj, (v, k) => k.indexOf('.') == -1);
+    let dotted = MyObject.filter(obj, (v, k) => k.indexOf('.') >= 0);
+    let no_dots = MyObject.filter(obj, (v, k) => k.indexOf('.') == -1);
     if (Object.keys(dotted).length == 0) return no_dots;
-    MyObject.object_forEach(dotted, (v, k) => {
+    MyObject.forEach(dotted, (v, k) => {
       let start = k.slice(0, k.indexOf('.'));
       let end = k.slice(k.indexOf('.') + 1);
       no_dots[start] = no_dots[start] || {};
@@ -351,9 +351,7 @@ class MyObject {
     return MyObject.deep_assign(obj, ...objs);
   }
 
-  /**
-  @param {((value:any, key?:any, obj?:any)=>(bool|any))} filter_func
-  */
+  /** @param {((value:any, key?:any, obj?:any)=>(boolean|any))} filter_func */
   static find(obj, filter_func) {
     for (let key in obj)
       if (MyObject._func(filter_func, obj[key], key))
@@ -396,7 +394,7 @@ function update_property_handler(object, property, create_handler) {
 }
 
 
-__caph_definitions__.Dequeue = class {
+const Dequeue = class {
   constructor(arr) {
     this.data = [...(arr || [])];
     this.lr = [0, arr.length];

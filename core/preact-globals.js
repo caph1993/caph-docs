@@ -4,9 +4,9 @@
 /// <reference path="preact-parser.js" />
 
 
-__caph_definitions__.preactGlobals = new class {
+const preactGlobals = new class {
 
-  parser = __caph_definitions__.preactParser;
+  parser = preactParser;
   contexts = {};
 
   constructor(){
