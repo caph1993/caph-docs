@@ -5,13 +5,25 @@
 
 /* lzutf8, utils, preact, preact hook are injected above this comment*/
 
-const caph = new class {
 
-  parseAst = __caph_definitions__.NewParser.parseAst.bind(__caph_definitions__.NewParser);
+/**
+ * @template {Function} T 
+ * @param {T} func
+ * @param {Object} obj
+ * @returns {T}
+*/
+const bind = (func, obj)=>func.bind(obj);
+
+
+const caph = new class {
+  until = MyPromise.until;
+  assert = assert;
+
+  parseAst = bind(__caph_definitions__.NewParser.parseAst, __caph_definitions__.NewParser);
   _parser = __caph_definitions__.preactParser;
   pluginDefs = this._parser.pluginDefs;
-  parse = this._parser.parse.bind(this._parser);
-  parseNoMarkup = this._parser.parseNoMarkup.bind(this._parser);
+  parse = bind(this._parser.parse, this._parser);
+  parseNoMarkup = bind(this._parser.parseNoMarkup, this._parser);
   
   parseHtmlAst(/** @type {string}*/str){
     return __caph_definitions__.NewParser.parseAstHtml(str);
@@ -29,18 +41,18 @@ const caph = new class {
     return this.parseHtml(html);
   }
 
-  plugin = this._parser.plugin.bind(this._parser);
+  plugin = bind(this._parser.plugin, this._parser);
   
   _scriptLoader = this._parser.scriptLoader;
-  load = this._scriptLoader.load.bind(this._scriptLoader);
-  loadFont = this._scriptLoader.loadFont.bind(this._scriptLoader);
-  injectStyle = this._scriptLoader.injectStyle.bind(this._scriptLoader);
+  load = bind(this._scriptLoader.load, this._scriptLoader);
+  loadFont = bind(this._scriptLoader.loadFont, this._scriptLoader);
+  injectStyle = bind(this._scriptLoader.injectStyle, this._scriptLoader);
 
   _preactGlobals = __caph_definitions__.preactGlobals;
   contexts = this._preactGlobals.contexts;
   menu = this._preactGlobals.menu;
-  listenToEvent = this._preactGlobals.listenToEvent.bind(this._preactGlobals);
-  listenToGlobal = this._preactGlobals.listenToGlobal.bind(this._preactGlobals);
+  listenToEvent = bind(this._preactGlobals.listenToEvent, this._preactGlobals);
+  listenToGlobal = bind(this._preactGlobals.listenToGlobal, this._preactGlobals);
 
   
   constructor() {}

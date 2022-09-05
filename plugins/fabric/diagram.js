@@ -4,7 +4,7 @@ class CaphFabric{}
 CaphFabric._Base = class{
   container = null;
   async draw_on(canvas, {width, height, top=0, left=0, borders=false}={}){
-    assert(width&&height);
+    caph.assert(width&&height);
     canvas.setHeight(height);
     canvas.setWidth(width);
     //2 pixels padding for seeing borders
@@ -41,19 +41,19 @@ CaphFabric.Element = class extends CaphFabric._Base{
     canvas.add(this.element);
   }
   get width(){
-    assert(this.element);
+    caph.assert(this.element);
     return this.element.width*this.element.scaleX;
   }
   get height(){
-    assert(this.element);
+    caph.assert(this.element);
     return this.element.height*this.element.scaleY;
   }
   get left(){
-    assert(this.element);
+    caph.assert(this.element);
     return this.element.left;
   }
   get top(){
-    assert(this.element);
+    caph.assert(this.element);
     return this.element.top;
   }
   side_midpoint(side){
@@ -93,10 +93,10 @@ CaphFabric.parse_style=(custom, all, pre_style)=>{
   );
   delete style.all;
   for(let k in style) for(let key in style[k]){
-    assert(k!='top', 'Invalid style key');
-    assert(k!='left', 'Invalid style key');
-    assert(k!='width', 'Invalid style key');
-    assert(k!='height', 'Invalid style key');
+    caph.assert(k!='top', 'Invalid style key');
+    caph.assert(k!='left', 'Invalid style key');
+    caph.assert(k!='width', 'Invalid style key');
+    caph.assert(k!='height', 'Invalid style key');
   }
   return style;
 }
@@ -175,8 +175,8 @@ CaphFabric.Arrow = class extends CaphFabric.Element{
   constructor(from, to, {text='', sides='auto',
       fromTip=null, toTip='triangle'}={},
       style={}){
-    assert(from);
-    assert(to);
+    caph.assert(from);
+    caph.assert(to);
     super();
     this.sides=sides;
     this.from={node:from, tip:fromTip};
@@ -365,7 +365,7 @@ CaphFabric.Grid = class extends CaphFabric.Tree{
     this.children = children.map(row=>this.validate_trees(row));
     this.nrows = children.length;
     this.ncols = children && children[0].length;
-    assert(MyBoolean.all(children.map(r=>r.length==this.ncols)),
+    caph.assert(MyBoolean.all(children.map(r=>r.length==this.ncols)),
       'Inconsistent number of grid rows/columns');
   }
   get elements(){ throw new Error('Not Implemented'); }

@@ -4,18 +4,9 @@
 /// <reference path="parser.js" />
 /// <reference path="preact-globals.js" />
 
-/* lzutf8, utils, preact, preact hook are injected above this comment*/
-
-
 __caph_definitions__.ScriptLoader = class {
 
-  constructor() {
-    //@ts-ignore
-    const requirements = window.caph_requirements || [];
-    //@ts-ignore
-    window.caph_requirements = requirements;
-    //@ts-ignore
-    delete window.caph_requirements;
+  constructor(/** @type {string[]}*/requirements=[]) {
     for (let a of requirements) this.attach(a);
     this.dist = '../dist';
     for (const e of document.querySelectorAll('script')) {
@@ -151,4 +142,7 @@ __caph_definitions__.ScriptLoader = class {
   }
 }
 
-__caph_definitions__.scriptLoader = new __caph_definitions__.ScriptLoader();
+
+const requirements = [];
+// Special comment: inject-requirements (do not delete)
+__caph_definitions__.scriptLoader = new __caph_definitions__.ScriptLoader(requirements);

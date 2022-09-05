@@ -47,12 +47,12 @@ caph.pluginDefs[caph.currentSrc] = (async ()=>{
     // const darkTheme = getItem('darkTheme');
     // const darkTheme = true;
     // preact.useEffect(async () => {
-    //   const cm = await MyPromise.until(() => thisThis.cm);
+    //   const cm = await caph.until(() => thisThis.cm);
     //   cm.setOption('theme', darkTheme ? 'monokai' : 'default');
     // }, [darkTheme]);
 
     preact.useEffect(async () => {
-      const div = await MyPromise.until(() => document.querySelector(`#${id}`));
+      const div = await caph.until(() => document.querySelector(`#${id}`));
       thisThis.cm = CodeMirror(div, { value: code, ...options });
     }, []);
 

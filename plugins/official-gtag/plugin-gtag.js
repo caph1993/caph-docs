@@ -6,7 +6,7 @@ caph.plugins.about = new class extends caph.Plugin {
 
   Component({ GA_MEASUREMENT_ID }) {
     preact.useEffect(() => {
-      assert(GA_MEASUREMENT_ID);
+      caph.assert(GA_MEASUREMENT_ID);
       const { addOption } = preact.useContext(caph.contexts['core-menu']);
       addOption('Google Analytics', { hold: true });
       caph.inject(caph.parse`

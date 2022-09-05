@@ -48,7 +48,7 @@ caph.pluginDefs[caph.currentSrc] = new class extends caph.Plugin {
     await caph.load('caph-docs/plugins/figure-editor/figure-editor.js');
     await caph.load('caph-docs/plugins/figure-editor/figure-editor.css');
     (async () => {
-      let load = async (id) => MyPromise.until(() =>
+      let load = async (id) => caph.until(() =>
         document.querySelector(`#${id}`));
       let main = await load('fabric-editor-main');
       await this.init();
@@ -65,7 +65,7 @@ caph.pluginDefs[caph.currentSrc] = new class extends caph.Plugin {
 
   loaded = {};
   async init() {
-    let load = async (id) => await MyPromise.until(() =>
+    let load = async (id) => await caph.until(() =>
       document.querySelector(`#${id}`));
     let [body, body_cm, footer, footer_canvas, footer_cm] = await Promise.all([
       'fabric-editor-body',

@@ -9,7 +9,7 @@ caph.pluginDefs[caph.currentSrc] = (async()=>{
   //await caph.load('caph-docs/plugins/mathjax-svg/plugin-mathjax-svg.js');
   caph.plugin('mathjax-svg');
   //await caph.load   ( 'mathjax-svg'); // caph.loadPluginDeep???
-  await MyPromise.until(() => caph['mathjax']);
+  await caph.until(() => caph['mathjax']);
 
   const evaluate = async(canvas, script)=> {
     let fabricCanvas = new fabric.Canvas(canvas, {
@@ -52,7 +52,7 @@ caph.pluginDefs[caph.currentSrc] = (async()=>{
     preact.useEffect(() => { plugin(script); }, []);
 
     const plugin = async (script) => {
-      let canvas = await MyPromise.until(() =>
+      let canvas = await caph.until(() =>
         document.querySelector(`#${id}`));
       let fabricCanvas = await evaluate(canvas, script);
       window.addEventListener('resize', async () => {

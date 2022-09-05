@@ -17,7 +17,7 @@ caph.pluginDefs[caph.currentSrc] = new class extends caph.Plugin {
   }
 
   async post_loader() {
-    if (window.Reveal) await MyPromise.until(() => Reveal.isReady());
+    if (window.Reveal) await caph.until(() => Reveal.isReady());
     await caph.load('caph-docs/libraries/mathjax2svg/tex-svg.js', {
       id: 'MathJax-script',
     });

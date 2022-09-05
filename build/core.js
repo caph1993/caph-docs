@@ -1,21 +1,23 @@
+//@ts-check
 let fs = require('fs');
 let utils = require('./build-tools.js');
 
 let baseDir = 'caph-docs/';
 
 let sources = {
-  'static': [
-    'core/utils.js',
-    'core/parser.js',
+  'dependencies': [
     'libraries/lzutf8-0.5.5/lzutf8.min.js',
-    'core/script-loader.js',
     'libraries/preact-10.4.6/preact.min.js',
     'libraries/preact-10.4.6/hooks.js',
+  ],
+  'core': [
+    'core/utils.js',
+    'core/parser.js',
+    'core/script-loader.js',
     'core/preact-parser.js',
     'core/preact-globals.js',
-    //'libraries/preact-router-3.2.1/preact-router.js',
+    'core/main.js',
   ],
-  'loader': 'core/main.js',
   'dynamic': [
     'core/plugin-loader.css',
   ],
@@ -62,16 +64,26 @@ function parseContent(path) {
 }
 
 async function main() {
-  let static = '';
-  for (let path of sources.static) static += parseContent(path) + '\n';
-  //static += `window.html = htm.bind(preact.createElement);\n`;
-  let loader = '' + fs.readFileSync(sources.loader);
+  
+  let code = '';
+  for (let path of sources.core) code += parseContent(path) + '\n';
 
-  let dynamic = sources.dynamic.map(path => (
+  let dynamicSources = sources.dynamic.map(path => (
     { ref: baseDir + path, content: parseContent(path) }
   ));
-  dynamic = `window.caph_requirements = ${utils.lzString(dynamic)};\n`;
-  let code = static + '\n\n\n' + dynamic + '\n\n' + loader;
+  const comment = '// Special comment: inject-requirements (do not delete)';
+  if(!code.includes(comment)) throw 'Injection point is missing';
+  code = code.replace(
+    comment,
+    `requirements.push(${utils.lzString(dynamicSources)});`,
+  );
+  
+  code = `${
+    sources.dependencies.map(path =>parseContent(path)).join('\n')
+  }\n\n\n${
+    utils.UniversalModuleDefinition(code, 'caph', 'caph')
+  }`;
+
   fs.writeFileSync('dist/caph-docs.js', code);
 }
 main();

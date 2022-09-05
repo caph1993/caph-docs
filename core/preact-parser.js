@@ -6,9 +6,8 @@
 
 /* lzutf8, utils, preact, preact hook are injected above this comment*/
 
-
 /**
- * @typedef {({children, ...props})=>T_PreactVDomElement} Component
+ * @typedef {(props:Object)=>T_PreactVDomElement} Component
 */
 
 __caph_definitions__.preactParser = new class {
@@ -70,7 +69,7 @@ __caph_definitions__.preactParser = new class {
     return vDom;
   }
 
-  /** @type {{[key:string]: Promise<Component>}} */
+  /** @type {{[key:string]: Component|Promise<Component>}} */
   pluginDefs = {
     'core-error': (async () => ({ children, tooltip }) => {
       const help = preact.useCallback(() => {

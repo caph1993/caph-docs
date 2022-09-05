@@ -169,12 +169,12 @@ class MyPromise {
     }
     return outs;
   }
-  static async until(func, { ms = 200, timeout = null } = {}) {
+  static async until(/** @type {()=>any}*/ func, { ms = 200, timeout = null } = {}) {
     if (timeout && ms > timeout) ms = timeout / 10;
     let t0 = (new Date()).getTime();
     let value;
     while (!(value = await func())) {
-      if (timeout && (new Date()).getTime() > timeout)
+      if (timeout && (new Date()).getTime()-t0 > timeout)
         throw MyPromise.Timeout;
       await sleep(ms);
     }
@@ -185,7 +185,7 @@ class MyPromise {
     let finished = false;
     let [resp, _] = await Promise.all([
       promise.then(e => { finished = true; return e; }),
-      MyPromise.until(() => finished, { timeout: ms })
+      caph.until(() => finished, { timeout: ms })
     ]);
     return resp;
   }

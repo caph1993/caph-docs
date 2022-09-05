@@ -20,4 +20,22 @@ function zipped(content) {
 function lzString(string) {
   return `JSON.parse(${zipped(JSON.stringify(string))})`;
 }
-module.exports = { unindent, lzString };
+
+/** @param {string} code*/
+/** @param {string} name*/
+/** @param {string} exports*/
+function UniversalModuleDefinition(code, name, exports){
+  return `(function (global, factory) {
+  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
+  //@ts-ignore
+  typeof define === 'function' && define.amd ? define(factory) :
+  //@ts-ignore
+  (global = global || self, global.${name} = factory());
+}(this, (function () { 'use strict';
+${code}
+return ${exports};
+})));
+`;
+}
+
+module.exports = { unindent, lzString, UniversalModuleDefinition};
