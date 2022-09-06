@@ -21,6 +21,7 @@ const caph = new class {
   until = MyPromise.until;
   assert = assert;
   sleep = sleep;
+  collections = { Queue };
 
 
   parseAst = bind(NewParser.parseAst, NewParser);

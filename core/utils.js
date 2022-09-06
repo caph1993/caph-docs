@@ -395,10 +395,11 @@ function update_property_handler(object, property, create_handler) {
 }
 
 
-const Dequeue = class {
+const Queue = class {
+
   constructor(arr) {
     this.data = [...(arr || [])];
-    this.lr = [0, arr.length];
+    this.lr = [0, this.data.length];
   }
   get capacity() {
     return this.data.length;
@@ -412,10 +413,23 @@ const Dequeue = class {
     if (j >= i) return this.data.slice(i, j);
     else return this.data.slice(i).concat(this.data.slice(0, j));
   }
+  [Symbol.iterator]() {
+    let index = -1;
+    // copy because I would need to update the pointer during resizing. Could be done.
+    let data = [...this.toArray()];
+    return {
+      next: () => ({
+        value: data[++index],
+        done: !(index in data)
+      })
+    };
+  };
   resize(newLength) {
     if (newLength === undefined) {
-      if (this.length + 1 >= this.capacity) this.resize(3 * this.length);
-      if (this.length - 1 <= this.capacity << 2) this.resize(this.length << 1);
+      if (this.length + 1 >= this.capacity)
+        return this.resize(1 + 3 * this.length);
+      if (this.length <= this.capacity >> 2)
+        return this.resize(this.capacity >> 1);
       return;
     }
     const arr = this.toArray()
@@ -423,7 +437,8 @@ const Dequeue = class {
     this.lr = [0, arr.length];
   }
   _mod_add(lrIndex, retK, afterK) {
-    const add = (i, k) => ((i % this.capacity) + k + this.capacity) % this.capacity;
+    const mod = this.capacity;
+    const add = (i, k) => ((i % mod) + k + mod) % mod;
     const out = add(this.lr[lrIndex], retK);
     this.lr[lrIndex] = add(this.lr[lrIndex], afterK);
     return out;
