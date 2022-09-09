@@ -7,7 +7,7 @@
 /* lzutf8, utils, preact, preact hook are injected above this comment*/
 
 /**
- * @typedef {(props:Object)=>T_PreactVDomElement} Component
+ * @typedef {(props:Object)=>Elem} Component
 */
 
 const preactParser = new class {
@@ -39,7 +39,7 @@ const preactParser = new class {
     createElement: this.createElement.bind(this),
     FragmentComponent: preact.Fragment,
   })
-  /** @type {(literals:TemplateStringsArray, ...values)=>T_PreactVDomElement}*/
+  /** @type {(literals:TemplateStringsArray, ...values)=>Elem}*/
   parse = this._parser.parserFactory(this._evalAst);
   parseNoMarkup = BaseParser.parserFactory(this._evalAst);
 

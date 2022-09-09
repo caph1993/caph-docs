@@ -1257,7 +1257,7 @@ exports={};
 /* lzutf8, utils, preact, preact hook are injected above this comment*/
 
 /**
- * @typedef {(props:Object)=>T_PreactVDomElement} Component
+ * @typedef {(props:Object)=>Elem} Component
 */
 
 const preactParser = new class {
@@ -1289,7 +1289,7 @@ const preactParser = new class {
     createElement: this.createElement.bind(this),
     FragmentComponent: preact.Fragment,
   })
-  /** @type {(literals:TemplateStringsArray, ...values)=>T_PreactVDomElement}*/
+  /** @type {(literals:TemplateStringsArray, ...values)=>Elem}*/
   parse = this._parser.parserFactory(this._evalAst);
   parseNoMarkup = BaseParser.parserFactory(this._evalAst);
 
@@ -1672,83 +1672,105 @@ exports={};
 
 /* lzutf8, utils, preact, preact hook are injected above this comment*/
 
+// https://www.typescriptlang.org/docs/handbook/jsdoc-supported-types.html
 
-/**
- * @template {Function} T 
- * @param {T} func
- * @param {Object} obj
- * @returns {T}
-*/
-const bind = (func, obj)=>func.bind(obj);
-
-
-const caph = new class {
+/** @namespace */
+var caph = (() => {
+  /** @template {Function} T @param {T} func @param {Object} obj @returns {T} */
+  const bind = (func, obj)=>func.bind(obj);
   
-  // Exported utils:
-  until = MyPromise.until;
-  assert = assert;
-  sleep = sleep;
-  collections = { Queue };
-
-
-  parseAst = bind(NewParser.parseAst, NewParser);
-  _parser = preactParser;
-  pluginDefs = this._parser.pluginDefs;
-  parse = bind(this._parser.parse, this._parser);
-  parseNoMarkup = bind(this._parser.parseNoMarkup, this._parser);
+  const parseAst = bind(NewParser.parseAst, NewParser);
+  const parser = preactParser;
+  const pluginDefs = parser.pluginDefs;
+  const parse = bind(parser.parse, parser);
+  const parseNoMarkup = bind(parser.parseNoMarkup, parser);
   
-  parseHtmlAst(/** @type {string}*/str){
+  const parseHtmlAst = (/** @type {string}*/str)=>{
     return NewParser.parseAstHtml(str);
   }
-  parseHtml(/** @type {string}*/str){
+  const parseHtml = (/** @type {string}*/str)=>{
     //@ts-ignore
-    return this._parser._evalAst(this.parseHtmlAst(str));
+    return parser._evalAst(parseHtmlAst(str));
   }
-  parseElem(/** @type {HTMLElement}*/elem, /** @type {('clear'|'hide'|'remove')?}*/action){
+  const parseElem = (/** @type {HTMLElement}*/elem, /** @type {('clear'|'hide'|'remove')?}*/action) => {
     const html = elem.innerHTML;
     if(!action){} // Do nothing
     else if(action=='clear') elem.innerHTML = '';
     else if(action=='remove') elem.remove();
     else if (action=='hide') elem.classList.add('caph-hidden');
-    return this.parseHtml(html);
+    return parseHtml(html);
   }
+  const plugin = bind(parser.plugin, parser);
+  const scriptLoader = parser.scriptLoader;
+  const load = bind(scriptLoader.load, scriptLoader);
+  const loadFont = bind(scriptLoader.loadFont, scriptLoader);
+  const injectStyle = bind(scriptLoader.injectStyle, scriptLoader);
 
-  plugin = bind(this._parser.plugin, this._parser);
+  const _preactGlobals = preactGlobals;
+  const contexts = _preactGlobals.contexts;
+  const menu = _preactGlobals.menu;
+  const listenToEvent = bind(_preactGlobals.listenToEvent, _preactGlobals);
+  const listenToGlobal = bind(_preactGlobals.listenToGlobal, _preactGlobals);
   
-  _scriptLoader = this._parser.scriptLoader;
-  load = bind(this._scriptLoader.load, this._scriptLoader);
-  loadFont = bind(this._scriptLoader.loadFont, this._scriptLoader);
-  injectStyle = bind(this._scriptLoader.injectStyle, this._scriptLoader);
+  return {
+    // Exported utils:
+    until: MyPromise.until, assert, sleep, collections: { Queue },
+    get currentSrc() {
+      const elem = document?.currentScript;
+      return /** @type {string}*/(elem&&elem['src']);
+    },
+    get mathParser(){ return parser.mathParser; },
+    mathMacros: {},
+    set mathParser(/** @type {'katex'|'mathjax'} */value) {
+      parser.mathParser = value;
+    },
+    parseAst,
+    parser,
+    pluginDefs,
+    parse,
+    parseNoMarkup,
+    parseHtmlAst,
+    parseHtml,
+    parseElem,
+    plugin,
+    scriptLoader,
+    load,
+    loadFont,
+    injectStyle,
+    _preactGlobals,
+    contexts,
+    menu,
+    listenToEvent,
+    listenToGlobal,
+  };
+})();
 
-  _preactGlobals = preactGlobals;
-  contexts = this._preactGlobals.contexts;
-  menu = this._preactGlobals.menu;
-  listenToEvent = bind(this._preactGlobals.listenToEvent, this._preactGlobals);
-  listenToGlobal = bind(this._preactGlobals.listenToGlobal, this._preactGlobals);
-  
-  constructor() {}
 
-  mathMacros = {};
+/** @namespace */
+var caph = (() => {
+  const any = /**@type {any} **/(null);
+  /** @typedef {Object} Elem */
+  /** @typedef {(props:Object)=>Elem} Component*/
+  /** @template T @param {T} value @param {string} valueName  @returns {T extends undefined ? never : T} */ function assertDefined(value, valueName) {return any;}
+  /** @template T @param {T} condition @param {any} messages  @returns {T extends false ? never : T extends null ? never: T extends undefined ? never: T extends 0 ? never: void} */ function assert(condition, ...messages){ return any; }
+  const sleep = /** @type {(ms:number)=>Promise<void>}*/(any);
+  const until = /** @type {(callback:()=>any)=>Promise<void>}*/(any);
+  const parse = /** @type {(literals:TemplateStringsArray, ...values)=>Elem}*/(any);
+  /** @lends caph */
+  let typed = {
+    assertDefined, assert, sleep, until,
+    parse,
+  };
+  typed = eval("caph"); // Critical! Facade would replace the module otherwise.
+  return typed;
+})();
 
-  set mathParser(/** @type {'katex'|'mathjax'} */value) {
-    this._parser.mathParser = value;
-  }
-  get mathParser(){ return this._parser.mathParser; }
 
-  get currentSrc() {
-    //@ts-ignore
-    return /** @type {string}*/(document.currentScript.src);
-  }
-}
 
 caph.injectStyle(`
 div.caph-paragraph + div.caph-paragraph { margin-top: 1em; }
 .caph-paragraph h1,h2,h3,h4,h5,h6,ul,ol{ margin:0; }
 `);
-
-
-
-
 
 // tab effects: https://alvarotrigo.com/blog/html-css-tabs/
 caph.injectStyle(`

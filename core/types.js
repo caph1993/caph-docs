@@ -1,30 +1,29 @@
-/**
- * @typedef {Object} T_PreactVDomElement
-*/
-/**
- * @typedef {Object} T_PreactContext
-*/
-/**
- * @typedef {Object} T_PreactFragment
-*/
-/**
- * @template T
- * @typedef {Object} Preact<T>
- * @property {(initial:T|(()=>T))=>[T, ((T)=>void)]} useState
- * @property {(effect:(()=>void)|(()=>(()=>void)), deps?)=>void} useEffect
- * @property {(effect:(()=>T), deps?)=> T} useMemo
- * @property {(T_PreactVDomElement, HTMLElement)=>void} render
- * @property {(tag:string, props?, ...children)=>T_PreactVDomElement} createElement
- * @property {()=>T_PreactContext} createContext
- * @property {T_PreactFragment} Fragment
-*/
-/**
- * @typedef {Object} FabricLibrary
-*/
+/** @typedef {Object} Elem */
+/** @typedef {Object} Context */
+/** @typedef {Object} Fragment */
 
-//@ts-ignore
-var /**@type {Preact}*/preact = window.preact;
+/** @namespace */
+var preact = (() => {
+  const any = /**@type {any} **/(null);
+  /** @typedef {()=>(void|Promise<void>)} DismountEffect */
+  /** @template T @function @param {T|(()=>T)} initial @returns {[T, ((value:T)=>void)]} */ function useState(initial) { return any; };
+  /** @template T @function @param {()=>T} effect @param {any[]?} deps @returns {T} */ function useMemo(effect, deps) { return any; };
+  /** @template F @function @param {F} callback @param {any[]?} deps @returns {F} */ function useCallback(callback, deps) { return any; };
+  const useEffect = /** @type {(effect: (()=>(void|Promise<void>|DismountEffect)), deps?:any[])=>void}*/(any);
+  const render = /** @type {(Elem, HTMLElement)=>void}*/(any);
+  const createElement = /** @type {(tag:string, props?, ...children)=>Elem}  */(any);
+  const createContext = /** @type {()=>Context} */(any);
+  const Fragment = /** @type {Fragment} */(any);
+  /** @lends preact */
+  let typed = {
+    useState, useMemo, useCallback, useEffect,
+    render, createElement, createContext, Fragment,
+  };
+  typed = eval("window.preact"); // Critical!
+  return typed;
+})();
 
+/** @typedef {Object} FabricLibrary */
 //@ts-ignore
 var /**@type {Window}*/ window = window || {};
 
