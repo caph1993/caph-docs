@@ -2,5 +2,7 @@
 !.gitignore
 __*
 !__init__.py
+node_modules
 
 MEGA-caph-info-home
+MEGA-caph-info-private
