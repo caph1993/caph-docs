@@ -1,14 +1,11 @@
 //@ts-check
 /// <reference path="parser.js" />
-
 //require('../build/build-tools.js');
-const window = {};
-const fs = require('fs');
-eval(fs.readFileSync('./utils.js', 'utf8'));
-eval(fs.readFileSync('./parser.js', 'utf8'));
+import {NewParser} from "./parser";
+import {isString} from "./utils";
 
 function main(){
-  var {parseAst0, parseAst1, parseAst2, parse, parse1, parse2} = __caph_definitions__.NewParser.debugParserFactory(null);
+  var {parseAst0, parseAst1, parseAst2, parse, parse1, parse2} = NewParser.debugParserFactory(null);
 
   function assertEq(vDom1, vDom2){
     const out = diff(vDom1, vDom2);
@@ -17,7 +14,7 @@ function main(){
     console.error('Difference found');
     console.warn(sub1);
     console.warn(sub2);
-    if(!is_string(sub1)&&!is_string(sub2)){
+    if(!isString(sub1)&&!isString(sub2)){
       const {tag:tag1, props:props1, children:children1} = sub1;
       const {tag:tag2, props:props2, children:children2} = sub2;
       console.log(tag1, props1, children1 && children1.length);
@@ -27,7 +24,7 @@ function main(){
   }
   const toEntries = obj => obj && Object.keys(obj).map(k => [k, obj[k]]);
   function diff(vDom1, vDom2){
-    if(is_string(vDom1)!=is_string(vDom2)) return [vDom1, vDom2, 'tag'];
+    if(isString(vDom1)!=isString(vDom2)) return [vDom1, vDom2, 'tag'];
     const {tag:tag1, props:props1, children:children1} = vDom1;
     const {tag:tag2, props:props2, children:children2} = vDom2;
     if (tag1 !== tag2) return [vDom1, vDom2, 'tag'];

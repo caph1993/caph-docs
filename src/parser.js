@@ -1,8 +1,6 @@
-export default function bar() {
-  console.log('hey');
-}
-
-
+//@ts-check
+/// <reference path="types.js" />
+import { isString, assert, assertNonNull } from "./utils";
 
 /** @typedef {({children, ...props})=>any} ComponentType*/
 /** @typedef {Object} AttributesType*/
@@ -142,7 +140,7 @@ export const BaseParser = (class {
   };
 
   static optionalClose(/** @type {TagType}*/ tag){
-    if(!tag || !is_string(tag)) return null;
+    if(!tag || !isString(tag)) return null;
     return this._optionalClose[/** @type {string} tag */(tag)];
   }
 
@@ -272,7 +270,7 @@ export const BaseParser = (class {
     let /** @type {TagType} */ tag;
     if (_tag==this.ESC){
       tag = this.values[this.valueIndex++];
-      if(is_string(tag)) this.throw(`Tag must be a component, not a string.`);
+      if(isString(tag)) this.throw(`Tag must be a component, not a string.`);
     }
     else if(!_tag.length) tag = null; //null means fragment
     else if(_tag.match(/[^a-z0-9._-]/i)) this.throw(`Error with tag ${_tag}`);
@@ -348,7 +346,7 @@ export const BaseParser = (class {
       } else{
         this.parseChildrenAndParentClose(); // (Huge step)
         if(!spacing){
-          if(!is_string(tag)) spacing = 'jsx';
+          if(!isString(tag)) spacing = 'jsx';
           else if(tag=='pre' || tag=='textarea') spacing = 'pre';
           else spacing = 'jsx';
         }
@@ -373,8 +371,8 @@ export const BaseParser = (class {
       });
     }
     const ESC = '\ue000';
-    const stack = children.filter(x=>!is_string(x)).reverse();
-    const text = children.map(x=>is_string(x)?x:ESC).join('');
+    const stack = children.filter(x=>!isString(x)).reverse();
+    const text = children.map(x=>isString(x)?x:ESC).join('');
     const newChildren = [];
     text.split(ESC).forEach((str, i)=>{
       if(i) newChildren.push(stack.pop());
@@ -388,14 +386,14 @@ export const BaseParser = (class {
   // https://html.spec.whatwg.org/multipage/syntax.html#element-restrictions
   static spacingRulesPre(children){
     const first = children[0];
-    if(is_string(first) && first.startsWith('\n')) children[0] = children[0].slice(1);
+    if(isString(first) && first.startsWith('\n')) children[0] = children[0].slice(1);
     return children;
   }
 
   static spacingRulesParagraphs(children){
     const ESC = '\ue000';
-    const stack = children.filter(x=>!is_string(x)).reverse();
-    const text = children.map(x=>is_string(x)?x:ESC).join('');
+    const stack = children.filter(x=>!isString(x)).reverse();
+    const text = children.map(x=>isString(x)?x:ESC).join('');
     /** @type {AstNode[]}*/
     const newChildren = text.split(/\s*?\n\s*?\n\s*/s).map(text=>{
       const elems = [];
@@ -461,7 +459,7 @@ export const BaseParser = (class {
   }
   static parseAstHtml(/** @type {string}*/str){
     const astUndoHtml = (/** @type {AstNode}*/ root) => {
-      if (is_string(root)) return this.htmlSafeUndo(root);
+      if (isString(root)) return this.htmlSafeUndo(root);
       if (!Array.isArray(root)) return root;
       //@ts-ignore
       root[2] = root[2].map(child => astUndoHtml(child));
@@ -479,7 +477,7 @@ export const BaseParser = (class {
   */
   static evalAstFactory(post=null){
     const {createElement, FragmentComponent} = post||{
-      createElement: (type, props, ...children)=> (!type||is_string(type))?
+      createElement: (type, props, ...children)=> (!type||isString(type))?
         {tag:type, props, children} : type({children, ...props}),
       FragmentComponent: ({children})=>({tag:null, props:null, children}),
     };
@@ -539,7 +537,7 @@ export const BaseParser = (class {
 
 });
 
-const NewParser = class extends BaseParser {
+export const NewParser = class extends BaseParser {
 
   static customRules = [
     ...super.customRules,

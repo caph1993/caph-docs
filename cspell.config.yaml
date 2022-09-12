@@ -1,14 +1,15 @@
 version: "0.2"
 words:
+  - arange
   - informationally
   - injectively
-  - submatrix
-  - subproblems
-  - preceeding
   - overriden
   - Pinzón
+  - preceeding
+  - submatrix
+  - subproblems
 ignoreWords:
-  - IIFE # https://developer.mozilla.org/en-US/docs/Glossary/IIFE
+  - IIFE
   - katex
   - mathjax
   - lzutf8

@@ -1,14 +1,12 @@
+caph.defineFileComponent((async ()=>{
+  caph.load('@dist/libraries/katex.min.lz.js'/*libraries/katex/katex.min.js*/);
+  caph.load('@dist/libraries/katex-nofonts.min.css'/*libraries/katex/katex-nofonts.min.css*/);
 
-caph.pluginDefs[caph.currentSrc] = (async()=>{
-  
-  await caph.load('caph-docs/libraries/katex/katex.min.js');
-  await caph.load('caph-docs/libraries/katex/katex-nofonts.min.css');
+  const katex = await caph.until(()=>window["katex"]);
   for (const key in caph.mathMacros) {
-    caph.katex.__defineMacro(`\\${key}`, caph.mathMacros[key]);
+    katex.__defineMacro(`\\${key}`, caph.mathMacros[key]);
   }
-  await caph.load('caph-docs/plugins/katex/katex.css');  
-  caph.loadFont('katex'); // request but don't await fonts
-
+  caph.load('@dist/fonts/font-katex.css') // request but don't await fonts
 
   return ({ children, displayMode=false }) => {
     let formula = (x => (Array.isArray(x) ? x.join('') : x))(children);
@@ -16,17 +14,29 @@ caph.pluginDefs[caph.currentSrc] = (async()=>{
     if(caph.mathPreprocessor) formula = caph.mathPreprocessor(formula);
     let htmlFormula;
     try{
-      htmlFormula = caph.katex.renderToString(formula, {displayMode:false});
+      htmlFormula = katex.renderToString(formula, {displayMode:false});
     }catch(err){
       console.warn(formula);
       console.error(err);
-      htmlFormula = caph.katex.renderToString(formula, {
+      htmlFormula = katex.renderToString(formula, {
         displayMode: false,
         throwOnError: false,
       });
     }
     const vNode = caph.parseHtml(htmlFormula);
-    if(displayMode) return caph.parse`<div style="width:100%; text-align:center">${vNode}</div>`
+    if(displayMode) return caph.parse`<div class="caph-katex-display-parent">${vNode}</div>`
     return vNode;
   }
-})();
+})());
+caph.injectStyle(`
+span.katex.display.formula{
+  text-align: center;
+}
+span.katex{
+  font-size: 1em;
+}
+.caph-katex-display-parent{
+  width:100%;
+  text-align:center;
+}
+`);

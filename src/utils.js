@@ -1,30 +1,16 @@
 //@ts-check
 
-/** 
- * JSDoc types lack a non-undefined assertion.
- * https://github.com/Microsoft/TypeScript/issues/23405#issuecomment-873331031
- *
- * Throws if the supplied value is _undefined_ (_null_ is allowed).\
- * Returns (via casting) the supplied value as a T with _undefined_ removed from its type space.
- * This informs the compiler that the value cannot be _undefined_.
- * @template T
- * @param {T} value
- * @param {string} [valueName]
- * @returns {T extends undefined ? never : T}
- */
-function assertDefined(value, valueName) {
+/** https://github.com/Microsoft/TypeScript/issues/23405#issuecomment-873331031 */
+/** @template T  @param {T} value @param {string} [valueName] @returns {T extends undefined ? never : T} */
+export function assertDefined(value, valueName) {
   if (value === undefined) {
     throw new Error(`Encountered unexpected undefined value${valueName? ` for '${valueName}'` : ""}`);
   }
   return /** @type {*} */ (value);
 }
 
-/**
- * @template T
- * @param {T} value
- * @returns {T extends null ? never : T}
- */
-function assertNonNull(value) {
+/** @template T @param {T} value @returns {T extends null ? never : T} */
+export function assertNonNull(value) {
   if (!value && (value===null||value === undefined)) throw new Error(`Encountered unexpected undefined value`);
   //@ts-ignore
   return value;
@@ -32,7 +18,7 @@ function assertNonNull(value) {
 
 
 /** @type {(obj: any) => obj is String} */
-function is_string(obj) {
+export function isString(obj) {
   return Object.prototype.toString.call(obj) === "[object String]";
 }
 
@@ -65,12 +51,12 @@ function is_string(obj) {
 // }
 
 
-function assert(/** @type {boolean|any}*/condition, ...messages) {
+export function assert(/** @type {boolean|any}*/condition, ...messages) {
   if (condition) return;
   throw new Error(...messages);
 }
 
-function sleep(/** @type {number}*/ms) {
+export function sleep(/** @type {number}*/ms) {
   return new Promise((ok, err) => setTimeout(ok, ms));
 }
 
@@ -136,7 +122,7 @@ class MyArray {
   }
 }
 
-class MyPromise {
+export class MyPromise {
   static async sleep(ms) {
     await new Promise((ok, err) => setTimeout(ok, ms));
   }
@@ -186,14 +172,15 @@ class MyPromise {
     let finished = false;
     let [resp, _] = await Promise.all([
       promise.then(e => { finished = true; return e; }),
-      caph.until(() => finished, { timeout: ms })
+      MyPromise.until(() => finished, { timeout: ms })
     ]);
     return resp;
   }
 }
+export const until=MyPromise.until;
 
 
-class MyDocument {
+export class MyDocument {
 
   /**
    * @param {string} tag 
@@ -395,7 +382,7 @@ function update_property_handler(object, property, create_handler) {
 }
 
 
-const Queue = class {
+export const Queue = class {
 
   constructor(arr) {
     this.data = [...(arr || [])];

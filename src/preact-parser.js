@@ -1,35 +1,18 @@
 //@ts-check
 /// <reference path="types.js" />
-/// <reference path="utils.js" />
-/// <reference path="parser.js" />
-/// <reference path="script-loader.js" />
+import { assertNonNull, assert, until, sleep } from './utils.js';
+import { BaseParser, NewParser } from './parser.js';
+import { load, parseKey, injectStyle } from './script-loader';
+import * as preact from 'preact';
+import { useMemo, useCallback, useState, useEffect} from 'preact/hooks';
 
-/* lzutf8, utils, preact, preact hook are injected above this comment*/
+/** @typedef {(props:Object)=>Elem} Component */
 
-/**
- * @typedef {(props:Object)=>Elem} Component
-*/
-
-const preactParser = new class {
+export const preactParser = new class {
   
-  /** @type {'katex'|'mathjax'} */
-  mathParser = 'katex';
+  /** @type {'@katex'|'@mathjax'} */
+  mathParser = '@katex';
   codeParser = '@codeFallback';
-  scriptLoader = scriptLoader;
-
-  officialPlugins = [
-    'core-menu',
-    'core-about',
-    'katex',
-    'document',
-    'whiteboard',
-    'hyphenator',
-    // 'slides',
-    'mathjax-svg',
-    'fabric',
-    'codemirror',
-    // 'figure-editor',
-  ];
 
   _parser = NewParser;
 
@@ -50,7 +33,7 @@ const preactParser = new class {
 
   constructor() {
     this.contexts = {};
-    this.contexts['core-menu'] = preact.createContext();
+    this.contexts['core-menu'] = preact.createContext(null);
   }
 
   createElement(type, props, ...children) {
@@ -65,14 +48,13 @@ const preactParser = new class {
     //   console.log(type, props, children);
     // }
     const vDom = preact.createElement(type, props, ...children);
-    vDom.pre = true;
     return vDom;
   }
 
   /** @type {{[key:string]: Component|Promise<Component>}} */
   pluginDefs = {
     'core-error': (async () => ({ children, tooltip }) => {
-      const help = preact.useCallback(() => {
+      const help = useCallback(() => {
         const win = window.open('', '_blank');
         if (!win) throw new Error('Popup blocked');
         win.document.write(`
@@ -93,11 +75,11 @@ const preactParser = new class {
         <code class="caph-flashing caph-error" title=${tooltip}>${children || tooltip || 'Error'}</code>
       `;
     })(),
-    '@paragraphs': (async () =>({ children }) => preact.useMemo(
+    '@paragraphs': (async () =>({ children }) => useMemo(
         ()=>this._evalAst([null, null, this._parser.spacingRulesParagraphs(preact.toChildArray(children))]),
         [children],
     ))(),
-    '@codeFallback': (async () => ({ children, progLang }) => preact.useMemo(
+    '@codeFallback': (async () => ({ children, progLang }) => useMemo(
       ()=>this.parse`<code>${children}</code>`,
       [children],
     ))(),
@@ -113,16 +95,13 @@ const preactParser = new class {
 
   /** @type {{[key:string]: Component}} */
   _componentWrappers = {};
-  _randomSessionSuffix = ('' + Math.random()).slice(2);
   componentWrapper(key) {
-    if (key.match(/[^#\?]*.js(#.*|\?.*|)$/)) key = this.resolveURL(key);
     const cache = this._componentWrappers;
     return cache[key] || (cache[key] = this.newPluginLoader(key));
   }
 
   /** @returns {Component} */
   newPluginLoader(/** @type {string}*/ key){
-    const scriptLoader = this.scriptLoader;
     const pluginDefs = this.pluginDefs;
     const parent = this;
   
@@ -157,23 +136,21 @@ const preactParser = new class {
       return parent.parse`<${parent.plugin('core-error')} tooltip=${loadStatus.error}/>`;
     }
 
+    const {url, proxyKey} = parseKey(key);
     const main = async ()=>{
       // 1. Put the plugin script in the document head and wait for the browser to load the script
       try{
         if (pluginDefs.hasOwnProperty(key)){} // already loaded
-        else if (parent.officialPlugins.includes(key)) {
-          const url = `${scriptLoader.dist}/plugin-${key}.js`;
-          //@ts-ignore (Component instead of Promise<Component>)
-          pluginDefs[key] = parent.componentWrapper(url);
-        } else if (key.match(/[^#\?]+.js(#.*|\?.*|)$/)) {
-          let isOfficial = parent.officialPlugins.map(k => `${scriptLoader.dist}/plugin-${k}.js`).includes(key);
-          const url = isOfficial ? key : `${key}?${parent._randomSessionSuffix}`;
-          await scriptLoader.load(url);
-          pluginDefs[key] = pluginDefs[key] || pluginDefs[url];
-          assert(pluginDefs[key], 'Plugin not declared in file: ' + key);
+        else if (proxyKey) {
+          pluginDefs[key] = parent.componentWrapper(proxyKey);
+        } else if(url) {
+          load(url);
+          await until(() => pluginDefs[url], { timeout: 3800});
+          // assert(pluginDefs[url], `Plugin ${key} not declared in file ${url}`);
+          pluginDefs[key] = pluginDefs[url];
           if (key != url) delete pluginDefs[url];
-        }else {
-          await MyPromise.until(() => pluginDefs[key], {timeout: 3800});
+        } else {
+          await until(() => pluginDefs[key], {timeout: 3800});
         } // User plugin
       } catch(err){
         loadStatus.error = err || true;
@@ -194,13 +171,15 @@ const preactParser = new class {
     }
     main();
     return ({ children, ...props })=>{
-      const [trigger, setTrigger] = preact.useState(0);
+      const [trigger, setTrigger] = useState(0);
 
-      preact.useEffect(async () => {
-        await MyPromise.until(() => loadStatus.renderReady || loadStatus.error);
+      const asyncLoad = useCallback(async () => {
+        await until(() => loadStatus.renderReady || loadStatus.error);
         setTrigger(Math.random() * 1e12); // refresh this component
       }, []);
-      const Component = preact.useMemo(()=>{
+      useEffect(()=>{asyncLoad()}, []);
+      
+      const Component = useMemo(()=>{
         if (loadStatus.renderReady) return FinalComponent;
         else if (loadStatus.error) return LoadErrorComponent;
         else return LoadingComponent;
@@ -215,7 +194,7 @@ const preactParser = new class {
    * @param {(data:any)=>void} callback 
    */
   listenToEvent(eventName, callback) {
-    preact.useEffect(() => {
+    useEffect(() => {
       const actualCallback = (/** @type {Event|CustomEvent}*/ e) => {
         //@ts-ignore: event.detail is not defined for non-custom events
         try{callback(e.detail);}
@@ -236,19 +215,16 @@ const preactParser = new class {
     return;
   }
   async untilGlobal(eventName) {
-    await MyPromise.until(() => this._globals[eventName]);
-    await MyPromise.sleep(500);
+    await until(() => this._globals[eventName]);
+    await sleep(500);
   }
   listenToGlobal(eventName) {
-    const initial = preact.useMemo(()=>this._globals[eventName], [eventName]);
-    const [value, setValue] = preact.useState(initial);
+    const initial = useMemo(()=>this._globals[eventName], [eventName]);
+    const [value, setValue] = useState(initial);
     this.listenToEvent(eventName, setValue);
     return value;
   }
 
-  resolveURL(url) {
-    return new URL(url, document.baseURI).href;
-  }
   // _URL_is_absolute(url) {
   //   //https://stackoverflow.com/q/10687099
   //   return new URL(document.baseURI).origin !== new URL(url, document.baseURI).origin;
@@ -256,7 +232,7 @@ const preactParser = new class {
 
 }
 
-preactParser.scriptLoader.injectStyle(`
+injectStyle(`
 .caph-error{
   color: #ce1111;
 }
