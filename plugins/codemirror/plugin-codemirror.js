@@ -37,11 +37,13 @@ caph.defineFileComponent((async ()=>{
     lineNumbers=true,
     scrollPastEnd=false,
     autoRefresh=true, // necessary for Reveal.js
+    onId=(()=>{}),
      ...props }) => {
     let code = (x => (Array.isArray(x) ? x.join('') : x))(children);
     let options = {keyMap, theme, indentUnit, tabSize, lineWrapping, lineNumbers, scrollPastEnd, autoRefresh, ...props };
     // if (unindent) code = caph.unindent(code);
     const id = preact.useMemo(()=>'codemirror-'+(''+Math.random()).slice(2), []);
+    preact.useEffect(()=>onId(id), [id]);
 
     // const { getItem } = preact.useContext(caph.contexts.storage);
     // const darkTheme = getItem('darkTheme');
