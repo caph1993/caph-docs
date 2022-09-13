@@ -38,5 +38,6 @@ span.katex{
 .caph-katex-display-parent{
   width:100%;
   text-align:center;
+  overflow-x: scroll;
 }
 `);
