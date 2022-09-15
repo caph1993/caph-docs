@@ -385,8 +385,8 @@ function update_property_handler(object, property, create_handler) {
 export const Queue = class {
 
   constructor(arr) {
-    this.data = [...(arr || [])];
-    this.lr = [0, this.data.length];
+    this.data = [...(arr || []), null];
+    this.lr = [0, (arr?arr.length:0)];
   }
   get capacity() {
     return this.data.length;
@@ -413,7 +413,7 @@ export const Queue = class {
   };
   resize(newLength) {
     if (newLength === undefined) {
-      if (this.length + 1 >= this.capacity)
+      if (this.length + 2 >= this.capacity)
         return this.resize(1 + 3 * this.length);
       if (this.length <= this.capacity >> 2)
         return this.resize(this.capacity >> 1);

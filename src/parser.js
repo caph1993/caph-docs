@@ -189,7 +189,7 @@ export const BaseParser = (class {
       if(this.tryRun(new RegExp(`${this.ESC}`, 'ys'))){
         let value = this.values[this.valueIndex++];
         for(value of Array.isArray(value)?value:[value]){
-          if(value) this.children.push(['@injected', null, [value]]);
+          if(value||value===0) this.children.push(['@injected', null, [value]]);
         }
         continue;
       }
