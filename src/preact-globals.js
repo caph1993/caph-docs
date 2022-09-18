@@ -1,10 +1,9 @@
 //@ts-check
 import { MyPromise } from "./utils";
-import { preactParser } from "./preact-parser";
+import { parser, plugin } from "./preact-parser";
 import { createContext, render } from "preact";
 import {useMemo, useCallback, useState, useEffect} from 'preact/hooks';
 
-export const parser = preactParser;
 export const contexts = {};
 contexts['core-menu'] = createContext(null);
 
@@ -73,8 +72,8 @@ export async function inject(vDom) {
 
 MyPromise.until(() => document.body).then(()=>{
   inject(parser.parse`
-    <${parser.plugin('@core-menu')}/>
-    <${parser.plugin('@core-about')}/>
+    <${plugin('@core-menu')}/>
+    <${plugin('@core-about')}/>
   `);
 });
 

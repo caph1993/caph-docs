@@ -20,16 +20,26 @@ import { isString, assert, assertNonNull } from "./utils";
 /** @typedef {AstNode[]} AstNodeArray*/
 
 
-const ConsoleProxy = class{
-  log(...args){ console.log(...args);}
-  warn(...args){ this.warn(...args);}
-  error(...args){ this.error(...args);}
+
+/**@param {string} str*/
+function htmlSafe(str) {
+  // e.g. converts < into &lt;
+  return new Option(str).innerHTML;
+}
+
+const htmlSafeUndo = (/** @type {string} */ str)=>{
+  // e.g. converts &lt; into <, etc. Prevents left trim caused by DOMParser
+  const [, l, content] = assertNonNull(str.match(/^(\s*)(.*)$/s));
+  const doc = new DOMParser().parseFromString(content, "text/html");
+  const text = l+(doc.documentElement.textContent || '');
+  // if(str!=text) console.log(`Converted ${str} into ${text}`)
+  return text;
 }
 
 
 //https://stackoverflow.com/a/70329711
 
-export const BaseParser = (class {
+export const AstParser = (class {
 
   ESC = '\ue000';
   SPEC = `https://html.spec.whatwg.org/multipage/syntax.html`;
@@ -41,23 +51,22 @@ export const BaseParser = (class {
     return new cls(strings, values).root
   }
 
-  /** @type {CustomRule[]} */
-  static customRules = [];
-
   warn(...args){console.warn(...args)}; // Overriden during tests
   error(...args){console.error(...args)}; // Overriden during tests
 
 
   /**
    * @param {readonly string[]} strings
+   * @param {readonly any[]} values
+   * @param {readonly CustomRule[]} customRules
    * @param {0|1|2} debug
   */
-  constructor(strings, values, debug=0){
-    /** @type {typeof BaseParser} */ //@ts-ignore
+  constructor(strings, values, customRules=[], debug=0){
+    /** @type {typeof AstParser} */ //@ts-ignore
     this.cls = this.constructor;
     let str = strings.join(this.ESC);
     let escaped = {};
-    let regEscaped = new RegExp(`${this.ESC}|\\\\"|\\\\'|\\\\$\\\\$|\\\\$(?=[^\\\\$])`, 'g');
+    let regEscaped = new RegExp(`${this.ESC}|\\\\"|\\\\'`, 'g');
     str = str.replace(regEscaped, (match, index)=>{
       //console.log(`Escaping ${match} at ${index}`);
       escaped[index] = match;
@@ -72,8 +81,9 @@ export const BaseParser = (class {
     debug && console.log('PARSING', this.str);
     this.DEBUG = debug==2;
 
-    /** @type {CustomRule[]} */
-    this.customRules = this.cls.customRules;
+    //console.log(this.cls);
+    /** @type {readonly CustomRule[]} */
+    this.customRules = customRules;
     /** @type {(tag:TagType)=>(null|string[])} */
     this.optionalClose = this.cls.optionalClose.bind(this.cls);
 
@@ -87,6 +97,24 @@ export const BaseParser = (class {
     /**@type {AstNode} */
     this.root = this.parent;
     this.parseRoot();
+
+    /**@param {CreateElementType} createElement @param {ComponentType} FragmentComponent*/
+    this.evalTree = (createElement, FragmentComponent)=>{
+      const evalTree = (/** @type {AstNode}*/ root) => {
+        if (!Array.isArray(root)) return root;
+        let [tag, props, children] = root;
+        if(tag=='@injected') return root[2][0];
+        assert(Array.isArray(children));
+        children = children.map(child =>evalTree(child));
+        if(tag==null){
+          assert(props==null);
+          tag = FragmentComponent;
+        }
+        return createElement(tag, props, ...children);
+      }
+      return evalTree(this.root);
+    }
+    
   }
   
   parseRoot(){
@@ -107,16 +135,14 @@ export const BaseParser = (class {
   get parentProps(){ return this.parent[1]; }
   get children(){ return this.parent[2]; }
 
-
   childlessTags = {
-    br:true, '!doctype': true, area: true, base: true, col: true, command: true, embed: true, hr: true,img: true, input: true,keygen: true, link: true, meta: true, param: true, source: true, track: true, wbr: true
+    br: true, '!doctype': true, area: true, base: true, col: true, command: true, embed: true, hr: true,img: true, input: true, keygen: true, link: true, meta: true, param: true, source: true, track: true, wbr: true
   };
 
   // spacePreservingTags = {
   //   pre: true, span: true, code: true, p: true, b: true, i: true,
   //   a: true, li: true,
   // };
-
 
   // https://html.spec.whatwg.org/multipage/syntax.html#optional-tags
   /** @type {{[key:string]:string[]}}*/
@@ -141,7 +167,7 @@ export const BaseParser = (class {
 
   static optionalClose(/** @type {TagType}*/ tag){
     if(!tag || !isString(tag)) return null;
-    return this._optionalClose[/** @type {string} tag */(tag)];
+    return this._optionalClose[tag];
   }
 
   run(/** @type {RegExp}*/regExp){
@@ -314,7 +340,7 @@ export const BaseParser = (class {
         else if(prevValue!==undefined) this.warn(`Replacing attribute ${key}.\nPrevious and new values:`, prevValue, value);
         
         if(key.startsWith('(')){
-          if(key=='(component)') key = 'data-caph'; // ?? temporary code
+          if(key=='(component)') {} // ?? temporary code
           else if(key=='(spacing)'){
             if(!['jsx', 'pre', 'tex', 'raw'].includes(value)) this.throw(`Invalid spacing mode: ${value}`);
             spacing = value;
@@ -336,9 +362,9 @@ export const BaseParser = (class {
         let code = m[1];
         if(code.match(/^\s*(String\.raw)?\`(.*)\`\s*$/ys)){
           code = eval(code);
-          code = this.cls.htmlSafe(code);
+          code = htmlSafe(code);
           this.parent[0] = 'div';
-          this.parent[1] = {'data-caph':'@code', ...this.parentProps};
+          this.parent[1] = {'(component)':'code', ...this.parentProps};
           this.parent[2] = [code];
         } else{
           this.parent[2] = [code];
@@ -442,83 +468,6 @@ export const BaseParser = (class {
       return this.values[this.valueIndex++];
     });
   }
-
-
-  static htmlSafe(str) {
-    // e.g. converts < into &lt;
-    return new Option(str).innerHTML;
-  }
-
-  static htmlSafeUndo = (str)=>{
-    // e.g. converts &lt; into <, etc. Prevents left trim caused by DOMParser
-    const [, l, content] = assertNonNull(str.match(/^(\s*)(.*)$/s));
-    const doc = new DOMParser().parseFromString(content, "text/html");
-    const text = l+(doc.documentElement.textContent || '');
-    // if(str!=text) console.log(`Converted ${str} into ${text}`)
-    return text;
-  }
-  static parseAstHtml(/** @type {string}*/str){
-    const astUndoHtml = (/** @type {AstNode}*/ root) => {
-      if (isString(root)) return this.htmlSafeUndo(root);
-      if (!Array.isArray(root)) return root;
-      //@ts-ignore
-      root[2] = root[2].map(child => astUndoHtml(child));
-      return root;
-    }
-    // Parse html, undoing html safe conversions, and then create element
-    /** @type {TemplateStringsArray}*/ //@ts-ignore
-    let tmp = {raw:[str]};
-    let root = this.parseAst(tmp);
-    return astUndoHtml(root);
-  }
-
-  /**
-   * @param {null|{createElement:CreateElementType, FragmentComponent:ComponentType}} post
-  */
-  static evalAstFactory(post=null){
-    const {createElement, FragmentComponent} = post||{
-      createElement: (type, props, ...children)=> (!type||isString(type))?
-        {tag:type, props, children} : type({children, ...props}),
-      FragmentComponent: ({children})=>({tag:null, props:null, children}),
-    };
-
-    const createTree = (/** @type {AstNode}*/ root) => {
-      if (!Array.isArray(root)) return root;
-      let [tag, props, children] = root;
-      if(tag=='@injected') return root[2][0];
-      assert(Array.isArray(children));
-      children = children.map(child =>createTree(child));
-      if(tag==null){
-        assert(props==null);
-        tag = FragmentComponent;
-      }
-      return createElement(tag, props, ...children);
-    }
-    return createTree;
-  }
-
-  static parserFactory(evalAst){
-    const cls = this;
-    return (/** @type {TemplateStringsArray} */ strings, ...values)=>(
-      evalAst(cls.parseAst(strings, ...values))
-    );
-  }
-
-  /**
-   * @param {null|{createElement:CreateElementType, FragmentComponent:ComponentType}} post
-  */
-  static debugParserFactory(post=null){
-    const cls = this;
-    const evalAst = cls.evalAstFactory(post);
-    const parse = cls.parserFactory(evalAst);
-    const parse1 = ({raw:strings}, ...values)=>evalAst(new cls(strings, values, 1).root);
-    const parse2 = ({raw:strings}, ...values)=>evalAst(new cls(strings, values, 2).root);
-    const parseAst1 = ({raw:strings}, ...values)=> new cls(strings, values, 1).root;
-    const parseAst2 = ({raw:strings}, ...values)=> new cls(strings, values, 2).root;
-    return {parse, parse1, parse2, parseAst1, parseAst2, evalAst};
-  }
-
-
   // asString(obj) {
   //   let out = `${obj}`;
   //   if (out == "[object Object]") {
@@ -537,39 +486,71 @@ export const BaseParser = (class {
 
 });
 
-export const NewParser = class extends BaseParser {
 
-  static customRules = [
-    ...super.customRules,
-    {
-      regStart: `(?<!\\\\)\\$\\$`,
-      regEnd: `(?<!\\\\)\\$\\$`,
-      parser: /**@type {RuleParser}*/ ((text)=>['div', {'data-caph': '@math', displayMode:true}, [text]]),
-    },
-    {
-      regStart: `(?<!\\\\)\\$`,
-      regEnd: `(?<!\\\\)\\$`,
-      parser: /**@type {RuleParser}*/ ((text)=>['div', {'data-caph': '@math', displayMode:false}, [text]]),
-      inline: true,
-    },
-    {
-      regStart: `(?<!\\\\)\`\`\``,
-      regEnd: `(?<!\\\\)\`\`\``,
-      parser: /**@type {RuleParser}*/ ((text)=>{
-        text = text.replace(/\\\`\`\`/g, '```');
-        let progLang = assertNonNull(text.match(/^[^\n]*/));
-        return ['div', {'data-caph': '@code', ...(!progLang.length?{}:{progLang})}, [text]];
-      }),
-    },
-    {
-      regStart: `(?<!\\\\)\``,
-      regEnd: `(?<!\\\\)\``,
-      parser: /**@type {RuleParser}*/ ((text)=>{
-        text = text.replace(/\\\`/g, '`');
-        return ['div', {'data-caph': '@code'}, [text]]
-      }),
-      inline: true,
-    },
-  ];
+const exampleCreateElement = /**@type {CreateElementType} */ (type, props, ...children)=> (!type||isString(type))? {tag:type, props, children} : type({children, ...props});
 
+const exampleFragmentComponent = /**@type {ComponentType} */  (({children})=>({tag:null, props:null, children}));
+
+const exampleCustomRules = /** @type {CustomRule[]} */ [
+  {
+    regStart: `(?<!\\\\)\\$\\$`,
+    regEnd: `(?<!\\\\)\\$\\$`,
+    parser: /**@type {RuleParser}*/ ((text)=>['div', {'(component)': '@math', displayMode:true}, [text]]),
+  },
+  {
+    regStart: `(?<!\\\\)\\$`,
+    regEnd: `(?<!\\\\)\\$`,
+    parser: /**@type {RuleParser}*/ ((text)=>['div', {'(component)': '@math', displayMode:false}, [text]]),
+  },
+  {
+    regStart: `(?<!\\\\)\`\`\``,
+    regEnd: `(?<!\\\\)\`\`\``,
+    parser: /**@type {RuleParser}*/ ((text)=>{
+      text = text.replace(/\\\`\`\`/g, '```');
+      let progLang = assertNonNull(text.match(/^[^\n]*/));
+      return ['div', {'(component)': '@code', ...(!progLang.length?{}:{progLang})}, [text]];
+    }),
+  },
+  {
+    regStart: `(?<!\\\\)\``,
+    regEnd: `(?<!\\\\)\``,
+    parser: /**@type {RuleParser}*/ ((text)=>{
+      text = text.replace(/\\\`/g, '`');
+      return ['div', {'(component)': '@code'}, [text]]
+    }),
+  },
+];
+
+
+
+export const createParser = ()=>{
+
+  const settings = {
+    createElement: exampleCreateElement,
+    FragmentComponent: exampleFragmentComponent,
+    customRules: exampleCustomRules,
+    debug: /** @type {0|1|2}*/(0),
+  }
+  
+  const parseAst = (/** @type {TemplateStringsArray} */ templateString, ...values)=> new AstParser(templateString.raw, values, settings.customRules, settings.debug);
+  
+  const parse = (/** @type {TemplateStringsArray} */ templateString, ...values)=> parseAst(templateString, ...values).evalTree(settings.createElement, settings.FragmentComponent);
+
+  const astUndoHtml = (/** @type {AstNode}*/ root) => {
+    if (isString(root)) return htmlSafeUndo(root);
+    if (!Array.isArray(root)) return root;
+    root[2] = root[2].map(child => astUndoHtml(child));
+    return root;
+  }
+  const parseAstHtml = (/** @type {string}*/str) => {
+    // Parse html, undoing html safe conversions, and then create element
+    let tmp = /** @type {TemplateStringsArray}*/(/**@type {any}*/({raw:[str]}));
+    let ast = parseAst(tmp);
+    ast.root = astUndoHtml(ast.root)
+    return ast;
+  }
+  const parseHtml = (/** @type {string}*/str) => parseAstHtml(str).evalTree(settings.createElement, settings.FragmentComponent);
+
+  return { settings, parse, parseAst, parseAstHtml, parseHtml, }
 }
+

@@ -17,7 +17,7 @@ async function main() {
   // Plugins
 
   // Dependencies
-  const tasks = [...distPlugins];
+  const tasks = [{dist:compressor.dist, src:compressor.src, lz:false}, ...distPlugins];
   for (let {src} of distPlugins) {
     //if (!src.endsWith('.js')) continue;
     let content = '' + fs.readFileSync(src);
@@ -26,7 +26,7 @@ async function main() {
       {dist, src, lz:dist.endsWith('.lz.js')}
     );
   }
-  console.log(tasks);
+
   for(let {src, dist} of tasks){
     const tgt = dist.slice(1);
     let text = ''+fs.readFileSync(src);

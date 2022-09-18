@@ -1,12 +1,12 @@
 //@ts-check
 
-
 const compressed = [];
 export const distPlugins = [
   'core-menu',
   'core-about',
   'katex',
   'codemirror',
+  'phonetics',
   // 'fabric.lz.js',
   // 'mathjax-svg',
   // // 'gtag',
@@ -17,7 +17,7 @@ export const distPlugins = [
   // 'hyphenator',
   // 'auto-scroll',
 ].map(name=>({
-  key:`@${name}`,
+  key: `@${name}`,
   dist: `@dist/components/${name}${compressed.includes(name)?'.lz':''}.js`,
   src: `plugins/${name}/plugin-${name}.js`,
 }));

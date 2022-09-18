@@ -1,7 +1,7 @@
 //@ts-check
 import { MyPromise, sleep, assert, Queue, assertNonNull } from "./utils";
-import { NewParser } from "./parser";
-import { preactParser } from "./preact-parser";
+import { createParser as createAstParser } from "./parser";
+import { parser, pluginDefs, plugin, createPreactParser } from "./preact-parser";
 import { contexts, menu, listenToEvent, listenToGlobal } from "./preact-globals";
 import { toChildArray } from "preact";
 import { useMemo, useState } from "preact/hooks";
@@ -16,25 +16,19 @@ import { compressor, decompress } from "./build-constants";
 export const preact = {...preactBase, ...preactHooks};
 window["preact"] = preact;
 
-export { scriptLoader, load, injectStyle };
+export const libraries = {};
+libraries.preact = preact;
+(async()=>{ libraries.lzutf8=await MyPromise.until(()=>window['LZUTF8']); })();
 
-/** @template {Function} T @param {T} func @param {Object} obj @returns {T} */
-const bind = (func, obj)=>func.bind(obj);
+export { scriptLoader, load, injectStyle, createAstParser };
+export {parser, pluginDefs, plugin, createPreactParser};
+export const {parse, parseAst, parseAstHtml, parseHtml} = parser;
 
-export const parseAst = bind(NewParser.parseAst, NewParser);
-export const parser = preactParser;
-export const pluginDefs = parser.pluginDefs;
-export const parse = bind(parser.parse, parser);
-export const parseNoMarkup = bind(parser.parseNoMarkup, parser);
-export const plugin = bind(parser.plugin, parser);
+const noRulesParser = createPreactParser();
+noRulesParser.settings.customRules = [];
+export const {parse: parseNoMarkup} = noRulesParser;
 
-export const parseHtmlAst = (/** @type {string}*/str)=>{
-  return NewParser.parseAstHtml(str);
-}
-export const parseHtml = (/** @type {string}*/str)=>{
-  //@ts-ignore
-  return parser._evalAst(parseHtmlAst(str));
-}
+
 export const parseElem = (/** @type {HTMLElement}*/elem, /** @type {('clear'|'hide'|'remove')?}*/action) => {
   const html = elem.innerHTML;
   if(!action){} // Do nothing
@@ -84,6 +78,13 @@ export const settings = {
 injectStyle(`
 div.caph-paragraph + div.caph-paragraph { margin-top: 1em; }
 .caph-paragraph h1,h2,h3,h4,h5,h6,ul,ol{ margin:0; }
+code {
+  padding: 0em 0.2em;
+  background-color: #f8f9fa;
+  color: #000;
+  border: 1px solid #eaecf0;
+  border-radius: 2px;
+}
 `);
 
 // tab effects: https://alvarotrigo.com/blog/html-css-tabs/

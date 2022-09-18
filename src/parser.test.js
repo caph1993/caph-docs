@@ -1,8 +1,23 @@
 //@ts-check
 /// <reference path="parser.js" />
 //require('../build/build-tools.js');
-import {NewParser} from "./parser";
+import {AstParser} from "./parser";
 import {isString} from "./utils";
+
+
+/**
+ * @param {null | {createElement: CreateElementType;FragmentComponent: ComponentType;}} post
+ * @param {readonly CustomRule[]} customRules
+ */
+ function debugParserFactory(post=null, customRules=[]){
+  const parse1 = ({raw:strings}, ...values)=>new AstParser(strings, values, customRules, 1).evalTree(post);
+  const parse2 = ({raw:strings}, ...values)=>new AstParser(strings, values, customRules, 2).evalTree(post);
+  const parseAst1 = ({raw:strings}, ...values)=> new AstParser(strings, values, customRules, 1).root;
+  const parseAst2 = ({raw:strings}, ...values)=> new AstParser(strings, values, customRules, 2).root;
+  const evalAst = evalAstFactory(post);
+  const parse = parserFactory(evalAst);
+  return {parse, parse1, parse2, parseAst1, parseAst2, evalAst};
+}
 
 function main(){
   var {parseAst0, parseAst1, parseAst2, parse, parse1, parse2} = NewParser.debugParserFactory(null);

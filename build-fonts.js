@@ -1,4 +1,5 @@
 let fs = require('fs');
+let path = require('path');
 
 let fonts = {
   'font-cmu-serif': [
@@ -216,7 +217,9 @@ async function main(){
     for(let font of fonts[key]){
       buff += parseFont(font);
     }
-    fs.writeFileSync(`dist/${key}.css`, buff);
+    const tgt = `dist/fonts/${key}.css`;
+    fs.mkdirSync(path.dirname(tgt), { recursive: true });
+    fs.writeFileSync(tgt, buff);
   }
 }
 main();

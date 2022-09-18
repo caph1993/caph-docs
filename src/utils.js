@@ -12,9 +12,11 @@ export function assertDefined(value, valueName) {
 /** @template T @param {T} value @returns {T extends null ? never : T} */
 export function assertNonNull(value) {
   if (!value && (value===null||value === undefined)) throw new Error(`Encountered unexpected undefined value`);
-  //@ts-ignore
-  return value;
+  return /** @type {*} */ (value);
 }
+
+/** @template T @param {T} value @returns {T extends null ? never : T} */
+export function nonNull(value) { return /** @type {*} */ (value); }
 
 
 /** @type {(obj: any) => obj is String} */
