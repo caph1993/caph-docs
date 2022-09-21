@@ -9,7 +9,7 @@ import {isString} from "./utils";
  * @param {null | {createElement: CreateElementType;FragmentComponent: ComponentType;}} post
  * @param {readonly CustomRule[]} customRules
  */
- function debugParserFactory(post=null, customRules=[]){
+function debugParserFactory(post=null, customRules=[]){
   const parse1 = ({raw:strings}, ...values)=>new AstParser(strings, values, customRules, 1).evalTree(post);
   const parse2 = ({raw:strings}, ...values)=>new AstParser(strings, values, customRules, 2).evalTree(post);
   const parseAst1 = ({raw:strings}, ...values)=> new AstParser(strings, values, customRules, 1).root;

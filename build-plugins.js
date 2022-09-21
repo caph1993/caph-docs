@@ -1,17 +1,7 @@
-let fs = require('fs');
-let path = require('path');
-
-let { distPlugins, compressor, compress, decompress } = (()=>{
-  const exports = {}
-  let f = ''+fs.readFileSync('./src/build-constants.js');
-  f = f.replace(/export\s+const\s+(.*?)=/g, 'exports.$1=');
-  eval(f);
-  return exports;
-})();
-
-const lzutf8 = require('./'+compressor.src);
-
-//console.log(distPlugins);
+import fs from 'fs';
+import LZUTF8 from 'lzutf8';
+import path from 'path';
+import { distPlugins, compressor, compress, decompress } from './src/build-constants.js';
 
 async function main() {
   // Plugins
@@ -31,7 +21,7 @@ async function main() {
     const tgt = dist.slice(1);
     let text = ''+fs.readFileSync(src);
     const lz = tgt.endsWith('.lz.js');
-    if(lz) text = `caph.injectCompressedScript("${dist}", "${compress(lzutf8, text)}")`;
+    if(lz) text = `caph.injectCompressedScript("${dist}", "${compress(LZUTF8, text)}")`;
     fs.mkdirSync(path.dirname(tgt), { recursive: true });
     fs.writeFileSync(tgt, text);
   }

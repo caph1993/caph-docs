@@ -1,5 +1,5 @@
-let fs = require('fs');
-let path = require('path');
+import fs from 'fs';
+import path from 'path';
 
 let fonts = {
   'font-cmu-serif': [

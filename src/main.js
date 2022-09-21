@@ -1,5 +1,6 @@
 //@ts-check
-import { MyPromise, sleep, assert, Queue, assertNonNull } from "./utils";
+import { MyPromise, sleep, assert, assertNonNull } from "./utils";
+import * as collections from "./collections";
 import { createParser as createAstParser } from "./parser";
 import { parser, pluginDefs, plugin, createPreactParser } from "./preact-parser";
 import { contexts, menu, listenToEvent, listenToGlobal } from "./preact-globals";
@@ -40,7 +41,7 @@ export const parseElem = (/** @type {HTMLElement}*/elem, /** @type {('clear'|'hi
 
 export const until = MyPromise.until;
 export {assert, sleep};
-export const collections = { Queue };
+export { collections };
 export {contexts, menu, listenToEvent, listenToGlobal};
 
 
