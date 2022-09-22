@@ -1,6 +1,6 @@
 //@ts-check
-import { assert } from "./utils.js";
-import {Queue, BruteForceQueue} from "./collections.js";
+import { arrayEq, assert } from "./utils.js";
+import {Queue, BruteForceQueue, SuffixArray, BruteForceSuffixArray} from "./collections.js";
 
 const randTest= ()=>{
   const randN = (n)=>Math.floor(Math.random()*n);
@@ -47,6 +47,16 @@ const main = ()=>{
       if(repeat%2) assert(q.popLeft() == bf.popLeft());
       else assert(q.popRight() == bf.popRight());
     }
+  }
+
+  const sTests = ["", "a", "aa", "aaa", "ab", "aba","abab","abba","cocacola"];
+  sTests.push("abba".repeat(100)+"bba".repeat(100))
+  sTests.push(Math.random().toString().repeat(400))
+  for(let s of sTests){
+    let {suffixArray:ans0} = BruteForceSuffixArray(s);
+    let {suffixArray:ans1, print} = SuffixArray(s);
+    assert(arrayEq(ans0, ans1))
+    //print();
   }
   return;
 }

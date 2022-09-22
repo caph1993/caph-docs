@@ -18,6 +18,10 @@ export function assertNonNull(value) {
 /** @template T @param {T} value @returns {T extends null ? never : T} */
 export function nonNull(value) { return /** @type {*} */ (value); }
 
+/** @type {(n: number) => number[]} */
+export function range(n) {
+  return [...Array(n).fill(0)].map((x,i)=>i);
+}
 
 /** @type {(obj: any) => obj is String} */
 export function isString(obj) {
@@ -60,6 +64,25 @@ export function assert(/** @type {boolean|any}*/condition, ...messages) {
 
 export function sleep(/** @type {number}*/ms) {
   return new Promise((ok, err) => setTimeout(ok, ms));
+}
+
+/** @param {any} first @param {any} second  @param {any[]} more*/
+export function assertEq(first, second, ...more) {
+  for(let other of [second, ...more]){
+    if (first==other) continue;
+    if (Array.isArray(first) && Array.isArray(other) && arrayEq(first, other)) continue;
+    throw new Error('Elements are different');
+  }
+}
+/** @param {any[]} first @param {any[]} second  @param {any[][]} more*/
+export function arrayEq(first, second, ...more) {
+  for(let other of [second, ...more]){
+    if(first.length != other.length) return false;
+    for(let i=0;i<first.length;i++){
+      if(first[i]!=other[i]) return false;
+    }
+  }
+  return true;
 }
 
 class MyBoolean {
