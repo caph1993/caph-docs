@@ -1,3 +1,3 @@
-import * as caph from './main';
+import * as caph from './main.js';
 
 export default caph;

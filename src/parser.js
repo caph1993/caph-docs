@@ -1,6 +1,6 @@
 //@ts-check
 /// <reference path="types.js" />
-import { isString, assert, assertNonNull } from "./utils";
+import { isString, assert, assertNonNull } from "./utils.js";
 
 /** @typedef {({children, ...props})=>any} ComponentType*/
 /** @typedef {Object} AttributesType*/
@@ -19,6 +19,7 @@ import { isString, assert, assertNonNull } from "./utils";
 */
 /** @typedef {AstNode[]} AstNodeArray*/
 
+/** @typedef {'jsx'|'tex'|'raw'|'pre'} SpacingType*/
 
 
 /**@param {string} str*/
@@ -120,6 +121,7 @@ export const AstParser = (class {
   parseRoot(){
     try{
       this.parseChildrenAndParentClose();
+      
       assert(this.parent===this.root);
     } catch (error){
       console.log(error);
@@ -199,7 +201,8 @@ export const AstParser = (class {
     return `${at}...${short}...${at+length}`;
   }
 
-  parseChildrenAndParentClose(){
+  /** @param {SpacingType|null} spacing*/
+  parseChildrenAndParentClose(spacing=null){
     /*
       Parses the children of a parent tag or fragment.
       Called (i) from the root level,
@@ -281,6 +284,9 @@ export const AstParser = (class {
         this.children.push(...newParent[2]);
       }
     }
+
+    if(!spacing||spacing=='jsx') this.parent[2] = this.cls.spacingRulesJsx(this.children);
+    else if(spacing=='tex') this.parent[2] = this.cls.spacingRulesParagraphs(this.children);
   }
 
   parseParent(grandParent){
@@ -305,7 +311,7 @@ export const AstParser = (class {
     
     this.parent[0] = tag;
     let admitsChildren = !this.childlessTags[(''+tag)?.toLowerCase()];
-    let /** @type {'jsx'|'tex'|'raw'|'pre'|null}*/ spacing=null;
+    let /** @type {SpacingType|null}*/ spacing=null;
     
     while(true){ // While attributes
 
@@ -356,7 +362,8 @@ export const AstParser = (class {
         let m = this.tryRun(/(.*?)<\/style\s*>/ys);
         if(!m) this.throw(`Style tag not closed properly.`);
         this.parent[2] = [m[1]];
-      } else if(tag=='script'){ // Script is closed differently
+      }
+      else if(tag=='script'){ // Script is closed differently
         let m = this.tryRun(/(.*?)<\/script\s*>/ys);
         if(!m) this.throw(`Script tag not closed properly.`);
         let code = m[1];
@@ -369,15 +376,15 @@ export const AstParser = (class {
         } else{
           this.parent[2] = [code];
         }
-      } else{
-        this.parseChildrenAndParentClose(); // (Huge step)
+      }
+      else{
         if(!spacing){
           if(!isString(tag)) spacing = 'jsx';
           else if(tag=='pre' || tag=='textarea') spacing = 'pre';
           else spacing = 'jsx';
         }
-        if(spacing=='jsx') this.parent[2] = this.cls.spacingRulesJsx(this.children);
-        else if(spacing=='tex') this.parent[2] = this.cls.spacingRulesParagraphs(this.children);
+        this.parseChildrenAndParentClose(spacing); // (Huge step)
+        
       }
     }
     this.parent = grandParent;
@@ -387,12 +394,12 @@ export const AstParser = (class {
     // https://reactjs.org/blog/2014/02/20/react-v0.9.html#jsx-whitespace
     // https://www.w3.org/TR/REC-html40/struct/text.html#h-9.1
     // https://stackoverflow.com/q/433493
-    
+    /** @param {string} text*/
     function trimText(text){
       // End spaces are preserved only if they are inline
       return text.replace(/^(\s*)(.*?)(\s*)$/s, (_, l, middle, r)=>{
-        if(l.includes('\n')) l='';
-        if(r.includes('\n')) r='';
+        if(l.includes('\n')) l = '';
+        if(r.includes('\n')) r = '';
         return `${l}${middle}${r}`
       });
     }
@@ -412,7 +419,8 @@ export const AstParser = (class {
   // https://html.spec.whatwg.org/multipage/syntax.html#element-restrictions
   static spacingRulesPre(children){
     const first = children[0];
-    if(isString(first) && first.startsWith('\n')) children[0] = children[0].slice(1);
+    if(isString(first) && first.startsWith('\n'))
+      children[0] = children[0].slice(1);
     return children;
   }
 

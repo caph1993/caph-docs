@@ -2,7 +2,7 @@
 /// <reference path="types.js" />
 import { assertNonNull, assert, until, sleep } from './utils.js';
 import { createParser } from './parser.js';
-import { load, parseKey, injectStyle } from './script-loader';
+import { load, parseKey, injectStyle } from './script-loader.js';
 import * as preact from 'preact';
 import { useMemo, useCallback, useState, useEffect} from 'preact/hooks';
 

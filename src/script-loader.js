@@ -1,6 +1,6 @@
 //@ts-check
-import { MyDocument, sleep, until } from "./utils";
-import {compressor, decompress, distPlugins} from "./build-constants";
+import { MyDocument, sleep, until } from "./utils.js";
+import {compressor, decompress, distPlugins} from "./build-constants.js";
 
 
 const plugins = Object.fromEntries(distPlugins.map(e => [e.key, e]));

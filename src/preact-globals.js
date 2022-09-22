@@ -1,6 +1,6 @@
 //@ts-check
-import { MyPromise } from "./utils";
-import { parser, plugin } from "./preact-parser";
+import { MyPromise } from "./utils.js";
+import { parser, plugin } from "./preact-parser.js";
 import { createContext, render } from "preact";
 import {useMemo, useCallback, useState, useEffect} from 'preact/hooks';
 

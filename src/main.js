@@ -1,16 +1,16 @@
 //@ts-check
-import { MyPromise, sleep, assert, assertNonNull } from "./utils";
-import * as collections from "./collections";
-import { createParser as createAstParser } from "./parser";
-import { parser, pluginDefs, plugin, createPreactParser } from "./preact-parser";
-import { contexts, menu, listenToEvent, listenToGlobal } from "./preact-globals";
+import { MyPromise, sleep, assert, assertNonNull } from "./utils.js";
+import * as collections from "./collections.js";
+import { createParser as createAstParser } from "./parser.js";
+import { parser, pluginDefs, plugin, createPreactParser } from "./preact-parser.js";
+import { contexts, menu, listenToEvent, listenToGlobal } from "./preact-globals.js";
 import { toChildArray } from "preact";
 import { useMemo, useState } from "preact/hooks";
-import { load, injectStyle } from "./script-loader";
-import * as scriptLoader from "./script-loader";
+import { load, injectStyle } from "./script-loader.js";
+import * as scriptLoader from "./script-loader.js";
 import * as preactBase from "preact";
 import * as preactHooks from "preact/hooks";
-import { compressor, decompress } from "./build-constants";
+import { compressor, decompress } from "./build-constants.js";
 /** @typedef {import("./preact-parser").Component} Component */ 
 
 

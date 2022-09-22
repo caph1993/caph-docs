@@ -1,26 +1,16 @@
 //@ts-check
-/// <reference path="parser.js" />
-//require('../build/build-tools.js');
-import {AstParser} from "./parser";
-import {isString} from "./utils";
+import {createParser} from "./parser.js";
+import {isString} from "./utils.js";
 
+const {parse:parse0, settings:settingsAst0} = createParser();
+settingsAst0.debug = 0;
+const {parse:parse1, settings:settingsAst1} = createParser();
+settingsAst1.debug = 1;
+const {parse:parse2, settings:settingsAst2} = createParser();
+settingsAst2.debug = 2;
 
-/**
- * @param {null | {createElement: CreateElementType;FragmentComponent: ComponentType;}} post
- * @param {readonly CustomRule[]} customRules
- */
-function debugParserFactory(post=null, customRules=[]){
-  const parse1 = ({raw:strings}, ...values)=>new AstParser(strings, values, customRules, 1).evalTree(post);
-  const parse2 = ({raw:strings}, ...values)=>new AstParser(strings, values, customRules, 2).evalTree(post);
-  const parseAst1 = ({raw:strings}, ...values)=> new AstParser(strings, values, customRules, 1).root;
-  const parseAst2 = ({raw:strings}, ...values)=> new AstParser(strings, values, customRules, 2).root;
-  const evalAst = evalAstFactory(post);
-  const parse = parserFactory(evalAst);
-  return {parse, parse1, parse2, parseAst1, parseAst2, evalAst};
-}
 
 function main(){
-  var {parseAst0, parseAst1, parseAst2, parse, parse1, parse2} = NewParser.debugParserFactory(null);
 
   function assertEq(vDom1, vDom2){
     const out = diff(vDom1, vDom2);
@@ -73,16 +63,16 @@ function main(){
   }
 
   assertTest(
-    parseAst1`<div/>`,
-    ['div', null, []],
+    parse1`<div/>`,
+    {tag:'div', props:null, children:[]},
   );
   assertTest(
-    parseAst1`<div></div>`,
-    ['div', null, []],
+    parse1`<div></div>`,
+    {tag:'div', props:null, children:[]},
   );
   assertTest(
-    parseAst1`<div></>`,
-    ['div', null, []],
+    parse1`<div></>`,
+    {tag:'div', props:null, children:[]},
   );
   assertTest(
     parse1`<div/>`,
@@ -122,56 +112,56 @@ function main(){
   );
 
   assertTest(
-    parseAst1`
+    parse1`
       <div>
         <div> hello </div>
       </div>
     `,
-    ['div', null, [['div', null, [' hello ']]]],
+    {tag:'div', props:null, children:[{tag:'div', props:null, children:[' hello ']}]},
   );
   assertTest(
-    parseAst1`<div><div> </div></div>`,
-    ['div', null, [['div', null, [' ']]]],
+    parse1`<div><div> </div></div>`,
+    {tag:'div', props:null, children:[{tag:'div', props:null, children:[' ']}]},
   );
   assertTest(
-    parseAst1`<div><div></div><div></div><div></div></div>`,
-    ['div', null, [{tag:'div', props:null, children:[]}, {tag:'div', props:null, children:[]}, {tag:'div', props:null, children:[]}]],
+    parse1`<div><div></div><div></div><div></div></div>`,
+    {tag:'div', props:null, children:[{tag:'div', props:null, children:[]}, {tag:'div', props:null, children:[]}, {tag:'div', props:null, children:[]}]},
   );
   assertTest(
-    parseAst1`<div><A></><B></><C></C></div>`,
-    ['div', null, [['A', null, []], ['B', null, []], ['C', null, []]]],
+    parse1`<div><A></><B></><C></C></div>`,
+    {tag:'div', props:null, children:[{tag:'A', props:null, children:[]}, {tag:'B', props:null, children:[]}, {tag:'C', props:null, children:[]}]},
   );
   assertTest(
-    parseAst1`<div>hello<div>world</div>!</div>`,
-    ['div', null, ['hello', ['div', null, ['world']], '!']],
+    parse1`<div>hello<div>world</div>!</div>`,
+    {tag:'div', props:null, children:['hello', {tag:'div', props:null, children:['world']}, '!']},
   );
   assertTest(
-    parseAst1`<div><div/><div/><div/></div>`,
-    ['div', null, [{tag:'div', props:null, children:[]}, {tag:'div', props:null, children:[]}, {tag:'div', props:null, children:[]}]],
+    parse1`<div><div/><div/><div/></div>`,
+    {tag:'div', props:null, children:[{tag:'div', props:null, children:[]}, {tag:'div', props:null, children:[]}, {tag:'div', props:null, children:[]}]},
   );
   assertTest(
-    parseAst1`<span> </span>`,
-    ['span', null, [' ']],
+    parse1`<span> </span>`,
+    {tag:'span', props:null, children:[' ']},
   );
   assertTest(
-    parseAst1`<></>`,
-    [null, null, []],
+    parse1`<></>`,
+    {tag:null, props:null, children: []},
   );
   assertTest(
-    parseAst1`Fragment without parents. <span bold>I insist!</span>`,
-    [null, null, ['Fragment without parents. ', ['span', {bold: true}, ['I insist!']]]],
+    parse1`Fragment without parents. <span bold>I insist!</span>`,
+    {tag:null, props:null, children: ['Fragment without parents. ', {tag:'span', props:{bold: true}, children:['I insist!']}]},
   );
   assertTest(
-    parseAst1`<><>A</><>B</><>C</></>`,
-    // [null, null, ['A', 'B', 'C']],
+    parse1`<><>A</><>B</><>C</></>`,
+    // {tag:null, props:null, children: ['A', 'B', 'C']},
     'ABC',
   );
   assertTest(
-    parseAst1`<><> A </><>B </><> C</></>`,
-    //[null, null, [' A ', 'B ', ' C']],
+    parse1`<><> A </><>B </><> C</></>`,
+    //{tag:null, props:null, children: [' A ', 'B ', ' C']},
     ' A B  C',
   );
-  assertTest(parseAst1`
+  assertTest(parse1`
     <!DOCTYPE html>
     <html lang="en" >
       <head  >
@@ -196,17 +186,23 @@ function main(){
       </body>
     </html>
     `,
-    ['html', {lang:'en'},[
-      [
-        'head', null, [['meta', {charset:'utf-8'}, []], ['meta', {name:'viewport', content:'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'}, []], ['title', null, ['Page title']], ['link', {rel:'icon', type:'image/x-icon', href:'./icons/icon.png'}, []]]],
-      [
-        'body', null, [['div', {id:'root'}, [
-          ['img', {class:'loading-gif', src:'./icons/loading.gif'}, []],
-        'Loading page...',
-      ],
-    ]]],
-  ]]);
-  assertTest(parseAst1`
+
+    {tag:'html', props:{lang:'en'}, children:[
+      {tag:'head', props:null, children:[
+        {tag:'meta', props:{charset:'utf-8'}, children:[]},
+        {tag:'meta', props:{name:'viewport', content:'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'}, children:[]},
+        {tag:'title', props:null, children:['Page tiprops:tle']},
+        {tag:'link', props:{rel:'icon', type:'image/x-icon', href:'./icons/icon.png'}, children:[]}
+      ]},
+      {tag:'body', props:null, children:[
+        {tag:'div', props:{id:'root'}, children:[
+          {tag:'img', props:{class:'loading-gif', src:'./icons/loading.gif'}, children:[]},
+          'Loading page...',
+        ]}
+      ]},
+    ]}
+  );
+  assertTest(parse1`
     <math>
       <ms><![CDATA[x<y]]></ms>
       <mo>+</mo>
@@ -214,79 +210,79 @@ function main(){
       <mo>=</mo>
       <ms><![CDATA[x<y3]]></ms>
     </math>`,
-    ['math', null,
-      [
-        [ 'ms', null, [] ],
-        [ 'mo', null, ['+'] ],
-        [ 'mn', null, ['3'] ],
-        [ 'mo', null, ['='] ],
-        [ 'ms', null, [] ],
-      ]
-    ],
+    {tag:'math', props:null, children:[
+      {tag:'ms', props:null, children: [] },
+      {tag:'mo', props:null, children: ['+'] },
+      {tag:'mn', props:null, children: ['3'] },
+      {tag:'mo', props:null, children: ['='] },
+      {tag:'ms', props:null, children: [] },
+    ]},
   );
-  assertTest(parseAst1`<div ><!-- awful comment "<>><<" </> <CDATA --></>`,
-    ['div', null,[]],
+  assertTest(parse1`<div ><!-- awful comment "<>><<" </> <CDATA --></>`,
+    {tag:'div', props:null,children:[]},
   );
   
   let SomeComponent;
 
-  SomeComponent = ()=>{};
+  SomeComponent = ({props, children})=>{ return [props, children];};
   assertTest(
-    parseAst1`<${SomeComponent} />`,
-    [SomeComponent, null, []],
+    parse1`<${SomeComponent} />`,
+    [null, []],
   )
   assertTest(
-    parseAst1`<div><${SomeComponent} /></div>`,
-    ['div', null, [[SomeComponent, null, []]]],
+    parse1`<div><${SomeComponent} /></div>`,
+    {tag:'div', props:null, children:[[null, []]]},
   )
 
   assertTest(
     parse1`<div>${parse1`<div/>`}</div>`,
     {tag:'div', props:null, children:[{tag:'div', props:null, children:[]}]},
   );
-  SomeComponent = ({children})=>parse`<div>${children}</div>`;
+
+  
+  SomeComponent = ({children,})=>parse0`<div>${children}</div>`;
   assertTest(
-    parseAst1`<div><${SomeComponent} propX="0" propY=${1}><div/></></div>`,
-    ['div', null, [['span', {propX:"0", propY:1}, ['Hello world', ['div', null, []]]]]],
+    parse1`<div><${SomeComponent} propX="0" propY=${1}><div/></></div>`,
+    {tag:'div', props:null, children:[{tag:'span', props:{propX:"0", propY:1}, children:['Hello world', {tag:'div', props:null, children:[]}]}]},
   );
 
-  SomeComponent = ({children, ...props})=>parse`<span ...${props}>Hello world${children}</span>`;
+  SomeComponent = ({children, ...props})=>parse0`<span ...${props}>Hello world${children}</span>`;
   assertTest(
-    parseAst1`<div><${SomeComponent} propX="1" propY=${1}><div/></></div>`,
-    ['div', null, [[SomeComponent, {propX:"1", propY:1}, [{tag:'div', props:null, children:[]}]]]],
+    parse1`<div><${SomeComponent} propX="1" propY=${1}><div/></></div>`,
+    {tag:'div', props:null, children:[[SomeComponent, {propX:"1", propY:1}, [{tag:'div', props:null, children:[]}]]]},
   );
   assertTest(
-    parseAst1`<div><${SomeComponent} propX="2" propY=${1}><div/></></div>`,
-    ['div', null, [{tag:'span', props:{propX:"2", propY:1}, children:['Hello world', {tag:'div', props:null, children:[]}]}]],
+    parse1`<div><${SomeComponent} propX="2" propY=${1}><div/></></div>`,
+    {tag:'div', props:null, children:[{tag:'span', props:{propX:"2", propY:1}, children:['Hello world', {tag:'div', props:null, children:[]}]}]},
   );
 
-  SomeComponent = ({children, ...props})=>parse`<span...${props} propZ="hello">Hello world${children}</span>`;
+  SomeComponent = ({children, ...props})=>parse0`<span...${props} propZ="hello">Hello world${children}</span>`;
   assertTest(
-    parseAst1`<div><${SomeComponent} propX="3" propY=${1}><div/></></div>`,
-    ['div', null, [{tag:'span', props:{propX:"3", propY:1, propZ:'hello'}, children:['Hello world', {tag:'div', props:null, children:[]}]}]],
+    parse1`<div><${SomeComponent} propX="3" propY=${1}><div/></></div>`,
+    {tag:'div', props:null, children:[{tag:'span', props:{propX:"3", propY:1, propZ:'hello'}, children:['Hello world', {tag:'div', props:null, children:[]}]}]},
   );
   assertTest(
-    parseAst1`$e^2$`,
+    parse1`$e^2$`,
     ['div', {'data-caph':'@math', displayMode:false}, ['e^2']],
   );
   assertTest(
-    parseAst1`$$e^2$$`,
+    parse1`$$e^2$$`,
     ['div', {'data-caph':'@math', displayMode:true}, ['e^2']],
   );
   assertTest(
-    parseAst1`<ul><li>testing<div/><li>auto<li>close</></>`,
-    ['ul', null, [['li', null, ['testing', ['div', null, []]]],['li', null, ['auto']],['li', null, ['close']]]],
+    parse1`<ul><li>testing<div/><li>auto<li>close</></>`,
+    ['ul', null, [['li', null, ['testing', {tag:'div', props:null, children:[]}]],['li', null, ['auto']],['li', null, ['close']]]],
   );
   assertTest(
-    parseAst2`Hello string`,
+    parse2`Hello string`,
     'Hello string',
   );
   assertTest(
-    parseAst2`${'Hello injected string'}`,
-    [null, null, 'Hello injected string'],
+    parse2`${'Hello injected string'}`,
+    {tag:null, props:null, children: 'Hello injected string'},
   );
   assertTest(
-    parseAst1`<ul>${['A', 'B', 'C'].map(s => parse1`<li>${s}</li>`)}</>`,
+    parse1`<ul>${['A', 'B', 'C'].map(s => parse1`<li>${s}</li>`)}</>`,
     ['ul', null, [{tag:'li', props:null, children:['A']}, {tag:'li', props:null, children:['B']}, {tag:'li', props:null, children:['C']}]],
   );
 
@@ -295,7 +291,7 @@ function main(){
     {tag:'div', props:null, children:[{tag:'div', props:null, children:[{tag:'div', props:null, children:[]}]}]},
   );
   // assertEq(
-  //   parser.parse`<div title="10$"><div title="10$"></div></div>`,
+  //   parser.parse0`<div title="10$"><div title="10$"></div></div>`,
   //   ['caph', {plugin:'caph-math'}, ['e^2']],
   // );
 }
