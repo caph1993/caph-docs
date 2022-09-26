@@ -1,6 +1,6 @@
 //@ts-check
 import { arrayEq, assert } from "./utils.js";
-import {Queue, BruteForceQueue, SuffixArray, BruteForceSuffixArray} from "./collections.js";
+import {Queue, BruteForceQueue, SuffixArray, BruteForceSuffixArray, Treap} from "./collections.js";
 
 const randTest= ()=>{
   const randN = (n)=>Math.floor(Math.random()*n);
@@ -58,6 +58,13 @@ const main = ()=>{
     assert(arrayEq(ans0, ans1))
     //print();
   }
+
+  // const t = new Treap(1);
+  // console.log(t.cnt);
+  // console.log(t.preorder())
+  // t.insert(1, 2);
+  // console.log(t.left);
+  // console.log(t.preorder())
   return;
 }
 main();

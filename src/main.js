@@ -66,8 +66,6 @@ export const injectCompressedScript = async (dist, compressedSequence)=>{
   document.getElementById('core-sources')?.insertAdjacentElement('beforeend', e);
 }
 
-
-
 export const settings = {
   get mathParser(){ return parser.mathParser; },
   mathMacros: {},

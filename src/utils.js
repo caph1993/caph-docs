@@ -28,6 +28,10 @@ export function isString(obj) {
   return Object.prototype.toString.call(obj) === "[object String]";
 }
 
+export function rand32(){
+  return Math.floor(Math.random()*(1<<32))
+}
+
 // utils = {
 //   unindent: (text) => {
 //     let lines = text.split('\n');

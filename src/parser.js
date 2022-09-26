@@ -8,8 +8,10 @@ import { isString, assert, assertNonNull } from "./utils.js";
 /**
  * @typedef {(type:any, props:any, ...children)=>(any extends Array? never: any)} CreateElementType
 */
-/** @typedef {(text:string) => AstNode} RuleParser*/
-/** @typedef {{regStart:string, regEnd:string, parser:RuleParser}} CustomRule*/
+// /** @typedef {(text:string) => AstNode} RuleParser*/
+// /** @typedef {{regStart:string, regEnd:string, parser:RuleParser}} CustomRule*/
+
+/** @typedef {{start:RegExp, capture:RegExp, component:string}} ParsingRule*/
 
 /**
  * @typedef {[null, null, AstNodeArray]|[string|ComponentType, AttributesType|null, AstNodeArray]} AstParent
@@ -43,8 +45,14 @@ const htmlSafeUndo = (/** @type {string} */ str)=>{
 export const AstParser = (class {
 
   ESC = '\ue000';
+  regESC = new RegExp('\ue000', 'ys')
   SPEC = `https://html.spec.whatwg.org/multipage/syntax.html`;
   DEBUG = false;
+
+  str;
+  values;
+  pos;
+  parsingRules;
 
 
   static parseAst(/** @type {TemplateStringsArray} */{raw:strings}, ...values){
@@ -55,14 +63,13 @@ export const AstParser = (class {
   warn(...args){console.warn(...args)}; // Overriden during tests
   error(...args){console.error(...args)}; // Overriden during tests
 
-
   /**
    * @param {readonly string[]} strings
    * @param {readonly any[]} values
-   * @param {readonly CustomRule[]} customRules
+   * @param {readonly ParsingRule[]} parsingRules
    * @param {0|1|2} debug
   */
-  constructor(strings, values, customRules=[], debug=0){
+  constructor(strings, values, parsingRules=[], debug=0){
     /** @type {typeof AstParser} */ //@ts-ignore
     this.cls = this.constructor;
     let str = strings.join(this.ESC);
@@ -83,14 +90,13 @@ export const AstParser = (class {
     this.DEBUG = debug==2;
 
     //console.log(this.cls);
-    /** @type {readonly CustomRule[]} */
-    this.customRules = customRules;
+    this.parsingRules = parsingRules;
     /** @type {(tag:TagType)=>(null|string[])} */
     this.optionalClose = this.cls.optionalClose.bind(this.cls);
 
     this.REG_EXP_TEXT = new RegExp(`.*?(?=${[
       '$', '<', this.ESC,
-      ...this.customRules.map(({regStart})=>regStart),
+      ...this.parsingRules.map(({start})=>start.source),
     ].join('|')})`, 'ys');
 
     /**@type {AstParent} */
@@ -141,10 +147,7 @@ export const AstParser = (class {
     br: true, '!doctype': true, area: true, base: true, col: true, command: true, embed: true, hr: true,img: true, input: true, keygen: true, link: true, meta: true, param: true, source: true, track: true, wbr: true
   };
 
-  // spacePreservingTags = {
-  //   pre: true, span: true, code: true, p: true, b: true, i: true,
-  //   a: true, li: true,
-  // };
+  // spacePreservingTags = {pre: true, span: true, code: true, p: true, b: true, i: true, a: true, li: true, };
 
   // https://html.spec.whatwg.org/multipage/syntax.html#optional-tags
   /** @type {{[key:string]:string[]}}*/
@@ -215,7 +218,7 @@ export const AstParser = (class {
       let [text] = this.run(this.REG_EXP_TEXT);
       if(text.length) this.children.push(text);
   
-      if(this.tryRun(new RegExp(`${this.ESC}`, 'ys'))){
+      if(this.tryRun(this.regESC)){
         let value = this.values[this.valueIndex++];
         for(value of Array.isArray(value)?value:[value]){
           if(value||value===0) this.children.push(['@injected', null, [value]]);
@@ -234,11 +237,14 @@ export const AstParser = (class {
           this.throw(`Expected closing tag </${this.parentTag}> or </>`);
       if(endReached) break;
       
-      if(this.customRules.length){
-        const parsedRule = (()=>{
-          for(let {regStart, regEnd, parser} of this.customRules){
-            let m = this.tryRun(new RegExp(`${regStart}(.*?)(${regEnd})`, 'ys'));
-            if(m) return parser(this.replaceText(m[1], this.pos-m[2].length-m[1].length));
+      if(this.parsingRules.length){
+        const parsedRule = (/**@returns {AstNode?} */()=>{
+          for(let {start, capture, component} of this.parsingRules){
+            if(!this.tryRun(start)) continue;
+            const textStart = this.pos;
+            let [_, text] = this.run(capture);
+            text = this.replaceText(text, textStart);
+            return ['div', {'(component)': component}, [text]];
           }
           return null;
         })();
@@ -499,35 +505,44 @@ const exampleCreateElement = /**@type {CreateElementType} */ (type, props, ...ch
 
 const exampleFragmentComponent = /**@type {ComponentType} */  (({children})=>({tag:null, props:null, children}));
 
-const exampleCustomRules = /** @type {CustomRule[]} */ [
-  {
-    regStart: `(?<!\\\\)\\$\\$`,
-    regEnd: `(?<!\\\\)\\$\\$`,
-    parser: /**@type {RuleParser}*/ ((text)=>['div', {'(component)': '@math', displayMode:true}, [text]]),
-  },
-  {
-    regStart: `(?<!\\\\)\\$`,
-    regEnd: `(?<!\\\\)\\$`,
-    parser: /**@type {RuleParser}*/ ((text)=>['div', {'(component)': '@math', displayMode:false}, [text]]),
-  },
-  {
-    regStart: `(?<!\\\\)\`\`\``,
-    regEnd: `(?<!\\\\)\`\`\``,
-    parser: /**@type {RuleParser}*/ ((text)=>{
-      text = text.replace(/\\\`\`\`/g, '```');
-      let progLang = assertNonNull(text.match(/^[^\n]*/));
-      return ['div', {'(component)': '@code', ...(!progLang.length?{}:{progLang})}, [text]];
-    }),
-  },
-  {
-    regStart: `(?<!\\\\)\``,
-    regEnd: `(?<!\\\\)\``,
-    parser: /**@type {RuleParser}*/ ((text)=>{
-      text = text.replace(/\\\`/g, '`');
-      return ['div', {'(component)': '@code'}, [text]]
-    }),
-  },
-];
+
+/** @type {ParsingRule[]} */
+const exampleParsingRules = [
+  {component: '@mathInline', start: /(?<!\\)\$(?!\$)/y, capture: /(.*?)(?<!\\)\$/y, },
+  {component: '@mathDisplay', start: /(?<!\\)\$\$/y, capture: /(.*?)(?<!\\)\$\$/y, },
+  {component: '@codeInline', start: /(?<!\\)`(?!``)/y, capture: /(.*?)(?<!\\)`/y, },
+  {component: '@codeDisplay', start: /(?<!\\)```/y, capture: /(.*?)(?<!\\)```/y, },
+]
+
+// const exampleCustomRules = /** @type {CustomRule[]} */ [
+//   {
+//     regStart: `(?<!\\\\)\\$\\$`,
+//     regEnd: `(?<!\\\\)\\$\\$`,
+//     parser: /**@type {RuleParser}*/ ((text)=>['div', {'(component)': '@math', displayMode:true}, [text]]),
+//   },
+//   {
+//     regStart: `(?<!\\\\)\\$`,
+//     regEnd: `(?<!\\\\)\\$`,
+//     parser: /**@type {RuleParser}*/ ((text)=>['div', {'(component)': '@math', displayMode:false}, [text]]),
+//   },
+//   {
+//     regStart: `(?<!\\\\)\`\`\``,
+//     regEnd: `(?<!\\\\)\`\`\``,
+//     parser: /**@type {RuleParser}*/ ((text)=>{
+//       text = text.replace(/\\\`\`\`/g, '```');
+//       let progLang = assertNonNull(text.match(/^[^\n]*/));
+//       return ['div', {'(component)': '@code', ...(!progLang.length?{}:{progLang})}, [text]];
+//     }),
+//   },
+//   {
+//     regStart: `(?<!\\\\)\``,
+//     regEnd: `(?<!\\\\)\``,
+//     parser: /**@type {RuleParser}*/ ((text)=>{
+//       text = text.replace(/\\\`/g, '`');
+//       return ['div', {'(component)': '@code'}, [text]]
+//     }),
+//   },
+// ];
 
 
 
@@ -536,11 +551,11 @@ export const createParser = ()=>{
   const settings = {
     createElement: exampleCreateElement,
     FragmentComponent: exampleFragmentComponent,
-    customRules: exampleCustomRules,
+    parsingRules: exampleParsingRules,
     debug: /** @type {0|1|2}*/(0),
   }
   
-  const parseAst = (/** @type {TemplateStringsArray} */ templateString, ...values)=> new AstParser(templateString.raw, values, settings.customRules, settings.debug);
+  const parseAst = (/** @type {TemplateStringsArray} */ templateString, ...values)=> new AstParser(templateString.raw, values, settings.parsingRules, settings.debug);
   
   const parse = (/** @type {TemplateStringsArray} */ templateString, ...values)=> parseAst(templateString, ...values).evalTree(settings.createElement, settings.FragmentComponent);
 

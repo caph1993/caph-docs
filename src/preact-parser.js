@@ -168,15 +168,24 @@ pluginDefs['core-error'] = (async () => ({ children, tooltip }) => {
 // ))(),
 
 
-parser.settings.customRules = [
-  {
-    regStart: `(?<!\\\\)\\$`,
-    regEnd: `(?<!\\\\)\\$`,
-    parser: ((text)=> parser.parse`<div (component)=${'@katex'}>${text}</>`),
-  },
+parser.settings.parsingRules = [
+  {component: '@mathInline', start: /(?<!\\)\$(?!\$)/y, capture: /(.*?)(?<!\\)\$/ys, },
+  {component: '@mathDisplay', start: /(?<!\\)\$\$/y, capture: /(.*?)(?<!\\)\$\$/ys, },
+  {component: '@codeInline', start: /(?<!\\)`(?!``)/y, capture: /(.*?)(?<!\\)`/ys, },
+  {component: '@codeDisplay', start: /(?<!\\)```/y, capture: /(.*?)(?<!\\)```/ys, },
 ]
-
-const reg = /(?<!\\)\\$(.*?)(?<!\\)\\$/;
+pluginDefs['@mathInline'] = ({ children}) => parser.parse`
+  <div (component)="@katex" displayMode=${false}>${children}</div>
+`;
+pluginDefs['@mathDisplay'] = ({ children}) => parser.parse`
+  <div (component)="@katex" displayMode=${true}>${children}</div>
+`;
+pluginDefs['@codeInline'] = ({ children}) => parser.parse`
+  <code>${children}</code>
+`;
+pluginDefs['@codeDisplay'] = ({ children}) => parser.parse`
+  <div><code>${children}</code></div>
+`;
 
 
 injectStyle(`
